@@ -946,6 +946,7 @@ bool savestate_save(EMUFILE* outstream, int compressionLevel)
 	EMUFILE_MEMORY ms;
 	EMUFILE* os;
 	
+#ifndef __LIBRETRO__
 	if(compressionLevel != Z_NO_COMPRESSION)
 	{
 		//generate the savestate in memory first
@@ -953,6 +954,7 @@ bool savestate_save(EMUFILE* outstream, int compressionLevel)
 		writechunks(os);
 	}
 	else
+#endif
 	{
 		os = outstream;
 		os->fseek(32,SEEK_SET); //skip the header
@@ -967,6 +969,7 @@ bool savestate_save(EMUFILE* outstream, int compressionLevel)
 
 	//compress the data
 	int error = Z_OK;
+#ifndef __LIBRETRO__
 	if(compressionLevel != Z_NO_COMPRESSION)
 	{
 		cbuf = ms.buf();
@@ -980,6 +983,7 @@ bool savestate_save(EMUFILE* outstream, int compressionLevel)
 		error = compress2(cbuf,&comprlen2,ms.buf(),len,compressionLevel);
 		comprlen = (u32)comprlen2;
 	}
+#endif
 
 	//dump the header
 	outstream->fseek(0,SEEK_SET);
@@ -989,11 +993,13 @@ bool savestate_save(EMUFILE* outstream, int compressionLevel)
 	write32le(len,outstream); //uncompressed length
 	write32le(comprlen,outstream); //compressed length (-1 if it is not compressed)
 
+#ifndef __LIBRETRO__
 	if(compressionLevel != Z_NO_COMPRESSION)
 	{
 		outstream->fwrite((char*)cbuf,comprlen==(u32)-1?len:comprlen);
 		delete[] cbuf;
 	}
+#endif
 
 	return error == Z_OK;
 }
