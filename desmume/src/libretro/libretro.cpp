@@ -36,14 +36,12 @@ namespace /* INPUT */
     static const uint32_t FramesWithPointerBase = 60 * 10;
     static int32_t FramesWithPointer;
 
-    template<uint16_t COLOR>
     static void DrawPointerLine(uint16_t* aOut, uint32_t aPitchInPix)
     {
         for(int i = 0; i < 5; i ++)
-            aOut[aPitchInPix * i] = COLOR;
+            aOut[aPitchInPix * i] = 0xFFFF;
     }
 
-    template<uint16_t COLOR>
     static void DrawPointer(uint16_t* aOut, uint32_t aPitchInPix)
     {
         if(FramesWithPointer-- < 0)
@@ -52,10 +50,10 @@ namespace /* INPUT */
         TouchX = Saturate<0, 255>(TouchX);
         TouchY = Saturate<0, 191>(TouchY);
 
-        if(TouchX >   5) DrawPointerLine<COLOR>(&aOut[TouchY * aPitchInPix + TouchX - 5], 1);
-        if(TouchX < 251) DrawPointerLine<COLOR>(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
-        if(TouchY >   5) DrawPointerLine<COLOR>(&aOut[(TouchY - 5) * aPitchInPix + TouchX], aPitchInPix);
-        if(TouchY < 187) DrawPointerLine<COLOR>(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
+        if(TouchX >   5) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX - 5], 1);
+        if(TouchX < 251) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
+        if(TouchY >   5) DrawPointerLine(&aOut[(TouchY - 5) * aPitchInPix + TouchX], aPitchInPix);
+        if(TouchY < 187) DrawPointerLine(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
     }
 }
 
@@ -89,29 +87,19 @@ namespace /* VIDEO */
 
     static const LayoutData* screenLayout = &layouts[0];
 
-    template<typename T, unsigned EXTRA>
-    static void SwapScreen(void* aOut, const void* aIn, uint32_t aPitchInPix)
+    static void SwapScreen(void *dst, const void *src, uint32_t pitch, bool render_fullscreen)
     {
-        static const uint32_t pixPerT = sizeof(T) / 2;
-        static const uint32_t pixPerLine = 256 / pixPerT;
-        static const T colorMask = (pixPerT == 1) ? 0x001F : ((pixPerT == 2) ? 0x001F001F : 0x001F001F001F001FULL);
-        
-        assert(pixPerT == 1 || pixPerT == 2 || pixPerT == 4);
-        
-        const uint32_t pitchInT = aPitchInPix / pixPerT;
-        const T* inPix = (const T*)aIn;
+        const uint32_t *_src = (const uint32_t*)src;
+        uint32_t width = render_fullscreen ? 256 : 128;
         
         for(int i = 0; i < 192; i ++)
         {
-            T* outPix = (T*)aOut + (i * pitchInT);
+            uint32_t *_dst = (uint32_t*)dst + (i * pitch);
 
-            for(int j = 0; j < pixPerLine; j ++)
+            for(int j = 0; j < width; j ++)
             {
-                const T p = *inPix++;            
-                const T r = ((p >> 10) & colorMask);
-                const T g = ((p >> 5) & colorMask) << 5 + EXTRA;
-                const T b = ((p >> 0) & colorMask) << 10 + EXTRA;
-                *outPix++ = r | g | b;
+               const uint32_t p = *_src++;            
+               *_dst++ = (((p >> 10) & 0x001F001F001F001FULL)) | (((p >> 5) & 0x001F001F001F001FULL) << 6) | (((p >> 0) & 0x001F001F001F001FULL) << 11);
             }
         }
     }
@@ -125,21 +113,14 @@ namespace /* VIDEO */
                 screenLayout = &layouts[i];
     }
 
-    template<unsigned EXTRA>
-    void SwapScreensFn()
+    void SwapScreens(bool render_fullscreen)
     {
-        static const uint16_t* const screenSource[2] = {(uint16_t*)&GPU_screen[0], (uint16_t*)&GPU_screen[256 * 192 * 2]};
-        SwapScreen<uint32_t, EXTRA>(screenLayout->screens[0], screenSource[0], screenLayout->pitchInPix);
-        SwapScreen<uint32_t, EXTRA>(screenLayout->screens[1], screenSource[1], screenLayout->pitchInPix);
-        DrawPointer<EXTRA ? 0xFFFF : 0x7FFF>(screenLayout->screens[1], screenLayout->pitchInPix);
+       SwapScreen(screenLayout->screens[0], (uint16_t*)&GPU_screen[0], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
+       SwapScreen(screenLayout->screens[1], (uint16_t*)&GPU_screen[256 * 192 * (render_fullscreen ? 1 : 2)], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
+       DrawPointer(screenLayout->screens[1], screenLayout->pitchInPix);
 
-        video_cb(screenSwap, screenLayout->width, screenLayout->height, screenLayout->pitchInPix * 2);
+       video_cb(screenSwap, screenLayout->width, screenLayout->height, screenLayout->pitchInPix * (render_fullscreen ? 1 : 2));
     }
-
-    template void SwapScreensFn<0>();
-    template void SwapScreensFn<1>();
-
-    void (*SwapScreens)();
 }
 
 namespace
@@ -175,7 +156,7 @@ static void CheckSettings()
         { "Spanish", 5 }
     };
 
-    for (int i = 0; i != 6; i ++)
+    for (int i = 0; i < 6; i ++)
     {
         if (strcmp(languages[i].name, language.value) == 0)
         {
@@ -304,9 +285,7 @@ void retro_init (void)
 
     colorMode = RETRO_PIXEL_FORMAT_RGB565;
     if(!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &colorMode))
-        colorMode = RETRO_PIXEL_FORMAT_0RGB1555;
-
-    SwapScreens = (colorMode == RETRO_PIXEL_FORMAT_RGB565) ? SwapScreensFn<1> : SwapScreensFn<0>;
+       return;
 
     CheckSettings();
 
@@ -345,6 +324,7 @@ void retro_run (void)
 {
     // Settings
     bool changed = false;
+    bool render_fullscreen = false;
     environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &changed);
     if(changed)
         CheckSettings();
@@ -431,9 +411,9 @@ void retro_run (void)
     
     // VIDEO: Swap screen colors and pass on
     if (!skipped)
-        SwapScreens();
+        SwapScreens(render_fullscreen);
     else
-        video_cb(0, screenLayout->width, screenLayout->height, screenLayout->pitchInPix * 2);
+        video_cb(0, screenLayout->width, screenLayout->height, screenLayout->pitchInPix * (render_fullscreen ? 1 : 2));
 
     frameIndex = skipped ? frameIndex : 0;
 }
@@ -466,6 +446,9 @@ bool retro_unserialize(const void * data, size_t size)
 
 bool retro_load_game(const struct retro_game_info *game)
 {
+   if (colorMode != RETRO_PIXEL_FORMAT_RGB565)
+      return false;
+
     execute = NDS_LoadROM(game->path);
     return execute;
 }
