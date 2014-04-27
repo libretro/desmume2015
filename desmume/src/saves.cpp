@@ -1126,6 +1126,10 @@ static bool ReadStateChunks(EMUFILE* is, s32 totalsize)
 			return false;
 	}
 
+#ifdef __LIBRETRO__
+   haveInfo = false;
+#endif
+
 	if (haveInfo)
 	{
 		char buf[14] = {0};
