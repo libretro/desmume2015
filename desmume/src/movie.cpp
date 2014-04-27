@@ -946,6 +946,7 @@ bool mov_loadstate(EMUFILE* fp, int size)
 	*/
 
 
+#ifndef __LIBRETRO__
 	if(movieMode != MOVIEMODE_INACTIVE)
 	{
 		//handle moviefile mismatch
@@ -1027,6 +1028,7 @@ bool mov_loadstate(EMUFILE* fp, int size)
 			movieMode = MOVIEMODE_RECORD;
 		}
 	}
+#endif
 	
 	load_successful = true;
 	freshMovie = false;
