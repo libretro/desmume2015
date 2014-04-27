@@ -43,6 +43,10 @@
 	bool GetPrivateProfileBool(const char* appname, const char* keyname, bool defval, const char* filename);
 	void WritePrivateProfileBool(char* appname, char* keyname, bool val, char* file);
 
+#ifdef __GNUC__
+#define sscanf_s sscanf
+#endif
+
 #else		// non Windows
 
 #define sscanf_s sscanf

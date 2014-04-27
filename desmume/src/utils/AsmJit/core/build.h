@@ -30,6 +30,7 @@
 // [AsmJit - OS]
 // ============================================================================
 
+#if !defined(ASMJIT_WINDOWS) && !defined(ASMJIT_POSIX)
 #if defined(WINDOWS) || defined(_WINDOWS) || defined(__WINDOWS__) || defined(_WIN32) || defined(_WIN64)
 # define ASMJIT_WINDOWS
 #elif defined(__linux__)     || defined(__unix__)    || \
@@ -40,6 +41,7 @@
 #else
 # warning "AsmJit - Can't match operating system, using ASMJIT_POSIX"
 # define ASMJIT_POSIX
+#endif
 #endif
 
 // ============================================================================

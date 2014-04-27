@@ -21,7 +21,11 @@
 #define mkdir _mkdir
 #endif
 
-#if defined(HOST_WINDOWS)
+#if defined(__LIBRETRO__)
+#include "libretro.h"
+extern retro_log_printf_t log_cb;
+extern retro_environment_t environ_cb;
+#elif defined(HOST_WINDOWS)
 #include <winsock2.h>
 #include <windows.h>
 #include <direct.h>
@@ -37,7 +41,7 @@
 #include "time.h"
 #include "utils/xstring.h"
 
-#ifdef HOST_WINDOWS
+#ifdef _WIN32
 #define FILE_EXT_DELIMITER_CHAR		'.'
 #define DIRECTORY_DELIMITER_CHAR	'\\'
 #define ALL_DIRECTORY_DELIMITER_STRING "/\\"
@@ -136,7 +140,14 @@ public:
 
 	void LoadModulePath()
 	{
-#if defined(HOST_WINDOWS)
+#if defined(__LIBRETRO__)
+      const char* systemDir = 0;
+      environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &systemDir);
+      strncpy(pathToModule, systemDir ? systemDir : ".", MAX_PATH);
+
+      if(systemDir == 0 && log_cb)
+         log_cb(RETRO_LOG_WARN, "No system dir, using \".\"\n");
+#elif defined(HOST_WINDOWS)
 
 		char *p;
 		ZeroMemory(pathToModule, sizeof(pathToModule));

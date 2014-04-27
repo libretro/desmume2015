@@ -31,7 +31,7 @@
 #endif //_MSC_VER
 
 // Determine CPU architecture for platforms that don't use the autoconf script
-#if defined(HOST_WINDOWS) || defined(DESMUME_COCOA)
+#if defined(__LIBRETRO__) || defined(HOST_WINDOWS) || defined(DESMUME_COCOA)
 	#if defined(__x86_64__) || defined(__LP64) || defined(__IA64__) || defined(_M_X64) || defined(_WIN64)
 		#define HOST_64
 	#else
@@ -112,7 +112,7 @@
 
 #ifdef __MINGW32__
 #define FASTCALL __attribute__((fastcall))
-#define ASMJIT_CALL_CONV kX86FuncConvGccFastCall
+#define ASMJIT_CALL_CONV kX86FuncConvCompatFastCall
 #elif defined (__i386__) && !defined(__clang__)
 #define FASTCALL __attribute__((regparm(3)))
 #define ASMJIT_CALL_CONV kX86FuncConvGccRegParm3
@@ -461,13 +461,13 @@ template<typename T> inline void reconstruct(T* t) {
 
 //-------------fixed point speedup macros
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #include <intrin.h>
 #endif
 
 FORCEINLINE s64 fx32_mul(const s32 a, const s32 b)
 {
-#ifdef _WIN32
+#ifdef _MSC_VER
 	return __emul(a,b);
 #else
 	return ((s64)a)*((s64)b);
@@ -476,7 +476,7 @@ FORCEINLINE s64 fx32_mul(const s32 a, const s32 b)
 
 FORCEINLINE s32 fx32_shiftdown(const s64 a)
 {
-#ifdef _WIN32
+#ifdef _MSC_VER
 	return (s32)__ll_rshift(a,12);
 #else
 	return (s32)(a>>12);
@@ -485,7 +485,7 @@ FORCEINLINE s32 fx32_shiftdown(const s64 a)
 
 FORCEINLINE s64 fx32_shiftup(const s32 a)
 {
-#ifdef _WIN32
+#ifdef _MSC_VER
 	return __ll_lshift(a,12);
 #else
 	return ((s64)a)<<12;

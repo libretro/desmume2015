@@ -19,9 +19,13 @@
 
 #include <stdio.h>
 #include <string>
-#ifdef HOST_WINDOWS 
+#ifdef WIN32
 #include <direct.h>
+#ifdef _XBOX
+#include <xtl.h>
+#else
 #include <windows.h>
+#endif
 #define __mkdir(x) mkdir(x)
 #else
 #include <unistd.h>

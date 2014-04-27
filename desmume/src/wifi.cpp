@@ -24,7 +24,7 @@
 #include "bits.h"
 
 
-#ifdef HOST_WINDOWS
+#if defined(WIN32)
 	#include <winsock2.h> 	 
 	#include <ws2tcpip.h>
 	#define socket_t    SOCKET 	 

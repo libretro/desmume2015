@@ -19,8 +19,12 @@
 #include "task.h"
 #include <stdio.h>
 
-#ifdef HOST_WINDOWS
+#ifdef _WIN32
+#ifdef _XBOX
+#include <xtl.h>
+#else
 #include <windows.h>
+#endif
 #else
 #include <pthread.h>
 #if defined HOST_LINUX
@@ -28,12 +32,13 @@
 #elif defined HOST_BSD || defined HOST_DARWIN
 #include <sys/sysctl.h>
 #endif
-#endif // HOST_WINDOWS
+#endif // _WIN32
 
 // http://stackoverflow.com/questions/150355/programmatically-find-the-number-of-cores-on-a-machine
 int getOnlineCores (void)
 {
-#ifdef HOST_WINDOWS
+// TODO LIBRETRO - might want to handle this libretro-side
+#ifdef _WIN32
 	SYSTEM_INFO sysinfo;
 	GetSystemInfo(&sysinfo);
 	return sysinfo.dwNumberOfProcessors;
@@ -50,7 +55,7 @@ int getOnlineCores (void)
 #endif
 }
 
-#ifdef HOST_WINDOWS
+#ifdef _WIN32
 class Task::Impl {
 public:
 	Impl();

@@ -57,6 +57,24 @@ typedef int32_t ssize_t;
 
 #include <unistd.h>
 
+#ifdef _WIN32
+#ifndef S_IRGRP
+#define S_IRGRP S_IREAD
+#endif
+
+#ifndef S_IROTH
+#define S_IROTH S_IREAD
+#endif
+
+#ifndef S_IWGRP
+#define S_IWGRP S_IWRITE
+#endif
+
+#ifndef S_IWOTH
+#define S_IWOTH S_IWRITE
+#endif
+#endif
+
 #endif //_MSC_VER
 
 struct _reent {

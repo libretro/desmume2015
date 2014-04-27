@@ -1,0 +1,296 @@
+ifeq ($(platform),)
+platform = unix
+ifeq ($(shell uname -a),)
+   platform = win
+else ifneq ($(findstring MINGW,$(shell uname -a)),)
+   platform = win
+else ifneq ($(findstring Darwin,$(shell uname -a)),)
+   platform = osx
+else ifneq ($(findstring win,$(shell uname -a)),)
+   platform = win
+endif
+endif
+
+TARGET_NAME := desmume
+SRC_DIR := src
+
+ifeq ($(platform), unix)
+   TARGET := $(TARGET_NAME)_libretro.so
+   fpic := -fPIC
+   SHARED := -shared -Wl,--version-script=$(SRC_DIR)/libretro/link.T
+	DESMUME_JIT = 1
+else ifeq ($(platform), osx)
+   TARGET := $(TARGET_NAME)_libretro.dylib
+   fpic := -fPIC
+   SHARED := -dynamiclib
+	DESMUME_JIT = 1
+else ifeq ($(platform), ios)
+   TARGET := $(TARGET_NAME)_libretro_ios.dylib
+   CC = clang -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0
+   CXX = clang++ -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0
+   CPPFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__ -miphoneos-version-min=5.0
+   fpic := -fPIC
+   SHARED := -dynamiclib
+   DESMUME_JIT_ARM = 1
+else ifeq ($(platform), ps3)
+   TARGET := $(TARGET_NAME)_libretro_ps3.a
+   CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
+   CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-g++.exe
+   AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
+   CPPFLAGS += -D__ppc__ -D__CELLOS_LV2__
+   INCLUDE_ZLIB_HEADERS = 1
+	STATIC_LINKING = 1
+else ifeq ($(platform), sncps3)
+   TARGET := $(TARGET_NAME)_libretro_ps3.a
+   CC = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
+   CXX = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
+   AR = $(CELL_SDK)/host-win32/sn/bin/ps3snarl.exe
+   CPPFLAGS += -D__ppc__-D__CELLOS_LV2__
+   INCLUDE_ZLIB_HEADERS = 1
+	STATIC_LINKING = 1
+else ifeq ($(platform), psl1ght)
+   TARGET := $(TARGET_NAME)_libretro_psl1ght.a
+   CC = $(PS3DEV)/ppu/bin/ppu-gcc$(EXE_EXT)
+   CXX = $(PS3DEV)/ppu/bin/ppu-g++$(EXE_EXT)
+   AR = $(PS3DEV)/ppu/bin/ppu-ar$(EXE_EXT)
+   CPPFLAGS += -D__ppc__ -D__CELLOS_LV2__
+   INCLUDE_ZLIB_HEADERS = 1
+	STATIC_LINKING = 1
+else ifeq ($(platform), psp1)
+   TARGET := $(TARGET_NAME)_libretro_psp1.a
+   CC = psp-gcc$(EXE_EXT)
+   CXX = psp-g++$(EXE_EXT)
+   AR = psp-ar$(EXE_EXT)
+   CPPFLAGS += -DPSP -G0
+   INCLUDE_ZLIB_HEADERS = 1
+	STATIC_LINKING = 1
+else ifeq ($(platform), xenon)
+   TARGET := $(TARGET_NAME)_libretro_xenon360.a
+   CC = xenon-gcc$(EXE_EXT)
+   CXX = xenon-g++$(EXE_EXT)
+   AR = xenon-ar$(EXE_EXT)
+   CPPFLAGS += -D__LIBXENON__ -m32 -D__ppc__
+   INCLUDE_ZLIB_HEADERS = 1
+	STATIC_LINKING = 1
+else ifeq ($(platform), wii)
+   TARGET := $(TARGET_NAME)_libretro_wii.a
+   CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
+   CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
+   AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
+   CFLAGS += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -D__ppc__
+   INCLUDE_ZLIB_HEADERS = 1
+	STATIC_LINKING = 1
+else ifeq ($(platform), android)
+   TARGET := $(TARGET_NAME)_libretro_$(TARGET_NAME).so
+   CC = arm-linux-androideabi-gcc$(EXE_EXT)
+   CXX = arm-linux-androideabi-g++$(EXE_EXT)
+   CPPFLAGS += -D__RETRO_ARM__
+   fpic := -fPIC
+   SHARED := -shared -Wl,--version-script=libretro/link.T
+   DESMUME_JIT_ARM = 1
+
+   ifeq ($(RETRO_PROFILE),1)
+      LDFLAGS += -llog
+   endif
+else ifneq (,$(findstring armv,$(platform)))
+   CPPFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
+   TARGET := $(TARGET_NAME)_libretro.so
+   SHARED := -shared -Wl,--version-script=libretro/link.T
+   fpic := -fPIC
+   CC = gcc
+   DESMUME_JIT_ARM = 1
+ifneq (,$(findstring cortexa8,$(platform)))
+   CPPFLAGS += -marm -mcpu=cortex-a8
+else ifneq (,$(findstring cortexa9,$(platform)))
+   CPPFLAGS += -marm -mcpu=cortex-a9
+endif
+   CPPFLAGS += -marm
+ifneq (,$(findstring neon,$(platform)))
+   CPPFLAGS += -mfpu=neon
+   HAVE_NEON = 1
+endif
+ifneq (,$(findstring softfloat,$(platform)))
+   CPPFLAGS += -mfloat-abi=softfp
+else ifneq (,$(findstring hardfloat,$(platform)))
+   CPPFLAGS += -mfloat-abi=hard
+endif
+   CPPFLAGS += -DARM
+else
+   TARGET := $(TARGET_NAME)_libretro.dll
+   CC = gcc
+   CXX = g++
+   SHARED := -shared -static-libgcc -static-libstdc++ -s -Wl,--version-script=$(SRC_DIR)/libretro/link.T
+	DESMUME_JIT = 1
+	SOURCES += $(SRC_DIR)/libretro/dirent_win32/dirent.cpp
+	INCDIR += -iquote $(SRC_DIR)/libretro/dirent_win32 -iquote $(SRC_DIR)/windows
+endif
+
+SOURCES += \
+	$(SRC_DIR)/armcpu.cpp \
+	$(SRC_DIR)/arm_instructions.cpp \
+	$(SRC_DIR)/bios.cpp \
+	$(SRC_DIR)/cp15.cpp \
+	$(SRC_DIR)/common.cpp \
+	$(SRC_DIR)/debug.cpp \
+	$(SRC_DIR)/Disassembler.cpp \
+	$(SRC_DIR)/emufile.cpp \
+	$(SRC_DIR)/encrypt.cpp \
+	$(SRC_DIR)/FIFO.cpp \
+	$(SRC_DIR)/firmware.cpp \
+	$(SRC_DIR)/GPU.cpp \
+	$(SRC_DIR)/mc.cpp \
+	$(SRC_DIR)/path.cpp \
+	$(SRC_DIR)/readwrite.cpp \
+	$(SRC_DIR)/wifi.cpp \
+	$(SRC_DIR)/MMU.cpp \
+	$(SRC_DIR)/NDSSystem.cpp \
+	$(SRC_DIR)/ROMReader.cpp \
+	$(SRC_DIR)/render3D.cpp \
+	$(SRC_DIR)/rtc.cpp \
+	$(SRC_DIR)/saves.cpp \
+	$(SRC_DIR)/slot1.cpp \
+	$(SRC_DIR)/slot2.cpp \
+	$(SRC_DIR)/SPU.cpp \
+	$(SRC_DIR)/matrix.cpp \
+	$(SRC_DIR)/gfx3d.cpp \
+	$(SRC_DIR)/thumb_instructions.cpp \
+	$(SRC_DIR)/movie.cpp \
+	$(SRC_DIR)/utils/advanscene.cpp \
+	$(SRC_DIR)/utils/datetime.cpp \
+   $(SRC_DIR)/utils/guid.cpp \
+	$(SRC_DIR)/utils/emufat.cpp \
+	$(SRC_DIR)/utils/fsnitro.cpp \
+	$(SRC_DIR)/utils/md5.cpp \
+	$(SRC_DIR)/utils/xstring.cpp \
+	$(SRC_DIR)/utils/decrypt/crc.cpp \
+	$(SRC_DIR)/utils/decrypt/decrypt.cpp \
+	$(SRC_DIR)/utils/decrypt/header.cpp \
+	$(SRC_DIR)/utils/task.cpp \
+   $(SRC_DIR)/utils/vfat.cpp \
+	$(SRC_DIR)/utils/dlditool.cpp \
+	$(SRC_DIR)/utils/libfat/cache.cpp \
+	$(SRC_DIR)/utils/libfat/directory.cpp \
+	$(SRC_DIR)/utils/libfat/disc.cpp \
+	$(SRC_DIR)/utils/libfat/fatdir.cpp \
+	$(SRC_DIR)/utils/libfat/fatfile.cpp \
+	$(SRC_DIR)/utils/libfat/filetime.cpp \
+	$(SRC_DIR)/utils/libfat/file_allocation_table.cpp \
+	$(SRC_DIR)/utils/libfat/libfat.cpp \
+	$(SRC_DIR)/utils/libfat/libfat_public_api.cpp \
+	$(SRC_DIR)/utils/libfat/lock.cpp \
+	$(SRC_DIR)/utils/libfat/partition.cpp \
+	$(SRC_DIR)/utils/tinyxml/tinystr.cpp \
+	$(SRC_DIR)/utils/tinyxml/tinyxml.cpp \
+	$(SRC_DIR)/utils/tinyxml/tinyxmlerror.cpp \
+	$(SRC_DIR)/utils/tinyxml/tinyxmlparser.cpp \
+	$(SRC_DIR)/addons/slot2_auto.cpp \
+	$(SRC_DIR)/addons/slot2_mpcf.cpp \
+	$(SRC_DIR)/addons/slot2_paddle.cpp \
+	$(SRC_DIR)/addons/slot2_gbagame.cpp \
+	$(SRC_DIR)/addons/slot2_none.cpp \
+	$(SRC_DIR)/addons/slot2_rumblepak.cpp \
+	$(SRC_DIR)/addons/slot2_guitarGrip.cpp \
+	$(SRC_DIR)/addons/slot2_expMemory.cpp \
+	$(SRC_DIR)/addons/slot2_piano.cpp \
+	$(SRC_DIR)/addons/slot2_passme.cpp \
+	$(SRC_DIR)/addons/slot1_none.cpp \
+	$(SRC_DIR)/addons/slot1_r4.cpp \
+	$(SRC_DIR)/addons/slot1comp_mc.cpp \
+	$(SRC_DIR)/addons/slot1comp_rom.cpp \
+	$(SRC_DIR)/addons/slot1comp_protocol.cpp \
+	$(SRC_DIR)/addons/slot1_retail_mcrom.cpp \
+	$(SRC_DIR)/addons/slot1_retail_mcrom_debug.cpp \
+	$(SRC_DIR)/addons/slot1_retail_nand.cpp \
+	$(SRC_DIR)/addons/slot1_retail_auto.cpp \
+	$(SRC_DIR)/cheatSystem.cpp \
+	$(SRC_DIR)/texcache.cpp \
+	$(SRC_DIR)/rasterize.cpp \
+	$(SRC_DIR)/metaspu/metaspu.cpp \
+	$(SRC_DIR)/version.cpp \
+	$(SRC_DIR)/mic.cpp \
+	$(SRC_DIR)/GPU_osd_stub.cpp \
+	$(SRC_DIR)/driver.cpp \
+	$(SRC_DIR)/fs-linux.cpp
+
+ifeq ($(DESMUME_JIT_ARM),1)
+SOURCES += \
+   $(SRC_DIR)/arm_arm/arm_gen.cpp \
+   $(SRC_DIR)/arm_arm/arm_jit.cpp
+CPPFLAGS += -DHAVE_JIT
+endif
+
+ifeq ($(DESMUME_JIT),1)
+SOURCES += \
+	$(SRC_DIR)/arm_jit.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/assembler.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/assert.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/buffer.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/compiler.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/compilercontext.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/compilerfunc.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/compileritem.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/context.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/cpuinfo.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/defs.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/func.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/logger.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/memorymanager.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/memorymarker.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/operand.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/stringbuilder.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/stringutil.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/virtualmemory.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/zonememory.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86assembler.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86compiler.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86compilercontext.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86compilerfunc.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86compileritem.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86cpuinfo.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86defs.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86func.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86operand.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86util.cpp
+CPPFLAGS += -DHAVE_JIT
+endif
+
+DEBUG=0
+ifeq ($(DEBUG), 1)
+   CPPFLAGS += -g
+   OPTIMIZE = -O0
+else
+   CPPFLAGS += -DNDEBUG
+   OPTIMIZE = -O3
+endif
+
+ifeq ($(RETRO_PROFILE),1)
+   CPPFLAGS += -DRETRO_PROFILE=1
+endif
+
+CPPFLAGS += $(OPTIMIZE)
+
+CPPFLAGS += -DHAVE_LIBZ
+ifeq ($(INCLUDE_ZLIB_HEADERS),1)
+   CPPFLAGS += -I$(SRC_DIR)/libretro/zlib
+endif
+
+SOURCES2   = $(SOURCES) $(SRC_DIR)/libretro/libretro.cpp
+
+OBJECTS    = $(SOURCES2:.cpp=.o) $(SRC_DIR)/utils/ConvertUTF.o
+LIBS       = -lz
+CFLAGS     += -std=gnu99
+CPPFLAGS   += -D__LIBRETRO__ $(fpic) -iquote $(SRC_DIR) -iquote $(SRC_DIR)/libretro $(INCDIR)
+
+all: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+ifeq ($(STATIC_LINKING), 1)
+	$(AR) rcs $@ $(OBJECTS)
+else
+	$(CXX) $(LDFLAGS) $(fpic) $(SHARED) -o $@ $(OBJECTS) $(LIBS)
+endif
+
+clean:
+	rm -f $(OBJECTS) $(TARGET)
+
+.PHONY: clean

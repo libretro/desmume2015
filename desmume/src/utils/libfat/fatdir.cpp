@@ -32,7 +32,7 @@
 #include <errno.h>
 #include <ctype.h>
 
-#ifndef _MSC_VER
+#ifndef _WIN32
 #include <unistd.h>
 #include <sys/dir.h>
 #endif
