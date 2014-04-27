@@ -127,8 +127,37 @@ namespace
     uint32_t firmwareLanguage;
 }
 
-static void CheckSettings()
+static void CheckSettings(void)
 {
+
+    retro_variable num_cores = { "desmume_num_cores", 0 };
+    environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &num_cores);
+
+    CommonSettings.num_cores = num_cores.value ? strtol(num_cores.value, 0, 10) : 1;
+
+    retro_variable cpu_mode = { "desmume_cpu_mode", 0 };
+    environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &cpu_mode);
+
+    if (cpu_mode.value && strcmp(cpu_mode.value, "jit") == 0)
+       CommonSettings.use_jit = true;
+    else if (cpu_mode.value && strcmp(cpu_mode.value, "interpreter") == 0)
+       CommonSettings.use_jit = false;
+    else
+    {
+#ifdef HAVE_JIT
+       CommonSettings.use_jit = true;
+#else
+       CommonSettings.use_jit = false;
+#endif
+    }
+
+#ifdef HAVE_JIT
+    retro_variable jit_block_size = { "desmume_jit_block_size", 0 };
+    environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &jit_block_size);
+
+    CommonSettings.jit_max_block_size = jit_block_size.value ? strtol(jit_block_size.value, 0, 10) : 100;
+#endif
+
     retro_variable layout = { "desmume_screens_layout", 0 };
     environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &layout);
     SetupScreens(layout.value);
@@ -195,6 +224,13 @@ void retro_set_environment(retro_environment_t cb)
 
    static const retro_variable values[] =
    {
+      { "desmume_num_cores", "CPU core usage; 1|2|3|4" },
+#ifdef HAVE_JIT
+      { "desmume_jit_block_size", "JIT Block Size; 100|99|98|97|96|95|94|93|92|91|90|89|88|87|86|85|84|83|82|81|80|79|78|77|76|75|74|73|72|71|70|69|68|67|66|65|64|63|62|61|60|59|58|57|56|55|54|53|52|51|50|49|48|47|46|45|44|43|42|41|40|39|38|37|36|35|34|33|32|31|30|29|28|27|26|25|24|23|22|21|50|19|18|17|16|15|14|13|12|11|40|9|8|7|6|5|4|3|2|1|0" },
+      { "desmume_cpu_mode", "CPU mode; jit|interpreter" },
+#else
+      { "desmume_cpu_mode", "CPU mode; interpreter" },
+#endif
       { "desmume_screens_layout", "Screen Layout; main_top_ext_bottom|main_bottom_ext_top|main_left_ext_right|main_right_ext_left" },
       { "desmume_pointer_type", "Pointer Mode; relative|absolute" },
       { "desmume_firmware_language", "Language; English|Japanese|French|German|Italian|Spanish" },
@@ -293,8 +329,6 @@ void retro_init (void)
     NDS_FillDefaultFirmwareConfigData(&fw_config);
     fw_config.language = firmwareLanguage;
 
-    CommonSettings.num_cores = 2;
-    CommonSettings.use_jit = true;
 
     //addonsChangePak(NDS_ADDON_NONE);
     NDS_Init();
