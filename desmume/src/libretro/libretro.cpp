@@ -119,7 +119,6 @@ namespace /* VIDEO */
        SwapScreen(screenLayout->screens[1], (uint16_t*)&GPU_screen[256 * 192 * (render_fullscreen ? 1 : 2)], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
        DrawPointer(screenLayout->screens[1], screenLayout->pitchInPix);
 
-       video_cb(screenSwap, screenLayout->width, screenLayout->height, screenLayout->pitchInPix * (render_fullscreen ? 1 : 2));
     }
 }
 
@@ -378,7 +377,6 @@ void retro_run (void)
     else
         NDS_releaseTouch();
 
-
     // BUTTONS
     NDS_beginProcessingInput();
     UserButtons& input = NDS_getProcessingUserInput().buttons;
@@ -403,17 +401,15 @@ void retro_run (void)
     bool skipped = frameIndex <= frameSkip;
 
     if (skipped)
-    {
-        NDS_SkipNextFrame();
-    }
+       NDS_SkipNextFrame();
 
     NDS_exec<false>();
     
     // VIDEO: Swap screen colors and pass on
     if (!skipped)
         SwapScreens(render_fullscreen);
-    else
-        video_cb(0, screenLayout->width, screenLayout->height, screenLayout->pitchInPix * (render_fullscreen ? 1 : 2));
+
+    video_cb(skipped ? 0 : screenSwap, screenLayout->width, screenLayout->height, screenLayout->pitchInPix * (render_fullscreen ? 1 : 2));
 
     frameIndex = skipped ? frameIndex : 0;
 }
