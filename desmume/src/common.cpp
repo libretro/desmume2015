@@ -18,6 +18,7 @@
 //TODO - move this into ndssystem where it belongs probably
 
 #include <string.h>
+#include <ctype.h>
 #include <string>
 #include <stdarg.h>
 #include "common.h"

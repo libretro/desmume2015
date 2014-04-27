@@ -22,6 +22,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+#if !defined(WIN32)
+#include <unistd.h>
+#endif
+
+#ifdef PSP
+//forward declaration - PSP doesn't have this so have to bake it in
+int ftruncate(int fd, off_t length);
+#endif
+
+
 #include "emufile.h"
 
 #include <vector>
