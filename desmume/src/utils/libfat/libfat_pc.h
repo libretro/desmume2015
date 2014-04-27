@@ -77,9 +77,11 @@ typedef int32_t ssize_t;
 
 #endif //_MSC_VER
 
+#ifndef PSP
 struct _reent {
 	intptr_t _errno;
 };
+#endif
 
 #ifdef __APPLE__
 typedef __darwin_mode_t mode_t;
