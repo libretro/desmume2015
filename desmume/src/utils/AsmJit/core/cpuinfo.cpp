@@ -23,7 +23,9 @@
 // [Dependencies - Posix]
 #if defined(ASMJIT_POSIX)
 # include <errno.h>
+#ifndef ANDROID
 # include <sys/statvfs.h>
+#endif
 # include <sys/utsname.h>
 # include <unistd.h>
 #endif // ASMJIT_POSIX
