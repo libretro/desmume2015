@@ -9,14 +9,49 @@ SRC_DIR = ../..
 ifeq ($(TARGET_ARCH),arm)
 LOCAL_CXXFLAGS += -DANDROID_ARM
 LOCAL_ARM_MODE := arm
-DESMUME_JIT_ARM := 1
+
+SOURCES += \
+   $(SRC_DIR)/libretro/arm_arm/arm_gen.cpp \
+   $(SRC_DIR)/libretro/arm_arm/arm_jit.cpp
+
 JIT += -D__RETRO_ARM__
 JIT += -DHAVE_JIT
 endif
 
 ifeq ($(TARGET_ARCH),x86)
 LOCAL_CXXFLAGS +=  -DANDROID_X86
-DESMUME_JIT := 1
+
+SOURCES += \
+	$(SRC_DIR)/arm_jit.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/assembler.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/assert.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/buffer.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/compiler.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/compilercontext.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/compilerfunc.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/compileritem.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/context.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/cpuinfo.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/defs.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/func.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/logger.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/memorymanager.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/memorymarker.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/operand.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/stringbuilder.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/stringutil.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/virtualmemory.cpp \
+   $(SRC_DIR)/utils/AsmJit/core/zonememory.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86assembler.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86compiler.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86compilercontext.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86compilerfunc.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86compileritem.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86cpuinfo.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86defs.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86func.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86operand.cpp \
+   $(SRC_DIR)/utils/AsmJit/x86/x86util.cpp
 JIT += -DHAVE_JIT
 endif
 
@@ -110,46 +145,6 @@ SOURCES += \
 	$(SRC_DIR)/GPU_osd_stub.cpp \
 	$(SRC_DIR)/driver.cpp \
 	$(SRC_DIR)/fs-linux.cpp
-
-ifeq ($(DESMUME_JIT_ARM),1)
-SOURCES += \
-   $(SRC_DIR)/libretro/arm_arm/arm_gen.cpp \
-   $(SRC_DIR)/libretro/arm_arm/arm_jit.cpp
-endif
-
-ifeq ($(DESMUME_JIT),1)
-SOURCES += \
-	$(SRC_DIR)/arm_jit.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/assembler.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/assert.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/buffer.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/compiler.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/compilercontext.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/compilerfunc.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/compileritem.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/context.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/cpuinfo.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/defs.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/func.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/logger.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/memorymanager.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/memorymarker.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/operand.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/stringbuilder.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/stringutil.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/virtualmemory.cpp \
-   $(SRC_DIR)/utils/AsmJit/core/zonememory.cpp \
-   $(SRC_DIR)/utils/AsmJit/x86/x86assembler.cpp \
-   $(SRC_DIR)/utils/AsmJit/x86/x86compiler.cpp \
-   $(SRC_DIR)/utils/AsmJit/x86/x86compilercontext.cpp \
-   $(SRC_DIR)/utils/AsmJit/x86/x86compilerfunc.cpp \
-   $(SRC_DIR)/utils/AsmJit/x86/x86compileritem.cpp \
-   $(SRC_DIR)/utils/AsmJit/x86/x86cpuinfo.cpp \
-   $(SRC_DIR)/utils/AsmJit/x86/x86defs.cpp \
-   $(SRC_DIR)/utils/AsmJit/x86/x86func.cpp \
-   $(SRC_DIR)/utils/AsmJit/x86/x86operand.cpp \
-   $(SRC_DIR)/utils/AsmJit/x86/x86util.cpp
-endif
 
 LOCAL_MODULE    := libretro
 
