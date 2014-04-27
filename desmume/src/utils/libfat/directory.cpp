@@ -45,15 +45,24 @@
 #include <AvailabilityMacros.h>
 
 #ifndef MAC_OS_X_VERSION_10_7
+#define COMPILE_IN_STRNLEN
+#endif
+#endif // __APPLE__
+
+#if defined(_WIN32) && !defined(_MSC_VER) && !defined(__MINGW64_VERSION_MAJOR)
+#define COMPILE_IN_STRNLEN
+#include <malloc.h>
+#endif
+
+#ifdef COMPILE_IN_STRNLEN
 // In Mac OS X, strnlen() is unsupported prior to v10.7, so define it here.
+// mingw-w64 has it's own implementation of strnlen(), defined in  in libw64crt.
 static size_t strnlen(const char *s, size_t n)
 {
 	const char *p = (const char *)memchr(s, 0, n);
 	return(p ? p-s : n);
 }
 #endif
-
-#endif // __APPLE__
 
 // Directory entry codes
 #define DIR_ENTRY_LAST 0x00
