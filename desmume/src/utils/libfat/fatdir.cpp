@@ -34,7 +34,9 @@
 
 #ifndef _WIN32
 #include <unistd.h>
+#ifndef __LIBRETRO__
 #include <sys/dir.h>
+#endif
 #endif
 
 #include "fatdir.h"

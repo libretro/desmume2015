@@ -214,8 +214,8 @@ SOURCES += \
 
 ifeq ($(DESMUME_JIT_ARM),1)
 SOURCES += \
-   $(SRC_DIR)/arm_arm/arm_gen.cpp \
-   $(SRC_DIR)/arm_arm/arm_jit.cpp
+   $(SRC_DIR)/libretro/arm_arm/arm_gen.cpp \
+   $(SRC_DIR)/libretro/arm_arm/arm_jit.cpp
 CPPFLAGS += -DHAVE_JIT
 endif
 
