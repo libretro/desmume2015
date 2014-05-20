@@ -26,12 +26,19 @@ else ifeq ($(platform), osx)
 	DESMUME_JIT = 1
 else ifeq ($(platform), ios)
    TARGET := $(TARGET_NAME)_libretro_ios.dylib
-   CC = clang -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0
-   CXX = clang++ -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0
-   CPPFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__ -miphoneos-version-min=5.0
+   CC = clang -arch armv7 -isysroot $(IOSSDK)
+   CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
+   CPPFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
    fpic := -fPIC
    SHARED := -dynamiclib
    DESMUME_JIT_ARM = 1
+OSXVER = `sw_vers -productVersion | cut -c 4`
+ifneq ($(OSXVER),9)
+   CC += -miphoneos-version-min=5.0
+   CXX += -miphoneos-version-min=5.0
+   CFLAGS += -miphoneos-version-min=5.0
+   CPPFLAGS += -miphoneos-version-min=5.0
+endif
 else ifeq ($(platform), ps3)
    TARGET := $(TARGET_NAME)_libretro_ps3.a
    CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
