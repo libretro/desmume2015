@@ -309,6 +309,11 @@ msgBoxInterface msgBoxWnd = {
 };
 //====================== Dialogs end
 
+static void check_system_specs(void)
+{
+   unsigned level = 15;
+   environ_cb(RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL, &level);
+}
 
 void retro_init (void)
 {
@@ -337,6 +342,7 @@ void retro_init (void)
     backup_setManualBackupType(MC_TYPE_AUTODETECT);
 
     msgbox = &msgBoxWnd;
+   check_system_specs();
 }
 
 void retro_deinit(void)
