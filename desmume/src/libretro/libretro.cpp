@@ -22,7 +22,7 @@ volatile bool execute = false;
 
 static int swap_delay_timer = 0;
 static int current_screen = 1;
-static bool quick_swap_enable=false;
+static bool quick_switch_enable=false;
 
 
 
@@ -90,7 +90,7 @@ namespace /* VIDEO */
         { "right/left", { &screenSwap[256], &screenSwap[0] }, 0, 0, 512, 192, 512 },
 		{ "top only", { &screenSwap[0], &screenSwap[256 * 192] }, 0, 192, 256, 192, 256 },
 		{ "bottom only", { &screenSwap[256 * 192], &screenSwap[0] }, 0, 192, 256, 192, 256 },
-		{ "quick swap", { &screenSwap[0], &screenSwap[256 * 192] }, 0, 192, 256, 192, 256 },
+		{ "quick switch", { &screenSwap[0], &screenSwap[256 * 192] }, 0, 192, 256, 192, 256 },
         { 0, 0, 0, 0 }
     };
 
@@ -147,31 +147,19 @@ void retro_get_system_info(struct retro_system_info *info)
 
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
-    // TODO
     info->geometry.base_width = screenLayout->width;
     info->geometry.base_height = screenLayout->height;
-    info->geometry.max_width = screenLayout->width;
+    info->geometry.max_width = screenLayout->width*2;
     info->geometry.max_height = screenLayout->height;
     info->geometry.aspect_ratio = 0.0;
     info->timing.fps = 60.0;
     info->timing.sample_rate = 44100.0;
 }
 
-void retro_get_system_geometry(struct retro_system_av_info *info)
-{
-    // TODO
-    info->geometry.base_width = screenLayout->width;
-    info->geometry.base_height = screenLayout->height;
-    info->geometry.max_width = screenLayout->width;
-    info->geometry.max_height = screenLayout->height;
-    info->geometry.aspect_ratio = 0.0;
-    info->timing.fps = 60.0;
-    info->timing.sample_rate = 44100.0;
-}
 
 static void QuickSwap()
 {
-	if(quick_swap_enable)
+	if(quick_switch_enable)
 	{
 	   if(current_screen == 1)
 	   {
@@ -228,16 +216,14 @@ static void CheckSettings(void)
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{	
-		if (strcmp(var.value, "quick swap") == 0)
-			quick_swap_enable = true;
+		if (strcmp(var.value, "quick switch") == 0)
+			quick_switch_enable = true;
 		else 
-			quick_swap_enable = false;
+			quick_switch_enable = false;
 		SetupScreens(var.value);
 		
-		struct retro_system_av_info new_av_info;
-		retro_get_system_geometry(&new_av_info);
-
-		environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);		
+		
+		
 	}	
 	
 	var.key = "desmume_pointer_type";
@@ -319,7 +305,7 @@ void retro_set_environment(retro_environment_t cb)
 #else
       { "desmume_cpu_mode", "CPU mode; interpreter" },
 #endif
-      { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick swap" },
+      { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch" },
       { "desmume_pointer_type", "Pointer mode; relative|absolute" },
       { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
@@ -432,9 +418,17 @@ void retro_run (void)
     // Settings
     bool changed = false;	
     bool render_fullscreen = false;
-    environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &changed);
+    
+	environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &changed);
     if(changed)
+	{
         CheckSettings();
+		struct retro_system_av_info new_av_info;
+		retro_get_system_av_info(&new_av_info);
+
+		environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);		
+		//environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &new_av_info);		
+	}
 
     poll_cb();
 
@@ -503,7 +497,7 @@ void retro_run (void)
     input.R = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT);
     //input.F = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2); //Lid
 	
-	if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) && quick_swap_enable && swap_delay_timer == 0)
+	if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) && quick_switch_enable && swap_delay_timer == 0)
 	{
 		QuickSwap();
 		swap_delay_timer++;
