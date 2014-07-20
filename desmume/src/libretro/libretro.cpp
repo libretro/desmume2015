@@ -22,7 +22,11 @@ volatile bool execute = false;
 
 static int swap_delay_timer = 0;
 static int current_screen = 1;
-static bool quick_swap_enable=false;
+static bool quick_switch_enable=false;
+static bool mouse_enable=false;
+static int pointer_device=0;
+static int analog_stick_deadzone;
+static int analog_stick_acceleration=2048;
 
 
 
@@ -90,7 +94,7 @@ namespace /* VIDEO */
         { "right/left", { &screenSwap[256], &screenSwap[0] }, 0, 0, 512, 192, 512 },
 		{ "top only", { &screenSwap[0], &screenSwap[256 * 192] }, 0, 192, 256, 192, 256 },
 		{ "bottom only", { &screenSwap[256 * 192], &screenSwap[0] }, 0, 192, 256, 192, 256 },
-		{ "quick swap", { &screenSwap[0], &screenSwap[256 * 192] }, 0, 192, 256, 192, 256 },
+		{ "quick switch", { &screenSwap[0], &screenSwap[256 * 192] }, 0, 192, 256, 192, 256 },
         { 0, 0, 0, 0 }
     };
 
@@ -147,31 +151,19 @@ void retro_get_system_info(struct retro_system_info *info)
 
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
-    // TODO
     info->geometry.base_width = screenLayout->width;
     info->geometry.base_height = screenLayout->height;
-    info->geometry.max_width = screenLayout->width;
+    info->geometry.max_width = screenLayout->width*2;
     info->geometry.max_height = screenLayout->height;
     info->geometry.aspect_ratio = 0.0;
     info->timing.fps = 60.0;
     info->timing.sample_rate = 44100.0;
 }
 
-void retro_get_system_geometry(struct retro_system_av_info *info)
-{
-    // TODO
-    info->geometry.base_width = screenLayout->width;
-    info->geometry.base_height = screenLayout->height;
-    info->geometry.max_width = screenLayout->width;
-    info->geometry.max_height = screenLayout->height;
-    info->geometry.aspect_ratio = 0.0;
-    info->timing.fps = 60.0;
-    info->timing.sample_rate = 44100.0;
-}
 
 static void QuickSwap()
 {
-	if(quick_swap_enable)
+	if(quick_switch_enable)
 	{
 	   if(current_screen == 1)
 	   {
@@ -228,18 +220,48 @@ static void CheckSettings(void)
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{	
-		if (strcmp(var.value, "quick swap") == 0)
-			quick_swap_enable = true;
+		if (strcmp(var.value, "quick switch") == 0)
+			quick_switch_enable = true;
 		else 
-			quick_swap_enable = false;
+			quick_switch_enable = false;
 		SetupScreens(var.value);
 		
-		struct retro_system_av_info new_av_info;
-		retro_get_system_geometry(&new_av_info);
-
-		environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);		
+		
+		
 	}	
 	
+
+	var.key = "desmume_pointer_mouse";
+	var.value = 0;
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		if (strcmp(var.value, "enable") == 0)
+			mouse_enable = true;
+		else 
+			mouse_enable = false;
+	}
+
+	var.key = "desmume_pointer_device";
+	var.value = 0;
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		if (strcmp(var.value, "l-stick") == 0)
+			pointer_device = 1;
+		else if(strcmp(var.value, "r-stick") == 0)
+			pointer_device = 2;
+		else 
+			pointer_device=0;
+	}	
+		
+		
+	var.key = "desmume_pointer_device_deadzone";
+	var.value = NULL;
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      analog_stick_deadzone = (int)(atoi(var.value));
+		
 	var.key = "desmume_pointer_type";
 	var.value = 0;
 
@@ -319,8 +341,11 @@ void retro_set_environment(retro_environment_t cb)
 #else
       { "desmume_cpu_mode", "CPU mode; interpreter" },
 #endif
-      { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick swap" },
-      { "desmume_pointer_type", "Pointer mode; relative|absolute" },
+      { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch" },
+	  { "desmume_pointer_mouse", "Enable mouse/pointer; enable|disable" },
+	  { "desmume_pointer_type", "Mouse/pointer mode; relative|absolute" },
+	  { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
+	  { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },	  
       { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
       { 0, 0 }
@@ -432,53 +457,111 @@ void retro_run (void)
     // Settings
     bool changed = false;	
     bool render_fullscreen = false;
-    environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &changed);
+    
+	environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &changed);
     if(changed)
+	{
         CheckSettings();
+		struct retro_system_av_info new_av_info;
+		retro_get_system_av_info(&new_av_info);
+
+		environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);		
+		//environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &new_av_info);		
+	}
 
     poll_cb();
 
     bool haveTouch = false;
+	
+	if(pointer_device!=0)
+	{
+		int16_t analogX = 0;
+		int16_t analogY = 0;
+		
+		if(pointer_device == 1)
+		{
+			analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X) / analog_stick_acceleration;
+			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y) / analog_stick_acceleration;
+		} 
+		else if(pointer_device == 2)
+		{
+			analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X) / analog_stick_acceleration;
+			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y) / analog_stick_acceleration;		
+		}
+		else
+		{
+			analogX = 0;
+			analogY = 0;
+		}
+		
 
-    // TOUCH: Analog
-    const int16_t analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X) / 2048;
-    const int16_t analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y) / 2048;
-    haveTouch = haveTouch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2);    
+		// Convert cartesian coordinate analog stick to polar coordinates
+		double radius = sqrt(analogX * analogX + analogY * analogY);
+		double angle = atan2(analogY, analogX);		
+		double max = (float)0x8000/analog_stick_acceleration;
+		
+		log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
+		//log_cb(RETRO_LOG_DEBUG, "%d %d.\n", radius,analog_stick_deadzone);
+		if (radius > (float)analog_stick_deadzone*max/100)
+		{
+			// Re-scale analog stick range to negate deadzone (makes slow movements possible)
+			radius = (radius - (float)analog_stick_deadzone*max/100)*((float)max/(max - (float)analog_stick_deadzone*max/100));
+			
+			// Convert back to cartesian coordinates
+			analogX = (int32_t)round(radius * cos(angle));
+			analogY = (int32_t)round(radius * sin(angle));
+		}
+		else
+		{
+			analogX = 0;
+			analogY = 0;
+		}		
+		log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
+		
+		haveTouch = haveTouch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); 
+		
+		TouchX = Saturate<0, 255>(TouchX + analogX);
+		TouchY = Saturate<0, 191>(TouchY + analogY);
+		
+		FramesWithPointer = (analogX || analogY) ? FramesWithPointerBase : FramesWithPointer;
+		
+	}
 
-    TouchX = Saturate<0, 255>(TouchX + analogX);
-    TouchY = Saturate<0, 191>(TouchY + analogY);
-    FramesWithPointer = (analogX || analogY) ? FramesWithPointerBase : FramesWithPointer;
-
-    // TOUCH: Mouse
-    if(!absolutePointer)
+	if(mouse_enable)
     {
-        const int16_t mouseX = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
-        const int16_t mouseY = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
-        haveTouch = haveTouch || input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
-    
-        TouchX = Saturate<0, 255>(TouchX + mouseX);
-        TouchY = Saturate<0, 191>(TouchY + mouseY);
-        FramesWithPointer = (mouseX || mouseY) ? FramesWithPointerBase : FramesWithPointer;
-    }
-    // TOUCH: Pointer
-    else if(input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED))
-    {
-        const float X_FACTOR = ((float)screenLayout->width / 65536.0f);
-        const float Y_FACTOR = ((float)screenLayout->height / 65536.0f);
-    
-        float x = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X) + 32768.0f) * X_FACTOR;
-        float y = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y) + 32768.0f) * Y_FACTOR;
+		// TOUCH: Mouse
+		if(!absolutePointer)
+		{
+			const int16_t mouseX = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
+			const int16_t mouseY = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
+			haveTouch = haveTouch || input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+			
+			TouchX = Saturate<0, 255>(TouchX + mouseX);
+			TouchY = Saturate<0, 191>(TouchY + mouseY);
+			FramesWithPointer = (mouseX || mouseY) ? FramesWithPointerBase : FramesWithPointer;
+		}
+		// TOUCH: Pointer
+		else if(input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED))
+		{
+			const float X_FACTOR = ((float)screenLayout->width / 65536.0f);
+			const float Y_FACTOR = ((float)screenLayout->height / 65536.0f);
+		
+			float x = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X) + 32768.0f) * X_FACTOR;
+			float y = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y) + 32768.0f) * Y_FACTOR;
 
-        if (x >= screenLayout->touchScreenX && x < screenLayout->touchScreenX + 256 &&
-            y >= screenLayout->touchScreenY && y < screenLayout->touchScreenY + 192)
-        {
-            haveTouch = true;
+			if (x >= screenLayout->touchScreenX && x < screenLayout->touchScreenX + 256 &&
+				y >= screenLayout->touchScreenY && y < screenLayout->touchScreenY + 192)
+			{
+				haveTouch = true;
 
-            TouchX = x - screenLayout->touchScreenX;
-            TouchY = y - screenLayout->touchScreenY;
-        }
-    }
-
+				TouchX = x - screenLayout->touchScreenX;
+				TouchY = y - screenLayout->touchScreenY;
+			}
+		}
+	}
+	
+	
+	
     // TOUCH: Final        
     if(haveTouch)
         NDS_setTouchPos(TouchX, TouchY);
@@ -503,7 +586,7 @@ void retro_run (void)
     input.R = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT);
     //input.F = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2); //Lid
 	
-	if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) && quick_swap_enable && swap_delay_timer == 0)
+	if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) && quick_switch_enable && swap_delay_timer == 0)
 	{
 		QuickSwap();
 		swap_delay_timer++;
