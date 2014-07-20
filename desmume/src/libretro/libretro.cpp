@@ -20,6 +20,12 @@ retro_environment_t environ_cb = NULL;
 
 volatile bool execute = false;
 
+static int swap_delay_timer = 0;
+static int current_screen = 1;
+static bool quick_swap_enable=false;
+
+
+
 namespace /* INPUT */
 {
     static bool absolutePointer;
@@ -78,10 +84,13 @@ namespace /* VIDEO */
 
     static const LayoutData layouts[] =
     {
-        { "main_top_ext_bottom", { &screenSwap[0], &screenSwap[256 * 192] }, 0, 192, 256, 384, 256 },
-        { "main_bottom_ext_top", { &screenSwap[256 * 192], &screenSwap[0] }, 0, 0, 256, 384, 256 },
-        { "main_left_ext_right", { &screenSwap[0], &screenSwap[256] }, 256, 0, 512, 192, 512 },
-        { "main_right_ext_left", { &screenSwap[256], &screenSwap[0] }, 0, 0, 512, 192, 512 },
+        { "top/bottom", { &screenSwap[0], &screenSwap[256 * 192] }, 0, 192, 256, 384, 256 },
+        { "bottom/top", { &screenSwap[256 * 192], &screenSwap[0] }, 0, 0, 256, 384, 256 },
+        { "left/right", { &screenSwap[0], &screenSwap[256] }, 256, 0, 512, 192, 512 },
+        { "right/left", { &screenSwap[256], &screenSwap[0] }, 0, 0, 512, 192, 512 },
+		{ "top only", { &screenSwap[0], &screenSwap[256 * 192] }, 0, 192, 256, 192, 256 },
+		{ "bottom only", { &screenSwap[256 * 192], &screenSwap[0] }, 0, 192, 256, 192, 256 },
+		{ "quick swap", { &screenSwap[0], &screenSwap[256 * 192] }, 0, 192, 256, 192, 256 },
         { 0, 0, 0, 0 }
     };
 
@@ -118,8 +127,8 @@ namespace /* VIDEO */
        SwapScreen(screenLayout->screens[0], (uint16_t*)&GPU_screen[0], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
        SwapScreen(screenLayout->screens[1], (uint16_t*)&GPU_screen[256 * 192 * (render_fullscreen ? 1 : 2)], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
        DrawPointer(screenLayout->screens[1], screenLayout->pitchInPix);
-
     }
+	
 }
 
 namespace
@@ -127,71 +136,150 @@ namespace
     uint32_t firmwareLanguage;
 }
 
+void retro_get_system_info(struct retro_system_info *info)
+{
+   info->library_name = "DeSmuME";
+   info->library_version = "svn";
+   info->valid_extensions = "nds|bin";
+   info->need_fullpath = true;   
+   info->block_extract = false;
+}
+
+void retro_get_system_av_info(struct retro_system_av_info *info)
+{
+    // TODO
+    info->geometry.base_width = screenLayout->width;
+    info->geometry.base_height = screenLayout->height;
+    info->geometry.max_width = screenLayout->width;
+    info->geometry.max_height = screenLayout->height;
+    info->geometry.aspect_ratio = 0.0;
+    info->timing.fps = 60.0;
+    info->timing.sample_rate = 44100.0;
+}
+
+void retro_get_system_geometry(struct retro_system_av_info *info)
+{
+    // TODO
+    info->geometry.base_width = screenLayout->width;
+    info->geometry.base_height = screenLayout->height;
+    info->geometry.max_width = screenLayout->width;
+    info->geometry.max_height = screenLayout->height;
+    info->geometry.aspect_ratio = 0.0;
+    info->timing.fps = 60.0;
+    info->timing.sample_rate = 44100.0;
+}
+
+static void QuickSwap()
+{
+	if(quick_swap_enable)
+	{
+	   if(current_screen == 1)
+	   {
+		   SetupScreens("bottom only");
+		   current_screen=2;
+	   }
+	   else
+	   {
+		   SetupScreens("top only");
+		   current_screen=1;
+	   }
+	}
+}
+
 static void CheckSettings(void)
 {
+	struct retro_variable var = {0};
+	
+	var.key = "desmume_num_cores";
+	var.value = 0;
 
-    retro_variable num_cores = { "desmume_num_cores", 0 };
-    environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &num_cores);
-
-    CommonSettings.num_cores = num_cores.value ? strtol(num_cores.value, 0, 10) : 1;
-
-    retro_variable cpu_mode = { "desmume_cpu_mode", 0 };
-    environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &cpu_mode);
-
-    if (cpu_mode.value && strcmp(cpu_mode.value, "jit") == 0)
-       CommonSettings.use_jit = true;
-    else if (cpu_mode.value && strcmp(cpu_mode.value, "interpreter") == 0)
-       CommonSettings.use_jit = false;
-    else
-    {
-#ifdef HAVE_JIT
-       CommonSettings.use_jit = true;
-#else
-       CommonSettings.use_jit = false;
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{	
+		CommonSettings.num_cores = var.value ? strtol(var.value, 0, 10) : 1;
+	}
+	
+	var.key = "desmume_cpu_mode";
+	var.value = 0;
+	
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		if (strcmp(var.value, "jit") == 0)
+			CommonSettings.use_jit = true;
+		else if (strcmp(var.value, "interpreter") == 0)
+			CommonSettings.use_jit = false;
+		else
+			CommonSettings.use_jit = false;
+#ifndef HAVE_JIT
+			CommonSettings.use_jit = false;
 #endif
-    }
+	}
 
 #ifdef HAVE_JIT
-    retro_variable jit_block_size = { "desmume_jit_block_size", 0 };
-    environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &jit_block_size);
-
-    CommonSettings.jit_max_block_size = jit_block_size.value ? strtol(jit_block_size.value, 0, 10) : 100;
+	var.key = "desmume_jit_block_size";
+	var.value = 0;
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		CommonSettings.jit_max_block_size = var.value ? strtol(var.value, 0, 10) : 100;
+	}    
 #endif
+	
+	var.key = "desmume_screens_layout";
+	var.value = 0;
 
-    retro_variable layout = { "desmume_screens_layout", 0 };
-    environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &layout);
-    SetupScreens(layout.value);
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{	
+		if (strcmp(var.value, "quick swap") == 0)
+			quick_swap_enable = true;
+		else 
+			quick_swap_enable = false;
+		SetupScreens(var.value);
+		
+		struct retro_system_av_info new_av_info;
+		retro_get_system_geometry(&new_av_info);
 
-    retro_variable pointer = { "desmume_pointer_type", 0 };
-    environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &pointer);
-    absolutePointer = pointer.value && (strcmp(pointer.value, "absolute") == 0);
+		environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);		
+	}	
+	
+	var.key = "desmume_pointer_type";
+	var.value = 0;
 
-    retro_variable frameskip = { "desmume_frameskip", 0 };
-    environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &frameskip);
-    frameSkip = frameskip.value ? strtol(frameskip.value, 0, 10) : 0;
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		absolutePointer = var.value && (strcmp(var.value, "absolute") == 0);
+	}
+	
+	var.key = "desmume_frameskip";
+	var.value = 0;
 
-    retro_variable language = { "desmume_firmware_language", 0 };
-    environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &language);
-    language.value = language.value ? language.value : "English";
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		frameSkip = var.value ? strtol(var.value, 0, 10) : 0;
+	}
+	
+	var.key = "desmume_firmware_language";
+	var.value = 0;
 
-    static const struct { const char* name; uint32_t id; } languages[6] = 
-    {
-        { "Japanese", 0 },
-        { "English", 1 },
-        { "French", 2 },
-        { "German", 3 },
-        { "Italian", 4 },
-        { "Spanish", 5 }
-    };
-
-    for (int i = 0; i < 6; i ++)
-    {
-        if (strcmp(languages[i].name, language.value) == 0)
-        {
-            firmwareLanguage = languages[i].id;
-            break;
-        }
-    }
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		static const struct { const char* name; uint32_t id; } languages[6] = 
+		{
+			{ "Japanese", 0 },
+			{ "English", 1 },
+			{ "French", 2 },
+			{ "German", 3 },
+			{ "Italian", 4 },
+			{ "Spanish", 5 }
+		};
+		
+		for (int i = 0; i < 6; i ++)
+		{
+			if (strcmp(languages[i].name, var.value) == 0)
+			{
+				firmwareLanguage = languages[i].id;
+				break;
+			}
+		}		
+	}		
 }
 
 void frontend_process_samples(u32 frames, const s16* data)
@@ -224,43 +312,23 @@ void retro_set_environment(retro_environment_t cb)
 
    static const retro_variable values[] =
    {
-      { "desmume_num_cores", "CPU core usage; 1|2|3|4" },
+      { "desmume_num_cores", "CPU cores; 1|2|3|4" },
 #ifdef HAVE_JIT
-      { "desmume_jit_block_size", "JIT Block Size; 100|99|98|97|96|95|94|93|92|91|90|89|88|87|86|85|84|83|82|81|80|79|78|77|76|75|74|73|72|71|70|69|68|67|66|65|64|63|62|61|60|59|58|57|56|55|54|53|52|51|50|49|48|47|46|45|44|43|42|41|40|39|38|37|36|35|34|33|32|31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10|9|8|7|6|5|4|3|2|1|0" },
-      { "desmume_cpu_mode", "CPU mode; jit|interpreter" },
+	  { "desmume_cpu_mode", "CPU mode; jit|interpreter" },	
+      { "desmume_jit_block_size", "JIT block size; 100|99|98|97|96|95|94|93|92|91|90|89|88|87|86|85|84|83|82|81|80|79|78|77|76|75|74|73|72|71|70|69|68|67|66|65|64|63|62|61|60|59|58|57|56|55|54|53|52|51|50|49|48|47|46|45|44|43|42|41|40|39|38|37|36|35|34|33|32|31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10|9|8|7|6|5|4|3|2|1|0" },
 #else
       { "desmume_cpu_mode", "CPU mode; interpreter" },
 #endif
-      { "desmume_screens_layout", "Screen Layout; main_top_ext_bottom|main_bottom_ext_top|main_left_ext_right|main_right_ext_left" },
-      { "desmume_pointer_type", "Pointer Mode; relative|absolute" },
-      { "desmume_firmware_language", "Language; English|Japanese|French|German|Italian|Spanish" },
-      { "desmume_frameskip", "Frame Skip; 0|1|2|3|4|5|6|7|8|9" },
+      { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick swap" },
+      { "desmume_pointer_type", "Pointer mode; relative|absolute" },
+      { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
+      { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
       { 0, 0 }
    };
 
    environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)values);
 }
 
-void retro_get_system_info(struct retro_system_info *info)
-{
-   info->library_name = "DeSmuME";
-   info->library_version = "svn";
-   info->valid_extensions = "nds|bin";
-   info->need_fullpath = true;   
-   info->block_extract = false;
-}
-
-void retro_get_system_av_info(struct retro_system_av_info *info)
-{
-    // TODO
-    info->geometry.base_width = screenLayout->width;
-    info->geometry.base_height = screenLayout->height;
-    info->geometry.max_width = screenLayout->width;
-    info->geometry.max_height = screenLayout->height;
-    info->geometry.aspect_ratio = 0.0;
-    info->timing.fps = 60.0;
-    info->timing.sample_rate = 44100.0;
-}
 
 //====================== Message box
 #define MSG_ARG \
@@ -362,7 +430,7 @@ void retro_reset (void)
 void retro_run (void)
 {
     // Settings
-    bool changed = false;
+    bool changed = false;	
     bool render_fullscreen = false;
     environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &changed);
     if(changed)
@@ -434,6 +502,21 @@ void retro_run (void)
     input.L = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT);
     input.R = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT);
     //input.F = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2); //Lid
+	
+	if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) && quick_swap_enable && swap_delay_timer == 0)
+	{
+		QuickSwap();
+		swap_delay_timer++;
+	}
+	
+	if(swap_delay_timer != 0)
+	{
+		swap_delay_timer++;
+		if(swap_delay_timer == 30)
+			swap_delay_timer = 0;
+	}
+	
+	
     NDS_endProcessingInput();
 
     // RUN
