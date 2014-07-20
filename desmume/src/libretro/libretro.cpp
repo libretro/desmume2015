@@ -26,6 +26,7 @@ static bool quick_switch_enable=false;
 static bool mouse_enable=false;
 static int pointer_device=0;
 static int analog_stick_deadzone;
+static int analog_stick_acceleration=2048;
 
 
 
@@ -259,7 +260,7 @@ static void CheckSettings(void)
 	var.value = NULL;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-      analog_stick_deadzone = (int)(atoi(var.value) * 0.01f * 0x8000);
+      analog_stick_deadzone = (int)(atoi(var.value));
 		
 	var.key = "desmume_pointer_type";
 	var.value = 0;
@@ -341,9 +342,10 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_cpu_mode", "CPU mode; interpreter" },
 #endif
       { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch" },
-	  { "desmume_pointer_mouse", "Enable mouse; enable|disable" },
-	  { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },	  
-      { "desmume_pointer_type", "Pointer mode; relative|absolute" },
+	  { "desmume_pointer_mouse", "Enable mouse/pointer; enable|disable" },
+	  { "desmume_pointer_type", "Mouse/pointer mode; relative|absolute" },
+	  { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
+	  { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },	  
       { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
       { 0, 0 }
@@ -478,25 +480,51 @@ void retro_run (void)
 		
 		if(pointer_device == 1)
 		{
-			analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X) / 2048;
-			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y) / 2048;
+			analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X) / analog_stick_acceleration;
+			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y) / analog_stick_acceleration;
 		} 
 		else if(pointer_device == 2)
 		{
-			analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X) / 2048;
-			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y) / 2048;		
+			analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X) / analog_stick_acceleration;
+			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y) / analog_stick_acceleration;		
 		}
 		else
 		{
 			analogX = 0;
 			analogY = 0;
 		}
+		
+
+		// Convert cartesian coordinate analog stick to polar coordinates
+		double radius = sqrt(analogX * analogX + analogY * analogY);
+		double angle = atan2(analogY, analogX);		
+		double max = (float)0x8000/analog_stick_acceleration;
+		
+		log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
+		//log_cb(RETRO_LOG_DEBUG, "%d %d.\n", radius,analog_stick_deadzone);
+		if (radius > (float)analog_stick_deadzone*max/100)
+		{
+			// Re-scale analog stick range to negate deadzone (makes slow movements possible)
+			radius = (radius - (float)analog_stick_deadzone*max/100)*((float)max/(max - (float)analog_stick_deadzone*max/100));
+			
+			// Convert back to cartesian coordinates
+			analogX = (int32_t)round(radius * cos(angle));
+			analogY = (int32_t)round(radius * sin(angle));
+		}
+		else
+		{
+			analogX = 0;
+			analogY = 0;
+		}		
+		log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
+		
 		haveTouch = haveTouch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); 
 		
 		TouchX = Saturate<0, 255>(TouchX + analogX);
 		TouchY = Saturate<0, 191>(TouchY + analogY);
 		
 		FramesWithPointer = (analogX || analogY) ? FramesWithPointerBase : FramesWithPointer;
+		
 	}
 
 	if(mouse_enable)
@@ -531,7 +559,9 @@ void retro_run (void)
 			}
 		}
 	}
-
+	
+	
+	
     // TOUCH: Final        
     if(haveTouch)
         NDS_setTouchPos(TouchX, TouchY);
