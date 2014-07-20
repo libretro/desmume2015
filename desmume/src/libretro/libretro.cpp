@@ -23,6 +23,9 @@ volatile bool execute = false;
 static int swap_delay_timer = 0;
 static int current_screen = 1;
 static bool quick_switch_enable=false;
+static bool mouse_enable=false;
+static int pointer_device=0;
+static int int astick_deadzone;
 
 
 
@@ -226,6 +229,38 @@ static void CheckSettings(void)
 		
 	}	
 	
+
+	var.key = "desmume_pointer_mouse";
+	var.value = 0;
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		if (strcmp(var.value, "enable") == 0)
+			mouse_enable = true;
+		else 
+			mouse_enable = false;
+	}
+
+	var.key = "desmume_pointer_device";
+	var.value = 0;
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		if (strcmp(var.value, "l-stick") == 0)
+			pointer_device = 1;
+		else if(strcmp(var.value, "r-stick") == 0)
+			pointer_device = 2;
+		else 
+			pointer_device=0;
+	}	
+		
+		
+	var.key = "desmume_pointer_device_deadzone";
+	var.value = NULL;
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      analog_stick_deadzone = (int)(atoi(var.value) * 0.01f * 0x8000);
+		
 	var.key = "desmume_pointer_type";
 	var.value = 0;
 
@@ -306,6 +341,8 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_cpu_mode", "CPU mode; interpreter" },
 #endif
       { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch" },
+	  { "desmume_pointer_mouse", "Enable mouse; enable|disable" },
+	  { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },	  
       { "desmume_pointer_type", "Pointer mode; relative|absolute" },
       { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
@@ -433,45 +470,67 @@ void retro_run (void)
     poll_cb();
 
     bool haveTouch = false;
+	
+	if(pointer_device!=0)
+	{
+		int16_t analogX = 0;
+		int16_t analogY = 0;
+		
+		if(pointer_device == 1)
+		{
+			analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X) / 2048;
+			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y) / 2048;
+		} 
+		else if(pointer_device == 2)
+		{
+			analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X) / 2048;
+			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y) / 2048;		
+		}
+		else
+		{
+			analogX = 0;
+			analogY = 0;
+		}
+		haveTouch = haveTouch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); 
+		
+		TouchX = Saturate<0, 255>(TouchX + analogX);
+		TouchY = Saturate<0, 191>(TouchY + analogY);
+		
+		FramesWithPointer = (analogX || analogY) ? FramesWithPointerBase : FramesWithPointer;
+	}
 
-    // TOUCH: Analog
-    const int16_t analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X) / 2048;
-    const int16_t analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y) / 2048;
-    haveTouch = haveTouch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2);    
-
-    TouchX = Saturate<0, 255>(TouchX + analogX);
-    TouchY = Saturate<0, 191>(TouchY + analogY);
-    FramesWithPointer = (analogX || analogY) ? FramesWithPointerBase : FramesWithPointer;
-
-    // TOUCH: Mouse
-    if(!absolutePointer)
+	if(mouse_enable)
     {
-        const int16_t mouseX = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
-        const int16_t mouseY = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
-        haveTouch = haveTouch || input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
-    
-        TouchX = Saturate<0, 255>(TouchX + mouseX);
-        TouchY = Saturate<0, 191>(TouchY + mouseY);
-        FramesWithPointer = (mouseX || mouseY) ? FramesWithPointerBase : FramesWithPointer;
-    }
-    // TOUCH: Pointer
-    else if(input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED))
-    {
-        const float X_FACTOR = ((float)screenLayout->width / 65536.0f);
-        const float Y_FACTOR = ((float)screenLayout->height / 65536.0f);
-    
-        float x = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X) + 32768.0f) * X_FACTOR;
-        float y = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y) + 32768.0f) * Y_FACTOR;
+		// TOUCH: Mouse
+		if(!absolutePointer)
+		{
+			const int16_t mouseX = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
+			const int16_t mouseY = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
+			haveTouch = haveTouch || input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+			
+			TouchX = Saturate<0, 255>(TouchX + mouseX);
+			TouchY = Saturate<0, 191>(TouchY + mouseY);
+			FramesWithPointer = (mouseX || mouseY) ? FramesWithPointerBase : FramesWithPointer;
+		}
+		// TOUCH: Pointer
+		else if(input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED))
+		{
+			const float X_FACTOR = ((float)screenLayout->width / 65536.0f);
+			const float Y_FACTOR = ((float)screenLayout->height / 65536.0f);
+		
+			float x = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X) + 32768.0f) * X_FACTOR;
+			float y = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y) + 32768.0f) * Y_FACTOR;
 
-        if (x >= screenLayout->touchScreenX && x < screenLayout->touchScreenX + 256 &&
-            y >= screenLayout->touchScreenY && y < screenLayout->touchScreenY + 192)
-        {
-            haveTouch = true;
+			if (x >= screenLayout->touchScreenX && x < screenLayout->touchScreenX + 256 &&
+				y >= screenLayout->touchScreenY && y < screenLayout->touchScreenY + 192)
+			{
+				haveTouch = true;
 
-            TouchX = x - screenLayout->touchScreenX;
-            TouchY = y - screenLayout->touchScreenY;
-        }
-    }
+				TouchX = x - screenLayout->touchScreenX;
+				TouchY = y - screenLayout->touchScreenY;
+			}
+		}
+	}
 
     // TOUCH: Final        
     if(haveTouch)
