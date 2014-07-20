@@ -25,7 +25,7 @@ static int current_screen = 1;
 static bool quick_switch_enable=false;
 static bool mouse_enable=false;
 static int pointer_device=0;
-static int int astick_deadzone;
+static int analog_stick_deadzone;
 
 
 
