@@ -500,7 +500,7 @@ void retro_run (void)
 		double angle = atan2(analogY, analogX);		
 		double max = (float)0x8000/analog_stick_acceleration;
 		
-		log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
+		//log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
 		//log_cb(RETRO_LOG_DEBUG, "%d %d.\n", radius,analog_stick_deadzone);
 		if (radius > (float)analog_stick_deadzone*max/100)
 		{
