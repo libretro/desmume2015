@@ -598,11 +598,16 @@ FORCEINLINE FASTCALL void GPU::_master_setFinal3dColor(int dstX, int srcX)
 			final = cfinal.val;
 		}
 		else final = R6G6B6TORGB15(red,green,blue);
+
+		#ifdef X432R_CUSTOMRENDERER_ENABLED
+		X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_3D, X432R::BLENDMODE_ENABLED>(dstX, srcX, 0, 0, 0);
+		#endif
 	}
 	else
 	{
 		final = R6G6B6TORGB15(red,green,blue);
 		//perform the special effect
+		#ifndef X432R_CUSTOMRENDERER_ENABLED
 		if(windowEffect)
 			switch(FUNC) {
 				case Increase: final = currentFadeInColors[final&0x7FFF]; break;
@@ -611,6 +616,34 @@ FORCEINLINE FASTCALL void GPU::_master_setFinal3dColor(int dstX, int srcX)
 				case Blend:
 					break;
 			}
+#else
+		switch(FUNC)
+      {
+         case Increase:
+            if( !windowEffect || (BLDY_EVY == 0) ) goto noblend;
+
+            X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_3D, X432R::BLENDMODE_BRIGHTUP>(dstX, srcX, 0, 0, 0);
+
+            final = currentFadeInColors[final&0x7FFF];
+            break;
+
+         case Decrease:
+            if( !windowEffect || (BLDY_EVY == 0) ) goto noblend;
+
+            X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_3D, X432R::BLENDMODE_BRIGHTDOWN>(dstX, srcX, 0, 0, 0);
+
+            final = currentFadeOutColors[final&0x7FFF];
+            break;
+
+            //			case NoBlend:
+            //			case Blend:
+         default:
+noblend:
+
+            X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_3D, X432R::BLENDMODE_DISABLED>(dstX, srcX, 0, 0, 0);
+            break;
+      }
+#endif
 	}
 
 	HostWriteWord(dst, passing, (final | 0x8000));
@@ -629,6 +662,7 @@ FORCEINLINE FASTCALL bool GPU::_master_setFinalBGColor(u16 &color, const u32 x)
 
 	bool windowEffect = true;
 
+	#ifndef X432R_CUSTOMRENDERER_ENABLED
 	if(WINDOW)
 	{
 		bool windowDraw = false;
@@ -655,6 +689,66 @@ FORCEINLINE FASTCALL bool GPU::_master_setFinalBGColor(u16 &color, const u32 x)
 		case NoBlend: break;
 	}
 	return true;
+	#else
+	if( !BACKDROP && WINDOW )	//backdrop must always be drawn
+	{
+		bool windowDraw = false;
+		renderline_checkWindows(x, windowDraw, windowEffect);
+		
+		//we never have anything more to do if the window rejected us
+		if( !windowDraw ) return false;
+	}
+	
+	const u8 bg_under = bgPixels[x];
+	const u16 backcolor = HostReadWord(currDst, x << 1);
+	const u16 original_color = color;
+	
+	//special effects rejected. just draw it.
+	if(blend1 && windowEffect)
+	{
+		//perform the special effect
+		switch(FUNC)
+      {
+         case Blend:
+            if( !blend2[bg_under] ) break;
+
+            color = blend(color, backcolor);
+
+            if( !BACKDROP )
+               X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_BG, X432R::BLENDMODE_ENABLED>(x, 0, original_color, 0, currBgNum);
+
+            return true;
+
+         case Increase:
+            if(BLDY_EVY == 0) break;
+
+            color = currentFadeInColors[color];
+
+            if( !BACKDROP )
+               X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_BG, X432R::BLENDMODE_BRIGHTUP>(x, 0, color, 0, currBgNum);
+
+            return true;
+
+         case Decrease:
+            if(BLDY_EVY == 0) break;
+
+            color = currentFadeOutColors[color];
+
+            if( !BACKDROP )
+               X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_BG, X432R::BLENDMODE_BRIGHTDOWN>(x, 0, color, 0, currBgNum);
+
+            return true;
+
+         case NoBlend:
+            break;
+      }
+	}
+	
+	if( !BACKDROP )
+		X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_BG, X432R::BLENDMODE_DISABLED>(x, 0, color, 0, currBgNum);
+	
+	return true;
+	#endif
 }
 
 template<BlendFunc FUNC, bool WINDOW>
@@ -671,6 +765,10 @@ static FORCEINLINE void _master_setFinalOBJColor(GPU *gpu, u8 *dst, u16 color, u
 		if(!windowDraw)
 			return;
 	}
+
+	#ifdef X432R_CUSTOMRENDERER_ENABLED
+	const u16 backcolor = HostReadWord(dst, x << 1);
+	#endif
 
 	//if the window effect is satisfied, then we can do color effects to modify the color
 	if(windowEffectSatisfied)
@@ -709,17 +807,55 @@ static FORCEINLINE void _master_setFinalOBJColor(GPU *gpu, u8 *dst, u16 color, u
 		}
 
 	
-		switch(selectedFunc) 
-		{
-		case NoBlend: break;
-		case Increase: color = gpu->currentFadeInColors[color&0x7FFF]; break;
-		case Decrease: color = gpu->currentFadeOutColors[color&0x7FFF]; break;
-		case Blend: 
-			u16 backColor = HostReadWord(dst,x<<1);
-			color = _blend(color,backColor,&gpuBlendTable555[eva][evb]); 
-			break;
-		}
+#ifndef X432R_CUSTOMRENDERER_ENABLED
+      switch(selectedFunc) 
+      {
+         case NoBlend: break;
+         case Increase: color = gpu->currentFadeInColors[color&0x7FFF]; break;
+         case Decrease: color = gpu->currentFadeOutColors[color&0x7FFF]; break;
+         case Blend: 
+                        u16 backColor = HostReadWord(dst,x<<1);
+                        color = _blend(color,backColor,&gpuBlendTable555[eva][evb]); 
+                        break;
+      }
+#else
+      const u16 original_color = color;
+
+      switch(selectedFunc)
+      {
+         case Increase:
+            if(gpu->BLDY_EVY == 0) break;
+
+            color = gpu->currentFadeInColors[color&0x7FFF];
+
+            X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_OBJ, X432R::BLENDMODE_BRIGHTUP>(x, 0, color, 0, 4);
+            goto finish;
+
+         case Decrease:
+            if(gpu->BLDY_EVY == 0) break;
+
+            color = gpu->currentFadeOutColors[color&0x7FFF];
+
+            X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_OBJ, X432R::BLENDMODE_BRIGHTUP>(x, 0, color, 0, 4);
+            goto finish;
+
+         case Blend:
+            color = _blend( color, backcolor, &gpuBlendTable555[eva][evb] );
+
+            X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_OBJ, X432R::BLENDMODE_ENABLED>(x, 0, original_color, alpha, 4);
+            goto finish;
+
+         case NoBlend:
+            break;
+      }
+#endif
 	}
+
+	#ifdef X432R_CUSTOMRENDERER_ENABLED
+	X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_OBJ, X432R::BLENDMODE_DISABLED>(x, 0, color, 0, 4);
+	
+	finish:
+	#endif
 
 	HostWriteWord(dst, x<<1, (color | 0x8000));
 	gpu->bgPixels[x] = 4;	
@@ -1896,6 +2032,10 @@ void Screen_Reset(void)
 
 	disp_fifo.head = disp_fifo.tail = 0;
 	osd->clear();
+
+	#ifdef X432R_CUSTOMRENDERER_ENABLED
+	X432R::ClearBuffers();
+	#endif
 }
 
 void Screen_DeInit(void)
@@ -1977,36 +2117,65 @@ static void GPU_RenderLine_layer(NDS_Screen * screen, u16 l)
 
 	u16 backdrop_color = T1ReadWord(MMU.ARM9_VMEM, gpu->core * 0x400) & 0x7FFF;
 
-	//we need to write backdrop colors in the same way as we do BG pixels in order to do correct window processing
-	//this is currently eating up 2fps or so. it is a reasonable candidate for optimization. 
-	gpu->currBgNum = 5;
-	switch(gpu->setFinalColorBck_funcNum)
-	{
-		//for backdrops, blend isnt applied (it's illogical, isnt it?)
-		case 0:
-		case 1:
+#ifndef X432R_CUSTOMRENDERER_ENABLED
+   //we need to write backdrop colors in the same way as we do BG pixels in order to do correct window processing
+   //this is currently eating up 2fps or so. it is a reasonable candidate for optimization. 
+   gpu->currBgNum = 5;
+   switch(gpu->setFinalColorBck_funcNum)
+   {
+      //for backdrops, blend isnt applied (it's illogical, isnt it?)
+      case 0:
+      case 1:
 PLAIN_CLEAR:
-			memset_u16_le<256>(gpu->currDst,backdrop_color); 
-			break;
+         memset_u16_le<256>(gpu->currDst,backdrop_color); 
+         break;
 
-		//for backdrops, fade in and fade out can be applied if it's a 1st target screen
-		case 2:
-			if(gpu->BLDCNT & 0x20) //backdrop is selected for color effect
-				memset_u16_le<256>(gpu->currDst,gpu->currentFadeInColors[backdrop_color]);
-			else goto PLAIN_CLEAR;
-			break;
-		case 3:
-			if(gpu->BLDCNT & 0x20) //backdrop is selected for color effect
-				memset_u16_le<256>(gpu->currDst,gpu->currentFadeOutColors[backdrop_color]);
-			else goto PLAIN_CLEAR;
-			break;
+         //for backdrops, fade in and fade out can be applied if it's a 1st target screen
+      case 2:
+         if(gpu->BLDCNT & 0x20) //backdrop is selected for color effect
+            memset_u16_le<256>(gpu->currDst,gpu->currentFadeInColors[backdrop_color]);
+         else goto PLAIN_CLEAR;
+         break;
+      case 3:
+         if(gpu->BLDCNT & 0x20) //backdrop is selected for color effect
+            memset_u16_le<256>(gpu->currDst,gpu->currentFadeOutColors[backdrop_color]);
+         else goto PLAIN_CLEAR;
+         break;
 
-		//windowed cases apparently need special treatment? why? can we not render the backdrop? how would that even work?
-		case 4: for(int x=0;x<256;x++) gpu->___setFinalColorBck<false,true,4>(backdrop_color,x,1); break;
-		case 5: for(int x=0;x<256;x++) gpu->___setFinalColorBck<false,true,5>(backdrop_color,x,1); break;
-		case 6: for(int x=0;x<256;x++) gpu->___setFinalColorBck<false,true,6>(backdrop_color,x,1); break;
-		case 7: for(int x=0;x<256;x++) gpu->___setFinalColorBck<false,true,7>(backdrop_color,x,1); break;
-	}
+         //windowed cases apparently need special treatment? why? can we not render the backdrop? how would that even work?
+      case 4: for(int x=0;x<256;x++) gpu->___setFinalColorBck<false,true,4>(backdrop_color,x,1); break;
+      case 5: for(int x=0;x<256;x++) gpu->___setFinalColorBck<false,true,5>(backdrop_color,x,1); break;
+      case 6: for(int x=0;x<256;x++) gpu->___setFinalColorBck<false,true,6>(backdrop_color,x,1); break;
+      case 7: for(int x=0;x<256;x++) gpu->___setFinalColorBck<false,true,7>(backdrop_color,x,1); break;
+   }
+#else
+   //we need to write backdrop colors in the same way as we do BG pixels in order to do correct window processing
+   //this is currently eating up 2fps or so. it is a reasonable candidate for optimization. 
+   gpu->currBgNum = 5;
+
+   u16 backdrop_color2 = backdrop_color;
+
+   if(gpu->BLDCNT & 0x20)		//backdrop is selected for color effect
+   {
+      switch(gpu->setFinalColorBck_funcNum)
+      {
+         //for backdrops, fade in and fade out can be applied if it's a 1st target screen
+         case 2:
+         case 6:
+            backdrop_color2 = gpu->currentFadeInColors[backdrop_color];
+            break;
+
+         case 3:
+         case 7:
+            backdrop_color2 = gpu->currentFadeOutColors[backdrop_color];
+            break;
+      }
+   }
+
+   memset_u16_le<256>(gpu->currDst, backdrop_color2);
+
+   X432R::backBuffer.InitRenderLineParams(screen, l, backdrop_color2);
+#endif
 	
 	memset(gpu->bgPixels,5,256);
 
@@ -2239,8 +2408,31 @@ template<bool SKIP> static void GPU_RenderLine_DispCapture(u16 l)
 							case 1:
 								//capture dispfifo
 								//(not yet tested)
-								for(int i=0; i < 128; i++)
-									T1WriteLong(cap_dst, i << 2, DISP_FIFOrecv());
+#if !defined(X432R_CUSTOMRENDERER_ENABLED) || !defined(X432R_DISPCAPTURE_MAINMEMORYFIFO_TEST)
+                        for(int i=0; i < 128; i++)
+                           T1WriteLong(cap_dst, i << 2, DISP_FIFOrecv());
+#else
+                        if( X432R::backBuffer.IsHighResolutionRedneringSkipped() )
+                        {
+                           for(u32 i = 0; i < 128; ++i)
+                              T1WriteLong( cap_dst, i << 2, DISP_FIFOrecv() );
+                        }
+                        else
+                        {
+                           u32 *fifo_buffer = X432R::backBuffer.GetCurrentMainMemoryFIFOBuffer();
+                           u32 color;
+
+                           for(u32 i = 0; i < 128; ++i)
+                           {
+                              color = DISP_FIFOrecv();
+
+                              T1WriteLong(cap_dst, i << 2, color);
+
+                              *fifo_buffer++ = (u32)RGB15TO24_REVERSE(color >> 16) | 0xFF000000;			// not tested
+                              *fifo_buffer++ = (u32)RGB15TO24_REVERSE(color & 0x0000FFFF) | 0xFF000000;
+                           }
+                        }
+#endif
 								break;
 						}
 					}
@@ -2269,9 +2461,34 @@ template<bool SKIP> static void GPU_RenderLine_DispCapture(u16 l)
 						{
 							//fifo - tested by splinter cell chaos theory thermal view
 							srcB = fifoLine;
+
+							#if !defined(X432R_CUSTOMRENDERER_ENABLED) || !defined(X432R_DISPCAPTURE_MAINMEMORYFIFO_TEST)
 							for (int i=0; i < 128; i++)
 								T1WriteLong((u8*)srcB, i << 2, DISP_FIFOrecv());
+                     #else
+							if( X432R::backBuffer.IsHighResolutionRedneringSkipped() )
+							{
+								for(u32 i = 0; i < 128; ++i)
+									T1WriteLong( (u8*)srcB, i << 2, DISP_FIFOrecv() );
+ 						}
+							else
+							{
+								u32 *fifo_buffer = X432R::backBuffer.GetCurrentMainMemoryFIFOBuffer();
+								u32 color;
+								
+								for(u32 i = 0; i < 128; ++i)
+								{
+									color = DISP_FIFOrecv();
+									
+									T1WriteLong( (u8*)srcB, i << 2, color );
+									
+									*fifo_buffer++ = (u32)RGB15TO24_REVERSE(color >> 16) | 0xFF000000;			// not tested
+									*fifo_buffer++ = (u32)RGB15TO24_REVERSE(color & 0x0000FFFF) | 0xFF000000;
+								}
+							}
+							#endif
 						}
+                     
 
 
 						const int todo = (gpu->dispCapCnt.capx==DISPCAPCNT::_128?128:256);
@@ -2329,6 +2546,10 @@ template<bool SKIP> static void GPU_RenderLine_DispCapture(u16 l)
 
 static INLINE void GPU_RenderLine_MasterBrightness(NDS_Screen * screen, u16 l)
 {
+	#ifdef X432R_CUSTOMRENDERER_ENABLED
+	if( !X432R::backBuffer.IsHighResolutionRedneringSkipped() ) return;
+	#endif
+
 	GPU * gpu = screen->gpu;
 
 	u8 * dst =  GPU_screen + (screen->offset + l) * 512;
@@ -2519,6 +2740,7 @@ void GPU_RenderLine(NDS_Screen * screen, u16 l, bool skip)
 		return;
 	}
 
+	#ifndef X432R_CUSTOMRENDERER_ENABLED
 	// skip some work if master brightness makes the screen completely white or completely black
 	if(gpu->MasterBrightFactor >= 16 && (gpu->MasterBrightMode == 1 || gpu->MasterBrightMode == 2))
 	{
@@ -2530,6 +2752,26 @@ void GPU_RenderLine(NDS_Screen * screen, u16 l, bool skip)
 			return;
 		}
 	}
+	#else
+	if( X432R::backBuffer.IsHighResolutionRedneringSkipped() )
+	{
+		// skip some work if master brightness makes the screen completely white or completely black
+		if(gpu->MasterBrightFactor >= 16 && (gpu->MasterBrightMode == 1 || gpu->MasterBrightMode == 2))
+		{
+			// except if it could cause any side effects (for example if we're capturing), then don't skip anything
+			if(!(gpu->core == GPU_MAIN && (gpu->dispCapCnt.enabled || l == 0 || l == 191)))
+			{
+				gpu->currLine = l;
+				GPU_RenderLine_MasterBrightness(screen, l);
+				return;
+			}
+		}
+	}
+	#endif
+
+	#ifdef X432R_PROCESSTIME_CHECK
+	X432R::AutoStopTimeCounter timecounter(X432R::timeCounter_2D);
+	#endif
 
 	//cache some parameters which are assumed to be stable throughout the rendering of the entire line
 	gpu->currLine = l;
@@ -2743,3 +2985,1428 @@ void gpu_SetRotateScreen(u16 angle)
 {
 	gpu_angle = angle;
 }
+
+#ifdef X432R_CUSTOMRENDERER_ENABLED
+namespace X432R
+{
+	//---------- RGBA8888 ----------
+	
+	static u8 blendColorTable[BLENDALPHA_MAX + 1][256][256];
+	static u8 blendColorTable2[BLENDALPHA_MAX2 + 1][BLENDALPHA_MAX2 + 1][256][256];
+	
+	void RGBA8888::InitBlendColorTable()
+	{
+		static bool created = false;
+		
+		if(created) return;
+		
+		u32 alpha1, alpha2, color1, color2;
+		float a1, a2;
+		
+		// blendColorTable
+		for(alpha1 = 0; alpha1 <= BLENDALPHA_MAX; ++alpha1)
+		{
+			a1 = (float)alpha1 / (float)BLENDALPHA_MAX;
+			a2 = (float)(BLENDALPHA_MAX - alpha1) / (float)BLENDALPHA_MAX;
+			
+			for(color1 = 0; color1 < 256; ++color1)
+			{
+				for(color2 = 0; color2 < 256; ++color2)
+				{
+					blendColorTable[alpha1][color1][color2] = (u8)std::min<u32>( (color1 * a1) + (color2 * a2), 0xFF );
+				}
+			}
+		}
+		
+		// blendColorTable2
+		for(alpha1 = 0; alpha1 <= BLENDALPHA_MAX2; ++alpha1)
+		{
+			a1 = (float)alpha1 / (float)BLENDALPHA_MAX2;
+			
+			for(alpha2 = 0; alpha2 <= BLENDALPHA_MAX2; ++alpha2)
+			{
+				a2 = (float)alpha2 / (float)BLENDALPHA_MAX2;
+				
+				for(color1 = 0; color1 < 256; ++color1)
+				{
+					for(color2 = 0; color2 < 256; ++color2)
+					{
+						blendColorTable2[alpha1][alpha2][color1][color2] = (u8)std::min<u32>( (color1 * a1) + (color2 * a2), 0xFF );
+					}
+				}
+			}
+		}
+		
+		created = true;
+	}
+	
+	inline u8 RGBA8888::GetBlendColor(const u8 color1, const u8 color2, const u8 alpha1)
+	{
+		assert(alpha1 <= BLENDALPHA_MAX);
+		
+		return blendColorTable[alpha1][color1][color2];
+	}
+	
+	inline u8 RGBA8888::GetBlendColor(const u8 color1, const u8 color2, const u8 alpha1, const u8 alpha2)
+	{
+		assert( (alpha1 <= BLENDALPHA_MAX2) && (alpha2 <= BLENDALPHA_MAX2) );
+		
+		return blendColorTable2[alpha1][alpha2][color1][color2];
+	}
+	
+	
+	//---------- HighResolutionFramebuffers ----------
+	
+/*	HighResolutionFramebuffers::HighResolutionFramebuffers()
+	{
+		Clear();
+	}
+*/	
+	void HighResolutionFramebuffers::Clear()
+	{
+		memset( this, 0, sizeof(HighResolutionFramebuffers) );
+		
+		subScreenIndex = 1;
+		
+		vramBlockMainScreen = 0xFF;
+		memset( vramBlockBG, 0xFF, sizeof(vramBlockBG) );
+		memset( vramBlockOBJ, 0xFF, sizeof(vramBlockOBJ) );
+		memset( highResolutionBGNum, 0xFF, sizeof(highResolutionBGNum) );
+		
+		displayCaptureWriteBlockIndex = 0xFF;
+		displayCaptureReadBlockIndex = 0xFF;
+		displayCaptureSourceA = 0xFF;
+		displayCaptureSourceB = 0xFF;
+		displayCaptureBlendingRatioA = BLENDALPHA_MAX2;
+		displayCaptureBlendingRatioB = BLENDALPHA_MAX2;
+		
+		renderLine_CurrentRenderMagnification = GetCurrentRenderMagnification();
+		renderLine_CurrentRenderWidth = 256 * renderLine_CurrentRenderMagnification;
+		renderLine_CurrentRenderHeight = 192 * renderLine_CurrentRenderMagnification;
+		renderLine_SkipHighResolutionRednering = true;
+	}
+	
+	void HighResolutionFramebuffers::ClearVramBuffer(const u8 vram_block)
+	{
+		if( (vram_block > 3) || ( !vramIsValid[vram_block] ) ) return;
+		
+//		memset( highResolutionBuffer_Vram[vram_block], 0, sizeof( highResolutionBuffer_Vram[vram_block] ) );		// obt@ðNAµÈ­Äà½ÔñâèÈµ
+		
+		vramIsValid[vram_block] = false;
+		
+		#ifdef X432R_SAMPLEDVRAMDATACHECK_TEST
+		memset( vramSampledPixelData[vram_block], 0, sizeof( vramSampledPixelData[vram_block] ) );
+		#endif
+	}
+	
+	
+	void HighResolutionFramebuffers::UpdateMasterBrightness()
+	{
+		const NDS_Screen *screen;
+		u32 color_rgba8888, alpha;
+		
+		for(u32 i = 0; i < 2; ++i)
+		{
+			screen = (i == mainScreenIndex) ? &MainScreen : &SubScreen;
+			
+			color_rgba8888 = 0;
+			alpha = screen->gpu->MasterBrightFactor;
+			
+//			if( (alpha > 2) && (alpha < 0x1F) )
+			if(alpha > 2)		// HÉtF[høÊÌãÉMasterBrightnessª0ÉZbg³êÄ¢È¢êª éÌÅ2Èºð³iÄ»xÍáº·éj
+			{
+				alpha = std::min<u32>(alpha * 16, 0xFF) << 24;
+				
+				switch(screen->gpu->MasterBrightMode)
+				{
+					case 1:		// bright up
+						color_rgba8888 = alpha | 0x00FFFFFF;
+						break;
+					
+					case 2:		// bright down
+						color_rgba8888 = alpha;
+						break;
+				}
+			}
+			
+			masterBrightness[i] = color_rgba8888;
+		}
+	}
+	
+	
+	#ifndef X432R_SAMPLEDVRAMDATACHECK_TEST
+	inline bool HighResolutionFramebuffers::IsVramInvalid(const u8 vram_block)
+	{
+		return !vramIsValid[vram_block];
+	}
+	#else
+	inline void HighResolutionFramebuffers::GetSampledVramPixelData(u16 * const sampled_pixels, const u8 vram_block)		// temp
+	{
+		assert( (vram_block <= 3) && (sampled_pixels != NULL) );
+		
+		u16 *source_buffer = (u16 *)( MMU.ARM9_LCD + (vram_block * 0x20000) );
+		
+		sampled_pixels[0] = source_buffer[ ( 48 * 256) +  64 ];
+		sampled_pixels[1] = source_buffer[ ( 48 * 256) + 128 ];
+		sampled_pixels[2] = source_buffer[ ( 48 * 256) + 192 ];
+		sampled_pixels[3] = source_buffer[ ( 96 * 256) +  64 ];
+		sampled_pixels[4] = source_buffer[ ( 96 * 256) + 128 ];
+		sampled_pixels[5] = source_buffer[ ( 96 * 256) + 192 ];
+		sampled_pixels[6] = source_buffer[ (144 * 256) +  64 ];
+		sampled_pixels[7] = source_buffer[ (144 * 256) + 128 ];
+		sampled_pixels[8] = source_buffer[ (144 * 256) + 192 ];
+	}
+	
+	inline bool HighResolutionFramebuffers::IsVramValid(const u8 vram_block)		// temp
+	{
+		if( !vramIsValid[vram_block] ) return false;
+		
+		static u16 sampled_vramdata[9];
+		
+		GetSampledVramPixelData(sampled_vramdata, vram_block);
+		
+		return ( memcmp( sampled_vramdata, vramSampledPixelData[vram_block], sizeof(sampled_vramdata) ) == 0 );
+		
+		// MMU.cpp MMU_VRAMmapRefreshBank()ÅVRAMÌÏXð`FbNµAvramIsValid[]ÉfalseðZbg·êÎ±ÌÍsvÉÈéÍ¸
+		
+		
+		#ifdef X432R_CUSTOMRENDERER_DEBUG
+		if( vramConfiguration.banks[vram_block].ofs != 0 )
+			X432R::ShowDebugMessage("VRAM Offset");
+		#endif
+	}
+	#endif
+	
+	inline bool HighResolutionFramebuffers::CheckOBJParams(const GPU * const gpu, const _DISPCNT * const display_control, const u32 screen_index)
+	{
+		if( !(bool)display_control->OBJ_Enable ) return false;
+		
+		// sNZtH[}bgªdirect color(RGBA5551)Asource bitmap widthª256ÉÝè³êÄ¢éêÉÌÝðxVRAMðOBJÆµÄ`æ
+		if( (display_control->OBJ_BMP_mapping != 0) || (display_control->OBJ_BMP_2D_dim != 1) ) return false;
+		
+		_OAM_ sprite_info;
+		size size;
+		s32 offset_x, offset_y;
+		
+		for(u32 i = 0; i < 128; ++i)
+		{
+			SlurpOAM(&sprite_info, gpu->oam, i);
+			
+			if( (sprite_info.RotScale == 2) || (sprite_info.TileIndex != 0) || (sprite_info.Mode != 3) || (sprite_info.PaletteIndex == 0) ) continue;
+			
+			size = sprSizeTab[sprite_info.Size][sprite_info.Shape];
+			
+			if( (size.x != 64) || (size.y != 64) ) continue;
+			
+			offset_x = sprite_info.X;
+			offset_y = (sprite_info.Y >= 192) ? (s32)( (s8)(sprite_info.Y) ) : sprite_info.Y;
+			
+			#ifdef X432R_CUSTOMRENDERER_DEBUG
+			if( (offset_x != 0) || (offset_y != 0) )
+				X432R::ShowDebugMessage("OBJ Offset");
+			
+			if(sprite_info.VFlip)
+				X432R::ShowDebugMessage("OBJ VFlip");
+			
+			if(sprite_info.HFlip)
+				X432R::ShowDebugMessage("OBJ HFlip");
+			#endif
+			
+			BGxPARMS &dest_params = highResolutionOBJOffset[screen_index];
+			
+			if(sprite_info.RotScale & 1)
+			{
+				#ifdef X432R_CUSTOMRENDERER_DEBUG
+				X432R::ShowDebugMessage("OBJ RotScale");
+				#endif
+				
+				#ifndef X432R_HIGHRESO_BG_OBJ_ROTSCALE_TEST
+				dest_params.BGxPA = -1;		// temp
+				#else
+				dest_params. = ;
+				dest_params. = ;
+				dest_params. = ;
+				dest_params. = ;
+				#endif
+			}
+			else
+			{
+				dest_params.BGxPA = 0;		// temp
+			}
+			
+			dest_params.BGxX = offset_x;
+			dest_params.BGxY = offset_y;
+			
+			highResolutionOBJFlipX[screen_index] = (bool)sprite_info.HFlip;
+			highResolutionOBJFlipY[screen_index] = (bool)sprite_info.VFlip;
+			
+			return true;
+		}
+		
+		return false;
+	}
+	
+	inline bool HighResolutionFramebuffers::CheckBGParams(const GPU * const gpu, const u32 layer_num)
+	{
+		assert( (layer_num == 2) || (layer_num == 3) );
+		
+		// sNZtH[}bgªdirect color(RGBA5551)ÉÝè³êÄ¢éêÉÌÝðxVRAMðBG2/BG3ÆµÄ`æ
+		if( ( gpu->BGTypes[layer_num] != BGType_AffineExt_Direct ) || ( gpu->BGSize[layer_num][0] != 256 ) || ( gpu->BGSize[layer_num][1] != 256 ) ) return false;
+		
+		return true;
+	}
+	
+	bool HighResolutionFramebuffers::UpdateHighResolutionBGNum(const GPU * const gpu, const _DISPCNT * const display_control, const u32 screen_index)
+	{
+		assert( (screen_index == 0) || (screen_index == 1) );
+		
+		const bool bg2 = display_control->BG2_Enable && CheckBGParams(gpu, 2);
+		const bool bg3 = display_control->BG3_Enable && CheckBGParams(gpu, 3);
+		
+		if( !bg2 && !bg3 )
+		{
+			highResolutionBGNum[screen_index] = 0xFF;
+			return false;
+		}
+		
+		u8 layer_num;
+		
+		if( bg2 && !bg3 )
+			layer_num = 2;
+		
+		else if( !bg2 && bg3 )
+			layer_num = 3;
+		
+		else
+		{
+			// DæxÌá¢ûÉèÄçêÄ¢éÆzè
+			const u8 bg2_priority = gpu->bgPrio[2];
+			const u8 bg3_priority = gpu->bgPrio[3];
+			
+			if(bg3_priority == bg3_priority)
+				layer_num = 3;											// priorityª¯¶ÈçBGnumªå«¢ûªDæxªá¢
+			
+			else
+				layer_num = (bg2_priority < bg3_priority) ? 3 : 2;		// priorityÌlªå«¢ûªDæxªá¢
+		}
+		
+		const BGxPARMS &source_params = (layer_num == 2) ? (gpu->dispx_st)->dispx_BG2PARMS : (gpu->dispx_st)->dispx_BG3PARMS;
+		const GPU::AffineInfo &affine_info = gpu->affineInfo[layer_num - 2];
+		BGxPARMS &dest_params = highResolutionBGOffset[screen_index];
+		
+		highResolutionBGNum[screen_index] = layer_num;
+		
+//		dest_params.BGxX = source_params.BGxX;
+//		dest_params.BGxY = source_params.BGxY;
+		dest_params.BGxX = affine_info.x;
+		dest_params.BGxY = affine_info.y;
+		dest_params.BGxPA = source_params.BGxPA;
+		dest_params.BGxPB = source_params.BGxPB;
+		dest_params.BGxPC = source_params.BGxPC;
+		dest_params.BGxPD = source_params.BGxPD;
+		
+		#ifdef X432R_CUSTOMRENDERER_DEBUG
+		if( (dest_params.BGxPA != 256) || (dest_params.BGxPB != 0) || (dest_params.BGxPC != 0) || (dest_params.BGxPD != 256) )
+			X432R::ShowDebugMessage("BG RotScale");
+		
+		if( (dest_params.BGxX != 0) || (dest_params.BGxY != 0) )
+			X432R::ShowDebugMessage("BG Offset");
+		#endif
+		
+		return true;
+	}
+	
+	#if !defined(X432R_LAYERPOSITIONOFFSET_TEST2) || !defined(X432R_HIGHRESO_BG_OBJ_ROTSCALE_TEST)
+	bool HighResolutionFramebuffers::CheckBGOffset(const u32 screen_index)
+	{
+		const BGxPARMS &params = highResolutionBGOffset[screen_index];
+		
+		#ifndef X432R_HIGHRESO_BG_OBJ_ROTSCALE_TEST
+		if( (params.BGxPA != 256) || (params.BGxPB != 0) || (params.BGxPC != 0) || (params.BGxPD != 256) ) return false;
+		#endif
+		
+		#ifndef X432R_LAYERPOSITIONOFFSET_TEST2
+		if( (params.BGxX != 0) || (params.BGxY != 0) ) return false;
+		#endif
+		
+		return true;
+	}
+	
+	bool HighResolutionFramebuffers::CheckOBJOffset(const u32 screen_index)
+	{
+		const BGxPARMS &params = highResolutionOBJOffset[screen_index];
+		
+		#ifndef X432R_HIGHRESO_BG_OBJ_ROTSCALE_TEST
+		if(params.BGxPA == -1) return false;		// temp
+		#endif
+		
+		#ifndef X432R_LAYERPOSITIONOFFSET_TEST2
+		if( (params.BGxX != 0) || (params.BGxY != 0) ) return false;
+		#endif
+		
+		if( highResolutionOBJFlipX[screen_index] || highResolutionOBJFlipY[screen_index] ) return false;
+		
+		return true;
+	}
+	#endif
+	
+	void HighResolutionFramebuffers::UpdateGpuParams()
+	{
+		mainScreenIndex = MainScreen.offset ? 1 : 0;
+		subScreenIndex = mainScreenIndex ? 0 : 1;
+		mainGpuDisplayMode = MainScreen.gpu->dispMode;
+		subGpuDisplayMode = SubScreen.gpu->dispMode;
+		
+		UpdateMasterBrightness();
+		
+		vramBlockMainScreen = 0xFF;
+		
+		memset( vramBlockBG, 0xFF, sizeof(vramBlockBG) );
+		memset( vramBlockOBJ, 0xFF, sizeof(vramBlockOBJ) );
+		memset( highResolutionBGNum, 0xFF, sizeof(highResolutionBGNum) );
+		
+		const _DISPCNT * const displaycontrol_main = &(_DISPCNT)(MainScreen.gpu->dispx_st)->dispx_DISPCNT.bits;
+		const _DISPCNT * const displaycontrol_sub = &(_DISPCNT)(SubScreen.gpu->dispx_st)->dispx_DISPCNT.bits;
+		mainGpuBG03DEnabled = (bool)displaycontrol_main->BG0_Enable && (bool)displaycontrol_main->BG0_3D;
+//		mainGpuBG03DEnabled = (bool)displaycontrol_main->BG0_Enable && (bool)displaycontrol_main->BG0_3D && (gfx3d.vertlist->count > 0);
+		
+		skipHighResolutionRendering[mainScreenIndex] = !mainGpuBG03DEnabled;
+		skipHighResolutionRendering[subScreenIndex] = true;
+		
+		#ifdef X432R_LAYERPOSITIONOFFSET_TEST
+//		highResolutionBG03DOffset = bg03d_enabled ? MainScreen.gpu->getHOFS(0) : 0;
+		#endif
+//		memset( highResolutionBGOffset, 0, sizeof(highResolutionBGOffset) );
+//		memset( highResolutionOBJOffset, 0, sizeof(highResolutionOBJOffset) );
+		
+		#ifdef X432R_DISPCAPTURE_MAINMEMORYFIFO_TEST
+		memset( MainMemoryFIFOBuffer, 0, sizeof(MainMemoryFIFOBuffer) );
+		#endif
+		
+		VramConfiguration::Purpose purpose;
+		
+		for(u32 i = 0; i < 4; ++i)
+		{
+			purpose = vramConfiguration.banks[i].purpose;
+			
+			switch(purpose)
+			{
+				case VramConfiguration::Purpose::ABG:
+					if( !IsVramValid(i) || !UpdateHighResolutionBGNum(MainScreen.gpu, displaycontrol_main, mainScreenIndex) ) break;
+					
+					#if !defined(X432R_LAYERPOSITIONOFFSET_TEST2) || !defined(X432R_HIGHRESO_BG_OBJ_ROTSCALE_TEST)
+					if( !CheckBGOffset(mainScreenIndex) )		// ðxBG/OBJð`æµÈ¢ªAVRAMÌàeÍNA¹¸ÉÛµÄ¨­
+					{
+						highResolutionBGNum[mainScreenIndex] = 0xFF;
+						continue;
+					}
+					#endif
+					
+					vramPurpose[i] = purpose;
+					vramBlockBG[mainScreenIndex] = i;
+					skipHighResolutionRendering[mainScreenIndex] = false;
+					continue;
+				
+				case VramConfiguration::Purpose::AOBJ:
+					if( !IsVramValid(i) || !CheckOBJParams(MainScreen.gpu, displaycontrol_main, mainScreenIndex) ) break;
+					
+					#if !defined(X432R_LAYERPOSITIONOFFSET_TEST2) || !defined(X432R_HIGHRESO_BG_OBJ_ROTSCALE_TEST)
+					if( !CheckOBJOffset(mainScreenIndex) ) continue;
+					#endif
+					
+					vramPurpose[i] = purpose;
+					vramBlockOBJ[mainScreenIndex] = i;
+					skipHighResolutionRendering[mainScreenIndex] = false;
+					continue;
+				
+				case VramConfiguration::Purpose::BBG:
+					if( !IsVramValid(i) || !UpdateHighResolutionBGNum(SubScreen.gpu, displaycontrol_sub, subScreenIndex) ) break;
+					
+					#if !defined(X432R_LAYERPOSITIONOFFSET_TEST2) || !defined(X432R_HIGHRESO_BG_OBJ_ROTSCALE_TEST)
+					if( !CheckBGOffset(subScreenIndex) )
+					{
+						highResolutionBGNum[subScreenIndex] = 0xFF;
+						continue;
+					}
+					#endif
+					
+					vramPurpose[i] = purpose;
+					vramBlockBG[subScreenIndex] = i;
+					skipHighResolutionRendering[subScreenIndex] = false;
+					continue;
+				
+				case VramConfiguration::Purpose::BOBJ:
+					if( !IsVramValid(i) || !CheckOBJParams(SubScreen.gpu, displaycontrol_sub, subScreenIndex) ) break;
+					
+					#if !defined(X432R_LAYERPOSITIONOFFSET_TEST2) || !defined(X432R_HIGHRESO_BG_OBJ_ROTSCALE_TEST)
+					if( !CheckOBJOffset(subScreenIndex) ) continue;
+					#endif
+					
+					vramPurpose[i] = purpose;
+					vramBlockOBJ[subScreenIndex] = i;
+					skipHighResolutionRendering[subScreenIndex] = false;
+					continue;
+				
+				case VramConfiguration::Purpose::LCDC:
+					vramPurpose[i] = purpose;
+					
+					if( !IsVramValid(i) || (mainGpuDisplayMode != 2) || (i != MainScreen.gpu->vramBlock) ) continue;
+					
+					vramBlockMainScreen = i;
+					continue;
+				
+				#ifdef X432R_CUSTOMRENDERER_DEBUG
+				case VramConfiguration::TEX:
+					if( IsVramValid(i) )
+						ShowDebugMessage("DisplayCapture->Texture?");
+					
+					break;
+				#endif
+			}
+			
+			ClearVramBuffer(i);
+		}
+		
+		UpdateDisplayCaptureParams(MainScreen.gpu->dispCapCnt);
+		
+		#ifdef X432R_HIGHRESOLUTION_RENDERLINE_DEBUG
+		skipHighResolutionRendering[0] = false;
+		skipHighResolutionRendering[1] = false;
+		#endif
+		
+		#ifdef X432R_3D_REARPLANE_TEST
+//		display3DControl = ( (REG_DISPx *)( &MMU.ARM9_REG[0] ) )->dispA_DISP3DCNT.bits;
+		rearPlane3DEnabled = ( ( (REG_DISPx *)( &MMU.ARM9_REG[0] ) )->dispA_DISP3DCNT.bits.RearPlaneMode == 1 );
+		
+		if(rearPlane3DEnabled)
+		{
+			u8 vram_bank_control;
+			
+			for(u32 i = 0; i < 4; ++i)
+			{
+				vram_bank_control = T1ReadByte( MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x240 + i );
+				
+				if(i <= 1)
+					vramBankControl_VramMST[i] = vram_bank_control & 0x03;		// VRAM A,B: bit0-1
+				else
+					vramBankControl_VramMST[i] = vram_bank_control & 0x07;		// VRAM B,C: bit0-2
+				
+				vramBankControl_VramOffset[i] = (vram_bank_control >> 3) & 0x03;
+				vramBankControl_VramEnabled[i] = (bool)(vram_bank_control >> 7);
+			}
+		}
+		#endif
+		
+		#ifdef X432R_CUSTOMRENDERER_DEBUG
+		_DISP3DCNT disp3d_control = ( (REG_DISPx *)( &MMU.ARM9_REG[0] ) )->dispA_DISP3DCNT.bits;
+		
+		if(disp3d_control.RearPlaneMode == 1)
+			ShowDebugMessage("DISP3DCNT RearPlane");
+		
+		if(disp3d_control.EnableAntiAliasing == 1)
+			ShowDebugMessage("DISP3DCNT AntiAliasing");
+		
+		if(disp3d_control.EnableAlphaBlending == 1)
+			ShowDebugMessage("DISP3DCNT AlphaBlending");
+		
+		if( mainGpuBG03DEnabled && ( MainScreen.gpu->getHOFS(0) != 0 ) )
+			ShowDebugMessage("BG0_3D Offset");
+		#endif
+	}
+	
+	void HighResolutionFramebuffers::UpdateDisplayCaptureParams(DISPCAPCNT params)
+	{
+		displayCaptureWriteBlockIndex = 0xFF;
+		displayCaptureReadBlockIndex = 0xFF;
+		displayCaptureSourceA = 0xFF;
+		displayCaptureSourceB = 0xFF;
+		displayCaptureBlendingRatioA = BLENDALPHA_MAX2;
+		displayCaptureBlendingRatioB = BLENDALPHA_MAX2;
+		
+		if( !(params.val & 0x80000000) ) return;
+		if( (params.capx != DISPCAPCNT::_256) || (params.capy != 192) ) return;
+//		if( (params.writeOffset != 0) || (params.readOffset != 0) ) return;
+		
+		#ifdef X432R_CUSTOMRENDERER_DEBUG
+		if(params.writeOffset != 0)
+			ShowDebugMessage("DisplayCapture WriteOffset");
+		
+		if(params.readOffset != 0)
+			ShowDebugMessage("DisplayCapture ReadOffset");
+		#endif
+		
+		u8 vram_writeblock = 0xFF;
+		
+		vram_writeblock = params.writeBlock;
+		
+		if( (vram_writeblock > 3) || ( vramPurpose[vram_writeblock] != VramConfiguration::Purpose::LCDC ) || skipHighResolutionRendering[mainScreenIndex] ) return;
+		
+		u8 vram_readblock = 0xFF;
+		u8 source_a = 0xFF;
+		u8 source_b = 0xFF;
+		u8 blend_a = BLENDALPHA_MAX2;
+		u8 blend_b = BLENDALPHA_MAX2;
+		
+		switch(params.capSrc)
+		{
+			case 0:
+				source_a = params.srcA;
+				break;
+			
+			case 1:
+				#ifdef X432R_CUSTOMRENDERER_DEBUG
+				if(params.srcB == 1)
+					ShowDebugMessage("DisplayCapture FIFO");
+				#endif
+				
+				if(params.srcB == 0)
+				{
+					vram_readblock = params.readBlock;
+					
+//					if( (vram_readblock > 3) || ( vramPurpose[vram_readblock] != VramConfiguration::Purpose::LCDC ) ) return;
+					if(vram_readblock > 3) return;
+					
+/*					if( !VramIsValid[vram_readblock] )
+					{
+						vram_readblock = 0xFF;
+						source_b = 0xFF;
+						break;
+					}
+*/				}
+				#ifndef X432R_DISPCAPTURE_MAINMEMORYFIFO_TEST
+				else return;
+				#endif
+				
+				if( (params.srcB == 0) && vramIsValid[vram_readblock] )
+					source_b = params.srcB;
+				
+				break;
+			
+			default:
+				#ifdef X432R_CUSTOMRENDERER_DEBUG
+				if(params.srcB == 1)
+					ShowDebugMessage("DisplayCapture GpuBuffer + FIFO");
+				#endif
+				
+				if(params.srcB == 0)
+				{
+					vram_readblock = params.readBlock;
+					
+//					if( (vram_readblock > 3) || ( vramPurpose[vram_readblock] != VramConfiguration::Purpose::LCDC ) ) return;
+					if(vram_readblock > 3) return;
+					
+/*					if( !VramIsValid[vram_readblock] )
+					{
+						vram_readblock = 0xFF;
+						source_b = 0xFF;
+						break;
+					}
+*/				}
+				#ifndef X432R_DISPCAPTURE_MAINMEMORYFIFO_TEST
+				else return;
+				#endif
+				
+				if( ( (params.srcB == 0) && !vramIsValid[vram_readblock] ) )
+					source_a = params.srcA;
+				
+				else if(params.EVA == 0)
+					source_b = params.srcB;
+				
+				else
+				{
+					source_a = params.srcA;
+					source_b = params.srcB;
+					blend_a = std::min<u8>(params.EVA, BLENDALPHA_MAX2);
+					blend_b = std::min<u8>(params.EVB, BLENDALPHA_MAX2);
+				}
+				break;
+		}
+		
+		displayCaptureWriteBlockIndex = vram_writeblock;
+		displayCaptureReadBlockIndex = vram_readblock;
+		displayCaptureSourceA = source_a;
+		displayCaptureSourceB = source_b;
+		displayCaptureBlendingRatioA = blend_a;
+		displayCaptureBlendingRatioB = blend_b;
+	}
+	
+	
+	template <u32 RENDER_MAGNIFICATION, bool HIGHRESO, u8 CAPTURESOURCE_A, u8 CAPTURESOURCE_B, u8 GPU_DISPLAYMODE>
+	void HighResolutionFramebuffers::UpdateFrontBufferAndDisplayCapture(u32 *front_buffer, const u32 screen_index)
+	{
+		assert( (screen_index == 0) || (screen_index == 1) );
+		assert(front_buffer != NULL);
+		
+		const u32 screen_offset = screen_index * 256 * 192;
+		const u16 * const normalbuffer_begin = (u16 *)GPU_screen + screen_offset;
+		const u16 *normal_buffer;
+		
+		#ifndef X432R_BACKGROUNDBUFFER_DISABLED
+		const u32 * const background_buffer_begin = backgroundBuffer + screen_offset;
+		const u32 *background_buffer;
+		#endif
+		
+		u32 *highreso_buffer = highResolutionBuffer_Final + (screen_index * 256 * 192 * RENDER_MAGNIFICATION * RENDER_MAGNIFICATION);
+		
+		u32 downscaled_y;
+//		u32 downscaled_index;
+		u32 highreso_index;
+		u32 color_rgba8888, normalscreen_rgba8888;
+		#ifndef X432R_BACKGROUNDBUFFER_DISABLED
+		u32 background_rgba8888;
+		#else
+		const u32 background_rgba8888 = backdropColor[screen_index];
+		#endif
+		
+		
+		#ifdef X432R_FOREGROUNDBUFFER_TEST
+		const u32 * const foreground_buffer_begin = foregroundBuffer + screen_offset;
+		const u32 *foreground_buffer;
+		u32 foreground_rgba8888;
+		u8 foreground_alpha;
+		#endif
+		
+		const u32 *maingpu3d_buffer = (CAPTURESOURCE_A == 1) ? highResolutionBuffer_3D : NULL;
+		u32 *vram_writebuffer = ( (CAPTURESOURCE_A <= 1) || (CAPTURESOURCE_B <= 1) ) ? highResolutionBuffer_Vram[displayCaptureWriteBlockIndex] : NULL;
+		const u32 *vram_readbuffer = (CAPTURESOURCE_B == 0) ? highResolutionBuffer_Vram[displayCaptureReadBlockIndex] : NULL;
+		const u32 *vram_screenbuffer = (GPU_DISPLAYMODE == 2) ? highResolutionBuffer_Vram[vramBlockMainScreen] : NULL;
+		
+		#ifdef X432R_DISPCAPTURE_MAINMEMORYFIFO_TEST
+		const u32 *fifo_buffer = (CAPTURESOURCE_B == 1) ? MainMemoryFIFOBuffer : NULL;
+		u32 fifo_rgba8888;
+		#endif
+		
+		u32 x, y, i;
+		
+		
+		front_buffer += (screen_index * 256 * 192 * RENDER_MAGNIFICATION * RENDER_MAGNIFICATION);
+		
+		
+		for( y = 0; y < (192 * RENDER_MAGNIFICATION); ++y )
+		{
+			downscaled_y = (y / RENDER_MAGNIFICATION) * 256;
+			
+			normal_buffer = normalbuffer_begin + downscaled_y;
+			#ifndef X432R_BACKGROUNDBUFFER_DISABLED
+			background_buffer = background_buffer_begin + downscaled_y;
+			#endif
+			
+			#ifdef X432R_FOREGROUNDBUFFER_TEST
+			foreground_buffer = foreground_buffer_begin + downscaled_y;
+			#endif
+			
+			for( x = 0; x < (256 * RENDER_MAGNIFICATION); ++x, ++front_buffer )
+			{
+//				downscaled_index = downscaled_y + (x / RENDER_MAGNIFICATION);
+				highreso_index = (y * 256 * RENDER_MAGNIFICATION) + x;
+				
+				if( (x % RENDER_MAGNIFICATION) == 0 )
+				{
+					normalscreen_rgba8888 = (u32)RGB15TO24_REVERSE(*normal_buffer++) | 0xFF000000;
+					
+					if( !HIGHRESO )
+						color_rgba8888 = normalscreen_rgba8888;
+					else
+					{
+						#ifndef X432R_BACKGROUNDBUFFER_DISABLED
+						background_rgba8888 = *background_buffer++ | 0xFF000000;
+						
+						#ifdef X432R_CUSTOMRENDERER_DEBUG2
+						if(debugModeEnabled)
+							background_rgba8888 = RGBA8888::AlphaBlend(0xFF00FF00, background_rgba8888, 8).Color;
+						#endif
+						#endif
+						
+						#ifdef X432R_FOREGROUNDBUFFER_TEST
+						foreground_rgba8888 = *foreground_buffer++;
+						foreground_alpha = foreground_rgba8888 >> 24;		// 0`15
+						foreground_rgba8888 |= 0xFF000000;
+						
+						#ifdef X432R_CUSTOMRENDERER_DEBUG2
+						if( debugModeEnabled && (foreground_alpha > 0) )
+							foreground_rgba8888 = RGBA8888::AlphaBlend(0xFF0000FF, foreground_rgba8888, 8).Color;
+						#endif
+						#endif
+					}
+					
+					#ifdef X432R_DISPCAPTURE_MAINMEMORYFIFO_TEST
+					if(CAPTURESOURCE_B == 1)
+						fifo_rgba8888 = *fifo_buffer++;
+					#endif
+					
+				}
+				
+				if(HIGHRESO)
+				{
+					color_rgba8888 = *highreso_buffer;
+					
+					if(color_rgba8888 == 0)
+						color_rgba8888 = background_rgba8888;
+					else
+						*highreso_buffer = 0;			// t[Ì½ßÉlðNAµÄ¨­
+					
+					++highreso_buffer;
+					
+					#ifdef X432R_FOREGROUNDBUFFER_TEST
+					if(foreground_alpha >= BLENDALPHA_MAX)
+						color_rgba8888 = foreground_rgba8888;
+					
+					else if(foreground_alpha > 0)
+						color_rgba8888 = RGBA8888::AlphaBlend(foreground_rgba8888, color_rgba8888, foreground_alpha).Color;
+					#endif
+				}
+				
+				switch(GPU_DISPLAYMODE)
+				{
+					case 1:
+						*front_buffer = color_rgba8888;
+						break;
+					
+					case 2:
+						*front_buffer = *vram_screenbuffer++;
+						break;
+					
+/*					#ifdef X432R_DISPCAPTURE_MAINMEMORYFIFO_TEST
+					case 3:
+						*front_buffer = *fifo_buffer;
+						break;
+					
+					case 0:
+						*front_buffer = 0xFFFFFFFF;
+						break;
+					#endif
+*/					
+					default:
+						*front_buffer = normalscreen_rgba8888;
+						break;
+				}
+				
+				// DispCapture
+				if( (CAPTURESOURCE_A != 0xFF) || (CAPTURESOURCE_B != 0xFF) )
+				{
+					if(CAPTURESOURCE_B == 0xFF)
+					{
+						if(CAPTURESOURCE_A == 0)
+							*vram_writebuffer++ = color_rgba8888;				// BG+3D+OBJ
+						
+						else if(CAPTURESOURCE_A == 1)
+							*vram_writebuffer++ = *maingpu3d_buffer++;			// 3D only
+					}
+					
+					else if(CAPTURESOURCE_A == 0xFF)
+					{
+						if(CAPTURESOURCE_B == 0)
+							*vram_writebuffer++ = *vram_readbuffer++;			// VRAM
+						#ifdef X432R_DISPCAPTURE_MAINMEMORYFIFO_TEST
+						else if(CAPTURESOURCE_B == 1)
+							*vram_writebuffer++ = *fifo_buffer;					// MainMemoryDisplayFIFO
+						#endif
+					}
+					
+					else if( (CAPTURESOURCE_A == 0) && (CAPTURESOURCE_B == 0) )		// BG+3D+OBJ + VRAM
+						*vram_writebuffer++ = RGBA8888::AlphaBlend(color_rgba8888, *vram_readbuffer++, displayCaptureBlendingRatioA, displayCaptureBlendingRatioB).Color;
+					
+					else if( (CAPTURESOURCE_A == 1) && (CAPTURESOURCE_B == 0) )		// 3D + VRAM
+						*vram_writebuffer++ = RGBA8888::AlphaBlend(*maingpu3d_buffer++, *vram_readbuffer++, displayCaptureBlendingRatioA, displayCaptureBlendingRatioB).Color;
+					
+					#ifdef X432R_DISPCAPTURE_MAINMEMORYFIFO_TEST
+					else if( (CAPTURESOURCE_A == 0) && (CAPTURESOURCE_B == 1) )		// BG+3D+OBJ + MainMemoryDisplayFIFO
+						*vram_writebuffer++ = RGBA8888::AlphaBlend(color_rgba8888, *fifo_buffer, displayCaptureBlendingRatioA, displayCaptureBlendingRatioB).Color;
+					
+					else if( (CAPTURESOURCE_A == 1) && (CAPTURESOURCE_B == 1) )		// 3D + MainMemoryDisplayFIFO
+						*vram_writebuffer++ = RGBA8888::AlphaBlend(*maingpu3d_buffer++, *fifo_buffer, displayCaptureBlendingRatioA, displayCaptureBlendingRatioB).Color;
+					#endif
+				}
+			}
+		}
+		
+		if( (CAPTURESOURCE_A > 1) && (CAPTURESOURCE_B > 1) ) return;
+		
+		vramIsValid[displayCaptureWriteBlockIndex] = true;
+		
+		#ifdef X432R_SAMPLEDVRAMDATACHECK_TEST
+		GetSampledVramPixelData( vramSampledPixelData[displayCaptureWriteBlockIndex], displayCaptureWriteBlockIndex );
+		#endif
+	}
+	
+	template <u32 RENDER_MAGNIFICATION>
+	void HighResolutionFramebuffers::UpdateFrontBufferAndDisplayCapture(u32 *front_buffer, const u32 screen_index)
+	{
+		assert( (screen_index == 0) || (screen_index == 1) );
+		assert(front_buffer != NULL);
+		
+		const u16 *normal_buffer = (u16 *)GPU_screen + (screen_index * 256 * 192);
+		
+		front_buffer += (screen_index * 256 * 192 * RENDER_MAGNIFICATION * RENDER_MAGNIFICATION);
+		
+		for(u32 i = 0; i < (256 * 192); ++i, ++front_buffer, ++normal_buffer)
+		{
+			*front_buffer = (u32)RGB15TO24_REVERSE(*normal_buffer) | 0xFF000000;
+		}
+	}
+	
+	template <u32 RENDER_MAGNIFICATION>
+	inline void HighResolutionFramebuffers::UpdateFrontBufferAndDisplayCapture(u32 * const front_buffer, u32 * const master_brightness, bool * const is_highreso_screen)
+	{
+		X432R_STATIC_RENDER_MAGNIFICATION_CHECK();
+		
+		
+		// MainScreen
+		u8 display_mode = 0xFF;
+		
+		if( (mainGpuDisplayMode == 1) || ( (mainGpuDisplayMode == 2) && (vramBlockMainScreen <= 3) ) )
+			display_mode = mainGpuDisplayMode;
+		
+		is_highreso_screen[mainScreenIndex] = true;
+		
+		#define X432R_CALL_UPDATEFRONTBUFFER(source_a,source_b) \
+		{ \
+			if( skipHighResolutionRendering[mainScreenIndex] ) \
+			{ \
+				switch(display_mode) \
+				{ \
+					case 1:		UpdateFrontBufferAndDisplayCapture<RENDER_MAGNIFICATION, false, source_a, source_b, 1>(front_buffer, mainScreenIndex);		break; \
+					case 2:		UpdateFrontBufferAndDisplayCapture<RENDER_MAGNIFICATION, false, source_a, source_b, 2>(front_buffer, mainScreenIndex);		break; \
+					default:	UpdateFrontBufferAndDisplayCapture<RENDER_MAGNIFICATION, false, source_a, source_b, 0xFF>(front_buffer, mainScreenIndex);	break; \
+				} \
+			} \
+			else \
+			{ \
+				switch(display_mode) \
+				{ \
+					case 1:		UpdateFrontBufferAndDisplayCapture<RENDER_MAGNIFICATION, true, source_a, source_b, 1>(front_buffer, mainScreenIndex);		break; \
+					case 2:		UpdateFrontBufferAndDisplayCapture<RENDER_MAGNIFICATION, true, source_a, source_b, 2>(front_buffer, mainScreenIndex);		break; \
+					default:	UpdateFrontBufferAndDisplayCapture<RENDER_MAGNIFICATION, true, source_a, source_b, 0xFF>(front_buffer, mainScreenIndex);	break; \
+				} \
+			} \
+		}
+		
+		switch(displayCaptureSourceA)
+		{
+			case 0:
+				switch(displayCaptureSourceB)
+				{
+					case 0:
+						X432R_CALL_UPDATEFRONTBUFFER(0, 0)
+						break;
+					
+					case 1:
+						X432R_CALL_UPDATEFRONTBUFFER(0, 1)
+						break;
+					
+					default:
+						X432R_CALL_UPDATEFRONTBUFFER(0, 0xFF)
+						break;
+				}
+				break;
+			
+			case 1:
+				switch(displayCaptureSourceB)
+				{
+					case 0:
+						X432R_CALL_UPDATEFRONTBUFFER(1, 0)
+						break;
+					
+					case 1:
+						X432R_CALL_UPDATEFRONTBUFFER(1, 1)
+						break;
+					
+					default:
+						X432R_CALL_UPDATEFRONTBUFFER(1, 0xFF)
+						break;
+				}
+				break;
+			
+			default:
+				switch(displayCaptureSourceB)
+				{
+					case 0:
+						X432R_CALL_UPDATEFRONTBUFFER(0xFF, 0)
+						break;
+					
+					case 1:
+						X432R_CALL_UPDATEFRONTBUFFER(0xFF, 1)
+						break;
+					
+					default:
+						if( ( (display_mode == 1) && !skipHighResolutionRendering[mainScreenIndex] ) || (display_mode == 2) )
+							X432R_CALL_UPDATEFRONTBUFFER(0xFF, 0xFF)
+						else
+						{
+							UpdateFrontBufferAndDisplayCapture<RENDER_MAGNIFICATION>(front_buffer, mainScreenIndex);
+							is_highreso_screen[mainScreenIndex] = false;
+						}
+						break;
+				}
+				break;
+		}
+		
+		#undef X432R_CALL_UPDATEFRONTBUFFER
+		
+		
+		// SubScreen
+		if( (subGpuDisplayMode == 1) && !skipHighResolutionRendering[subScreenIndex] )
+		{
+			UpdateFrontBufferAndDisplayCapture<RENDER_MAGNIFICATION, true, 0xFF, 0xFF, 1>(front_buffer, subScreenIndex);
+			is_highreso_screen[subScreenIndex] = true;
+		}
+		else
+		{
+			UpdateFrontBufferAndDisplayCapture<RENDER_MAGNIFICATION>(front_buffer, subScreenIndex);
+			is_highreso_screen[subScreenIndex] = false;
+		}
+		
+		
+		master_brightness[0] = masterBrightness[0];
+		master_brightness[1] = masterBrightness[1];
+		
+		currentFrameRendered = false;
+	}
+	
+	template void HighResolutionFramebuffers::UpdateFrontBufferAndDisplayCapture<2>(u32 * const front_buffer, u32 * const master_brightness, bool * const is_highreso_screen);
+	template void HighResolutionFramebuffers::UpdateFrontBufferAndDisplayCapture<3>(u32 * const front_buffer, u32 * const master_brightness, bool * const is_highreso_screen);
+	template void HighResolutionFramebuffers::UpdateFrontBufferAndDisplayCapture<4>(u32 * const front_buffer, u32 * const master_brightness, bool * const is_highreso_screen);
+	
+	
+	//---------- HighResolutionFramebuffers RenderLine ----------
+	
+	void HighResolutionFramebuffers::InitRenderLineParams(const NDS_Screen * const screen, u32 y, const u16 backdrop_rgb555)
+	{
+		const bool is_maingpu = (screen->gpu->core == 0);
+		
+		renderLine_CurrentScreenIndex = screen->offset ? 1 : 0;
+		
+		if( (y == 0) && is_maingpu )
+		{
+			renderLine_CurrentRenderMagnification = GetCurrentRenderMagnification();
+			
+			if(renderLine_CurrentRenderMagnification == 1)
+			{
+				renderLine_SkipHighResolutionRednering = true;
+				return;
+			}
+			
+			UpdateGpuParams();
+			
+			if(mainGpuBG03DEnabled)
+				gpu3D->NDS_3D_RenderFinish();			// GPU_RenderLine_Layer()ÌÅÉÀsµÄ¨­
+			
+			currentFrameRendered = true;
+			renderLine_CurrentRenderWidth = 256 * renderLine_CurrentRenderMagnification;
+			renderLine_CurrentRenderHeight = 192 * renderLine_CurrentRenderMagnification;
+		}
+		
+		#ifdef X432R_BACKGROUNDBUFFER_DISABLED
+		if(y == 0)
+			backdropColor[renderLine_CurrentScreenIndex] = (u32)RGB15TO24_REVERSE(backdrop_rgb555) | 0xFF000000;
+		
+		renderLine_CurrentBackdropColor = backdropColor[renderLine_CurrentScreenIndex];
+		#endif
+		
+		renderLine_SkipHighResolutionRednering = (renderLine_CurrentRenderMagnification == 1) || skipHighResolutionRendering[renderLine_CurrentScreenIndex];
+		
+		if(renderLine_SkipHighResolutionRednering) return;
+		
+		const u32 screen_offset = renderLine_CurrentScreenIndex * 256 * 192;
+		const u32 buffer_offset = y * 256;
+		
+		const u32 highreso_offset_gain = renderLine_CurrentRenderMagnification * renderLine_CurrentRenderMagnification;
+		const u32 highreso_screenoffset = screen_offset * highreso_offset_gain;
+//		const u32 highreso_offset = buffer_offset * highreso_offset_gain;
+		
+		renderLine_CurrentY = y;
+		renderLine_CurrentHighResolutionYBegin = y * renderLine_CurrentRenderMagnification;
+		renderLine_CurrentHighResolutionYEnd = renderLine_CurrentHighResolutionYBegin + renderLine_CurrentRenderMagnification;
+		
+		renderLine_CurrentBrightFactor = std::min<u8>(screen->gpu->BLDY_EVY, BLENDALPHA_MAX);
+		renderLine_CurrentBlendAlphaA = std::min<u8>(screen->gpu->BLDALPHA_EVA, BLENDALPHA_MAX2);
+		renderLine_CurrentBlendAlphaB = std::min<u8>(screen->gpu->BLDALPHA_EVB, BLENDALPHA_MAX2);
+		
+		renderLine_HighResolutionFinalBuffer = highResolutionBuffer_Final + highreso_screenoffset;
+		#ifndef X432R_BACKGROUNDBUFFER_DISABLED
+		renderLine_BackgroundBuffer = backgroundBuffer + screen_offset + buffer_offset;
+		#endif
+		
+		#ifdef X432R_FOREGROUNDBUFFER_TEST
+		renderLine_ForegroundBuffer = foregroundBuffer + screen_offset + buffer_offset;
+		#endif
+		
+		#ifdef X432R_DISPCAPTURE_MAINMEMORYFIFO_TEST
+		renderLine_MainMemoryFIFOBuffer = (MainMemoryFIFOBuffer + buffer_offset);
+		#endif
+		
+		const u8 vramblock_bg = vramBlockBG[renderLine_CurrentScreenIndex];
+		const u8 vramblock_obj = vramBlockOBJ[renderLine_CurrentScreenIndex];
+		
+		if(vramblock_bg <= 3)
+		{
+			renderLine_HighResolutionBGNum = highResolutionBGNum[renderLine_CurrentScreenIndex];
+			renderLine_VramBufferBG = highResolutionBuffer_Vram[vramblock_bg];
+			
+			#ifdef X432R_LAYERPOSITIONOFFSET_TEST2
+			renderLine_CurrentHighResolutionBGOffset = highResolutionBGOffset + renderLine_CurrentScreenIndex;
+			#endif
+		}
+		else
+		{
+			renderLine_HighResolutionBGNum = 0xFF;
+			renderLine_VramBufferBG = NULL;
+			
+			#ifdef X432R_LAYERPOSITIONOFFSET_TEST2
+			renderLine_CurrentHighResolutionBGOffset = NULL;
+			#endif
+		}
+		
+		if(vramblock_obj <= 3)
+		{
+			renderLine_VramBufferOBJ = highResolutionBuffer_Vram[vramblock_obj];
+			
+			#ifdef X432R_LAYERPOSITIONOFFSET_TEST2
+			renderLine_CurrentHighResolutionOBJOffset = highResolutionOBJOffset + renderLine_CurrentScreenIndex;
+			#endif
+		}
+		else
+		{
+			renderLine_VramBufferOBJ = NULL;
+			
+			#ifdef X432R_LAYERPOSITIONOFFSET_TEST2
+			renderLine_CurrentHighResolutionOBJOffset = NULL;
+			#endif
+		}
+		
+		#ifndef X432R_BACKGROUNDBUFFER_DISABLED
+		const u32 backdrop_rgba8888 = (u32)RGB15TO24_REVERSE(backdrop_rgb555) | 0xFF000000;
+		u32 *background_buffer = renderLine_BackgroundBuffer;
+		bool *highreso_flag_buffer = renderLine_ExistsHighResolutionPixelData;
+		#ifdef X432R_FOREGROUNDBUFFER_TEST
+		u32 *foreground_buffer = renderLine_ForegroundBuffer;
+		#endif
+		
+		for(u32 x = 0; x < 256; ++x, ++background_buffer, ++highreso_flag_buffer)
+		{
+			*background_buffer = backdrop_rgba8888;
+			*highreso_flag_buffer = false;
+			
+			#ifdef X432R_FOREGROUNDBUFFER_TEST
+			*foreground_buffer++ = 0;
+			#endif
+		}
+		#endif
+	}
+	
+	
+	template <SOURCELAYER LAYER, BLENDMODE MODE, bool HIGHRESO, bool LAYER_OFFSET, bool USE_ALPHA>
+	inline void HighResolutionFramebuffers::SetFinalColor(const u32 dest_x, const u32 source_x, const u16 color_rgb555, u8 alpha, const u32 * const source_buffer)
+	{
+		const u32 x_begin = dest_x * renderLine_CurrentRenderMagnification;
+		const u32 x_end = x_begin + renderLine_CurrentRenderMagnification;
+		
+		u32 *highreso_buffer;
+		u32 highreso_index;
+		u32 color_rgba8888;
+		#ifndef X432R_BACKGROUNDBUFFER_DISABLED
+		u32 background_rgba8888;
+		#endif
+		
+		u32 x, y;
+		
+		s32 offset_x = 0;
+		s32 offset_y = 0;
+		s32 offseted_x, offseted_y;
+		
+		
+		#ifdef X432R_PROCESSTIME_CHECK
+		AutoStopTimeCounter timecounter(timeCounter_2DHighReso);
+		#endif
+		
+		
+		#ifndef X432R_BACKGROUNDBUFFER_DISABLED
+		if(MODE == BLENDMODE_ENABLED)
+			background_rgba8888 = renderLine_BackgroundBuffer[dest_x];
+		#endif
+		
+		if( !HIGHRESO )
+		{
+			color_rgba8888 = (u32)RGB15TO24_REVERSE(color_rgb555) | 0xFF000000;
+			
+			#ifdef X432R_CUSTOMRENDERER_DEBUG2
+			if(debugModeEnabled)
+				color_rgba8888 = RGBA8888::AlphaBlend(0xFFFF0000, color_rgba8888, 8).Color;
+			#endif
+		}
+		else
+		{
+			renderLine_ExistsHighResolutionPixelData[dest_x] = true;
+			
+			if(LAYER_OFFSET)
+			{
+				switch(LAYER)
+				{
+					#ifdef X432R_LAYERPOSITIONOFFSET_TEST
+					case SOURCELAYER_3D:
+						offset_x = (dest_x - source_x) * renderLine_CurrentRenderMagnification;
+//						offset_x = ( dest_x - ( (dest_x + highResolutionBG03DOffset) & 0x1FF ) ) * renderLine_currentRenderMagnification;
+						break;
+					#endif
+					
+					#ifdef X432R_LAYERPOSITIONOFFSET_TEST2
+					case SOURCELAYER_BG:
+						#if 1
+						offset_x = renderLine_CurrentHighResolutionBGOffset->BGxX * renderLine_CurrentRenderMagnification;
+						offset_y = renderLine_CurrentHighResolutionBGOffset->BGxY * renderLine_CurrentRenderMagnification;
+						#else
+						offset_x = ( dest_x - ( (dest_x + renderLine_CurrentHighResolutionBGOffset->BGxX) & 0x1FF ) ) * renderLine_CurrentRenderMagnification;
+						offset_y = ( renderLine_CurrentY - ( (renderLine_CurrentY + renderLine_CurrentHighResolutionBGOffset->BGxY) & 0xFF ) ) * renderLine_CurrentRenderMagnification;
+						#endif
+						break;
+					
+					case SOURCELAYER_OBJ:
+						#if 1
+						offset_x = renderLine_CurrentHighResolutionOBJOffset->BGxX * renderLine_CurrentRenderMagnification;
+						offset_y = renderLine_CurrentHighResolutionOBJOffset->BGxY * renderLine_CurrentRenderMagnification;
+						#else
+						offset_x = ( dest_x - ( (dest_x + renderLine_CurrentHighResolutionOBJOffset->BGxX) & 0x1FF ) ) * renderLine_CurrentRenderMagnification;
+						offset_y = ( renderLine_CurrentY - ( (renderLine_CurrentY + renderLine_CurrentHighResolutionOBJOffset->BGxY) & 0xFF ) ) * renderLine_CurrentRenderMagnification;
+						#endif
+						
+/*						if(renderLine_CurrentHighResolutionOBJFlipX)
+							;
+						
+						if(renderLine_CurrentHighResolutionOBJFlipY)
+							;
+*/						
+						break;
+					#endif
+				}
+			}
+		}
+		
+		for(y = renderLine_CurrentHighResolutionYBegin; y < renderLine_CurrentHighResolutionYEnd; ++y)
+		{
+			highreso_index = y * renderLine_CurrentRenderWidth;
+			highreso_buffer = renderLine_HighResolutionFinalBuffer + highreso_index + x_begin;
+			
+			if(LAYER_OFFSET)
+			{
+				if(LAYER == SOURCELAYER_3D)
+					offseted_y = highreso_index;
+				else
+				{
+					offseted_y = (s32)y - offset_y;
+					
+					if( (offseted_y < 0) || (offseted_y >= renderLine_CurrentRenderHeight) ) continue;
+					
+					offseted_y *= renderLine_CurrentRenderWidth;
+				}
+			}
+			
+			for(x = x_begin; x < x_end; ++x, ++highreso_buffer)
+			{
+				if( !HIGHRESO )
+				{
+					if(MODE != BLENDMODE_ENABLED)
+						*highreso_buffer = color_rgba8888;
+					else
+					{
+						if(USE_ALPHA)
+						{
+							if(*highreso_buffer == 0)
+								#ifndef X432R_BACKGROUNDBUFFER_DISABLED
+								*highreso_buffer = RGBA8888::AlphaBlend(color_rgba8888, background_rgba8888, alpha).Color;
+								#else
+								*highreso_buffer = RGBA8888::AlphaBlend(color_rgba8888, renderLine_CurrentBackdropColor, alpha).Color;
+								#endif
+							else
+								*highreso_buffer = RGBA8888::AlphaBlend(color_rgba8888, *highreso_buffer, alpha).Color;
+						}
+						else
+						{
+							if(*highreso_buffer == 0)
+								#ifndef X432R_BACKGROUNDBUFFER_DISABLED
+								*highreso_buffer = RGBA8888::AlphaBlend(color_rgba8888, background_rgba8888, renderLine_CurrentBlendAlphaA, renderLine_CurrentBlendAlphaB).Color;
+								#else
+								*highreso_buffer = RGBA8888::AlphaBlend(color_rgba8888, renderLine_CurrentBackdropColor, renderLine_CurrentBlendAlphaA, renderLine_CurrentBlendAlphaB).Color;
+								#endif
+							else
+								*highreso_buffer = RGBA8888::AlphaBlend(color_rgba8888, *highreso_buffer, renderLine_CurrentBlendAlphaA, renderLine_CurrentBlendAlphaB).Color;
+						}
+					}
+					
+					continue;
+				}
+				
+				if( !LAYER_OFFSET )
+					color_rgba8888 = source_buffer[highreso_index + x];
+				else
+				{
+					offseted_x = (s32)x - offset_x;
+					
+					if( (offseted_x < 0) || (offseted_x >= renderLine_CurrentRenderWidth) ) continue;
+					
+					color_rgba8888 = source_buffer[offseted_y + offseted_x];
+				}
+				
+				switch(MODE)
+				{
+					case BLENDMODE_BRIGHTUP:
+						if(color_rgba8888 == 0) continue;
+						
+						*highreso_buffer = RGBA8888::AlphaBlend(0xFFFFFFFF, color_rgba8888, renderLine_CurrentBrightFactor).Color;
+						break;
+					
+					case BLENDMODE_BRIGHTDOWN:
+						if(color_rgba8888 == 0) continue;
+						
+						*highreso_buffer = RGBA8888::AlphaBlend(0xFF000000, color_rgba8888, renderLine_CurrentBrightFactor).Color;
+						break;
+					
+					case BLENDMODE_ENABLED:
+						alpha = color_rgba8888 >> (24 + 4);
+						
+						if(alpha == 0) continue;
+						
+						if(*highreso_buffer == 0)
+							#ifndef X432R_BACKGROUNDBUFFER_DISABLED
+							*highreso_buffer = RGBA8888::AlphaBlend(color_rgba8888, background_rgba8888, alpha).Color;
+							#else
+							*highreso_buffer = RGBA8888::AlphaBlend(color_rgba8888, renderLine_CurrentBackdropColor, alpha).Color;
+							#endif
+						else
+							*highreso_buffer = RGBA8888::AlphaBlend(color_rgba8888, *highreso_buffer, alpha).Color;
+						
+						break;
+					
+					default:
+						if(color_rgba8888 == 0) continue;
+						
+						*highreso_buffer = color_rgba8888 | 0xFF000000;		// Enable Anti-AliasingLøÉ2DÆ3DÌ«Eªª­Èéêª é
+						break;
+				}
+			}
+		}
+	}
+	
+	#ifdef X432R_FOREGROUNDBUFFER_TEST
+	template <SOURCELAYER LAYER, BLENDMODE MODE>
+	inline void HighResolutionFramebuffers::SetForegroundColor(const u32 x, const u16 color_rgb555, const u8 alpha)
+	{
+		if( (MODE == BLENDMODE_ENABLED) && (alpha == 0) ) return;
+		
+		const u32 color_rgba8888 = (u32)RGB15TO24_REVERSE(color_rgb555);
+		
+		if( (MODE != BLENDMODE_ENABLED) || (alpha >= BLENDALPHA_MAX) )
+			renderLine_ForegroundBuffer[x] = color_rgba8888 | 0xFF000000;
+		else
+		{
+			// foregroundÉ¼§¾Fª2ñ`æ³ê½êÉ³µ¢\¦ªs¦È¢âè è
+			
+			u32 * const foreground_buffer = renderLine_ForegroundBuffer + x;
+			
+			if(*foreground_buffer == 0)
+//				*foreground_buffer = color_rgba8888 | ( std::min<u32>(alpha * 16, 0xFF) << 24 );
+				*foreground_buffer = color_rgba8888 | (alpha << 24);
+			else
+				*foreground_buffer = RGBA8888::AlphaBlend(color_rgba8888 | 0xFF000000, *foreground_buffer, alpha).Color;
+			
+			#ifdef X432R_CUSTOMRENDERER_DEBUG
+			ShowDebugMessage("ForegroundBuffer: Translucent OBJ");
+			#endif
+		}
+	}
+	#endif
+	
+	#ifndef X432R_BACKGROUNDBUFFER_DISABLED
+	template <SOURCELAYER LAYER, BLENDMODE MODE>
+	inline void HighResolutionFramebuffers::SetBackgroundColor(const u32 x, const u16 color_rgb555, const u8 alpha)
+	{
+		if( (LAYER == SOURCELAYER_OBJ) && (MODE == BLENDMODE_ENABLED) && (alpha == 0) ) return;
+		
+		const u32 color_rgba8888 = (u32)RGB15TO24_REVERSE(color_rgb555) | 0xFF000000;
+		
+		if(MODE != BLENDMODE_ENABLED)
+			renderLine_BackgroundBuffer[x] = color_rgba8888;
+		else
+		{
+			u32 * const background_buffer = renderLine_BackgroundBuffer + x;
+			
+			if( (LAYER == SOURCELAYER_OBJ) && (alpha < 255) )
+				*background_buffer = RGBA8888::AlphaBlend(color_rgba8888, *background_buffer, alpha).Color;
+			else
+				*background_buffer = RGBA8888::AlphaBlend(color_rgba8888, *background_buffer, renderLine_CurrentBlendAlphaA, renderLine_CurrentBlendAlphaB).Color;
+		}
+	}
+	#endif
+	
+	template <SOURCELAYER LAYER, BLENDMODE MODE>
+	inline void HighResolutionFramebuffers::SetFinalColor(const u32 dest_x, const u32 source_x, const u16 color_rgb555, u8 alpha, const u8 layer_num)
+	{
+		assert(layer_num <= 4);		// 0-3:BG, 4:OBJ, 5:Backdrop
+		
+		if(renderLine_SkipHighResolutionRednering) return;
+		
+		switch(LAYER)
+		{
+			case SOURCELAYER_3D:
+				#ifdef X432R_LAYERPOSITIONOFFSET_TEST
+//				if(highResolutionBG03DOffset != 0)
+				if(source_x != dest_x)
+					SetFinalColor<LAYER, MODE, true, true, false>(dest_x, source_x, 0, 0, highResolutionBuffer_3D);
+				else
+				#endif
+					SetFinalColor<LAYER, MODE, true, false, false>(dest_x, 0, 0, 0, highResolutionBuffer_3D);
+				
+				return;
+			
+			case SOURCELAYER_BG:
+				if( (renderLine_VramBufferBG == NULL) || (layer_num != renderLine_HighResolutionBGNum) ) break;
+				
+				#ifdef X432R_LAYERPOSITIONOFFSET_TEST2
+				if( (renderLine_CurrentHighResolutionBGOffset->BGxX != 0) || (renderLine_CurrentHighResolutionBGOffset->BGxY != 0) )
+					SetFinalColor<LAYER, MODE, true, true, false>(dest_x, 0, 0, 0, renderLine_VramBufferBG);
+				else
+				#endif
+					SetFinalColor<LAYER, MODE, true, false, false>(dest_x, 0, 0, 0, renderLine_VramBufferBG);
+				return;
+			
+			case SOURCELAYER_OBJ:
+				if(renderLine_VramBufferOBJ == NULL) break;
+				
+				#ifdef X432R_LAYERPOSITIONOFFSET_TEST2
+				if( (renderLine_CurrentHighResolutionOBJOffset->BGxX != 0) || (renderLine_CurrentHighResolutionOBJOffset->BGxY != 0) )
+					SetFinalColor<LAYER, MODE, true, true, false>(dest_x, 0, 0, 0, renderLine_VramBufferOBJ);
+				else
+				#endif
+					SetFinalColor<LAYER, MODE, true, false, false>(dest_x, 0, 0, 0, renderLine_VramBufferOBJ);
+				
+				return;
+		}
+		
+		if( (LAYER == SOURCELAYER_OBJ) && (MODE == BLENDMODE_ENABLED) && (alpha < 255) )
+			alpha = std::min<u8>(alpha, BLENDALPHA_MAX);
+		
+		#ifndef X432R_BACKGROUNDBUFFER_DISABLED
+		if( renderLine_ExistsHighResolutionPixelData[dest_x] )
+		{
+			#ifndef X432R_FOREGROUNDBUFFER_TEST
+			if( (LAYER != SOURCELAYER_OBJ) || (MODE != BLENDMODE_ENABLED) || (alpha == 255) )
+				SetFinalColor<LAYER, MODE, false, false, false>(dest_x, 0, color_rgb555, 0, NULL);
+			else
+				SetFinalColor<LAYER, MODE, false, false, true>(dest_x, 0, color_rgb555, alpha, NULL);
+			#else
+			if( (MODE != BLENDMODE_ENABLED) || ( (LAYER == SOURCELAYER_OBJ) && (alpha < 255) ) )
+				SetForegroundColor<LAYER, MODE>(dest_x, color_rgb555, alpha);
+			else
+				SetFinalColor<LAYER, MODE, false, false, false>(dest_x, 0, color_rgb555, 0, NULL);
+			#endif
+		}
+		else
+			SetBackgroundColor<LAYER, MODE>(dest_x, color_rgb555, alpha);
+		#else
+		if( (LAYER != SOURCELAYER_OBJ) || (MODE != BLENDMODE_ENABLED) || (alpha == 255) )
+			SetFinalColor<LAYER, MODE, false, false, false>(dest_x, 0, color_rgb555, 0, NULL);
+		else
+			SetFinalColor<LAYER, MODE, false, false, true>(dest_x, 0, color_rgb555, alpha, NULL);
+		#endif
+	}
+}
+#endif

@@ -27,6 +27,12 @@
 
 #include "aggdraw.h"
 
+
+//---CUSTOM--->
+#include "X432R_BuildSwitch.h"
+//<---CUSTOM---
+
+
 #define OSD_MAX_LINES 4
 #define OSD_TIMER_SECS 2
 
@@ -120,6 +126,13 @@ public:
 	void	addLine(const char *fmt, ...);
 	void	addFixed(u16 x, u16 y, const char *fmt, ...);
 	void	border(bool enabled);
+	
+	#ifdef X432R_CUSTOMRENDERER_ENABLED
+	inline u8 GetLineCount()
+	{
+		return lastLineText;
+	};
+	#endif
 };
 
 extern OSDCLASS	*osd;

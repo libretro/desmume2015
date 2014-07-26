@@ -58,30 +58,46 @@ bool Path::IsPathRooted (const std::string &path)
 
 std::string Path::GetFileDirectoryPath(std::string filePath)
 {
-	if (filePath.empty()) {
-		return "";
-	}
+	if( filePath.empty() ) return "";
 	
+	#if !defined(X432R_FILEPATHMOD_ENABLED) || !defined(HOST_WINDOWS)
 	size_t i = filePath.find_last_of(ALL_DIRECTORY_DELIMITER_STRING);
-	if (i == std::string::npos) {
-		return filePath;
-	}
+	if(i == std::string::npos) return filePath;
 	
 	return filePath.substr(0, i);
+	#else
+	char path[MAX_PATH] = {0};
+	strncpy( path, filePath.c_str(), sizeof(path) );
+	
+	if( filePath.length() >= MAX_PATH )
+		path[MAX_PATH - 1] = '\0';
+	
+	PathRemoveFileSpec(path);
+	
+	return std::string(path);
+	#endif
 }
 
 std::string Path::GetFileNameFromPath(std::string filePath)
 {
-	if (filePath.empty()) {
-		return "";
-	}
+	if( filePath.empty() ) return "";
 	
+	#if !defined(X432R_FILEPATHMOD_ENABLED) || !defined(HOST_WINDOWS)
 	size_t i = filePath.find_last_of(ALL_DIRECTORY_DELIMITER_STRING);
-	if (i == std::string::npos) {
-		return filePath;
-	}
+	if(i == std::string::npos) return filePath;
 	
 	return filePath.substr(i + 1);
+	#else
+	char path[MAX_PATH] = {0};
+	strncpy( path, filePath.c_str(), sizeof(path) );
+	
+	if( filePath.length() >= MAX_PATH )
+		path[MAX_PATH - 1] = '\0';
+	
+	PathStripPath(path);
+	
+	return std::string(path);
+	#endif
 }
 
 std::string Path::GetFileNameWithoutExt(std::string fileName)
@@ -90,16 +106,29 @@ std::string Path::GetFileNameWithoutExt(std::string fileName)
 		return "";
 	}
 	
+	#if !defined(X432R_FILEPATHMOD_ENABLED) || !defined(HOST_WINDOWS)
 	size_t i = fileName.find_last_of(FILE_EXT_DELIMITER_CHAR);
 	if (i == std::string::npos) {
 		return fileName;
 	}
 	
 	return fileName.substr(0, i);
+	#else
+	char path[MAX_PATH] = {0};
+	strncpy( path, fileName.c_str(), sizeof(path) );
+	
+	if( fileName.length() >= MAX_PATH )
+		path[MAX_PATH - 1] = '\0';
+	
+	PathRemoveExtension(path);
+	
+	return std::string(path);
+	#endif
 }
 
 std::string Path::ScrubInvalid(std::string str)
 {
+	#if !defined(X432R_FILEPATHMOD_ENABLED) || !defined(HOST_WINDOWS)
 	for (std::string::iterator it(str.begin()); it != str.end(); ++it)
 	{
 		bool ok = true;
@@ -117,6 +146,40 @@ std::string Path::ScrubInvalid(std::string str)
 	}
 
 	return str;
+	#else
+	const char length = str.length();
+	char buffer[1024];
+	char *c;
+	u32 size;
+	u32 i, j;
+	
+	strncpy( buffer, str.c_str(), 1024 );
+	
+	if(length >= 1024)
+		buffer[1024 - 1] = '\0';
+	
+	for(i = 0; i < length; i += size)
+	{
+		c = buffer + i;
+		
+		if(*c == '\0') break;
+		
+		size = _mbclen( (unsigned char *)c );		// ¶ÌoCgðæ¾
+		
+		if(size <= 0) break;
+		if(size != 1) continue;
+		
+		for( j = 0; j < ARRAY_SIZE(InvalidPathChars); ++j )
+		{
+			if( InvalidPathChars[j] != *c ) continue;
+			
+			*c = '*';
+			break;
+		}
+	}
+	
+	return (std::string)buffer;
+	#endif
 }
 
 std::string Path::GetFileNameFromPathWithoutExt(std::string filePath)
@@ -136,12 +199,25 @@ std::string Path::GetFileExt(std::string fileName)
 		return "";
 	}
 	
+	#if !defined(X432R_FILEPATHMOD_ENABLED) || !defined(HOST_WINDOWS)
 	size_t i = fileName.find_last_of(FILE_EXT_DELIMITER_CHAR);
 	if (i == std::string::npos) {
 		return fileName;
 	}
 	
 	return fileName.substr(i + 1);
+	#else
+	char path[MAX_PATH] = {0};
+	char *extension;
+	strncpy( path, fileName.c_str(), sizeof(path) );
+	
+	if( fileName.length() >= MAX_PATH )
+		path[MAX_PATH - 1] = '\0';
+	
+	extension = PathFindExtension(path);
+	
+	return std::string(extension);
+	#endif
 }
 
 //-----------------------------------

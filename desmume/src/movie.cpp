@@ -1021,6 +1021,10 @@ bool mov_loadstate(EMUFILE* fp, int size)
 			{
 			   osd->setLineColor(255, 0, 0);
 			   osd->addLine("Can't save movie file!");
+
+				#ifdef X432R_MENUITEMMOD_ENABLED
+				osd->setLineColor(255, 255, 255);
+				#endif
 			}
 
 			//printf("DUMPING MOVIE: %d FRAMES\n",currMovieData.records.size());
