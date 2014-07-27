@@ -283,6 +283,7 @@ static void CheckSettings(void)
 		frameSkip = var.value ? strtol(var.value, 0, 10) : 0;
 	}
 	 
+#ifdef X432R_CUSTOMRENDERER_ENABLED
 	var.key = "desmume_high_res_renderer_enabled";
 	var.value = 0;
 
@@ -309,6 +310,7 @@ static void CheckSettings(void)
 		else 
 			internal_res = 1;
 	}		
+#endif
 	
 	
 	var.key = "desmume_firmware_language";
