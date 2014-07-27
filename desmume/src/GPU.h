@@ -921,15 +921,15 @@ void gpu_SetRotateScreen(u16 angle);
 
 
 //---CUSTOM--->
-#include "X432R_BuildSwitch.h"
+//#include "X432R_BuildSwitch.h"
 #include <map>
 #include <utility>
 
 #ifdef X432R_CUSTOMRENDERER_ENABLED
 namespace X432R
 {
-	static const u8 BLENDALPHA_MAX = 15;
 	static const u8 BLENDALPHA_MAX2 = 16;
+	static const u8 BLENDALPHA_MAX = 15;
 	
 	
 	union RGBA8888
@@ -1045,12 +1045,12 @@ namespace X432R
 	};
 	
 	
-	static enum SOURCELAYER
+	enum SOURCELAYER
 	{
 		SOURCELAYER_BG, SOURCELAYER_3D, SOURCELAYER_OBJ
 	};
 	
-	static enum BLENDMODE
+	enum BLENDMODE
 	{
 		BLENDMODE_DISABLED, BLENDMODE_ENABLED, BLENDMODE_BRIGHTUP, BLENDMODE_BRIGHTDOWN
 	};
