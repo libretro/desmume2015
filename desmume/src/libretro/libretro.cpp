@@ -28,6 +28,11 @@ static int pointer_device=0;
 static int analog_stick_deadzone;
 static int analog_stick_acceleration=2048;
 
+#ifdef X432R_CUSTOMRENDERER_ENABLED
+static bool highres_enabled = false;
+static int internal_res = 1;
+#endif
+
 
 
 namespace /* INPUT */
@@ -277,6 +282,34 @@ static void CheckSettings(void)
 	{
 		frameSkip = var.value ? strtol(var.value, 0, 10) : 0;
 	}
+	 
+	var.key = "desmume_high_res_renderer_enabled";
+	var.value = 0;
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		if (strcmp(var.value, "enable") == 0)
+			highres_enabled = true;
+		else 
+			highres_enabled = false;
+	}	  
+	  
+	
+	var.key = "desmume_internal_res";
+	var.value = 0;
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		if (strcmp(var.value, "2x") == 0)
+			internal_res = 2;
+		else if(strcmp(var.value, "3x") == 0)
+			internal_res = 3;
+		else if(strcmp(var.value, "4x") == 0)
+			internal_res = 4;			
+		else 
+			internal_res = 1;
+	}		
+	
 	
 	var.key = "desmume_firmware_language";
 	var.value = 0;
@@ -342,6 +375,10 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_cpu_mode", "CPU mode; interpreter" },
 #endif
       { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch" },
+#ifdef X432R_CUSTOMRENDERER_ENABLED
+	  { "desmume_high_res_renderer_enabled", "Enable high resolution renderer; disable|enable" },
+	  { "desmume_internal_res", "Internal resolution; 1x|2x|3x|4x" },
+#endif	  
 	  { "desmume_pointer_mouse", "Enable mouse/pointer; enable|disable" },
 	  { "desmume_pointer_type", "Mouse/pointer mode; relative|absolute" },
 	  { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
