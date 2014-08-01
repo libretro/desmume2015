@@ -555,7 +555,7 @@ void retro_run (void)
 			analogX = 0;
 			analogY = 0;
 		}		
-		log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
+		//log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
 		
 		haveTouch = haveTouch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); 
 		
