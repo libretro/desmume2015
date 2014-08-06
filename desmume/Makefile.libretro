@@ -93,7 +93,7 @@ else ifeq ($(platform), android)
    CXX = arm-linux-androideabi-g++$(EXE_EXT)
    CPPFLAGS += -D__RETRO_ARM__
    fpic := -fPIC
-   SHARED := -shared -Wl,--version-script=libretro/link.T
+   SHARED := -shared -Wl,--version-script=$(SRC_DIR)/libretro/link.T
    DESMUME_JIT_ARM = 1
 
    ifeq ($(RETRO_PROFILE),1)
@@ -102,7 +102,7 @@ else ifeq ($(platform), android)
 else ifneq (,$(findstring armv,$(platform)))
    CPPFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
    TARGET := $(TARGET_NAME)_libretro.so
-   SHARED := -shared -Wl,--version-script=libretro/link.T
+   SHARED := -shared -Wl,--version-script=$(SRC_DIR)/libretro/link.T
    fpic := -fPIC
    CC = gcc
    DESMUME_JIT_ARM = 1
