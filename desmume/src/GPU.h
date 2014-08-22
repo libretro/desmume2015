@@ -931,6 +931,8 @@ namespace X432R
 	static const u8 BLENDALPHA_MAX2 = 16;
 	static const u8 BLENDALPHA_MAX = 15;
 	
+   void ClearBuffers();
+   u32 GetCurrentRenderMagnification();
 	
 	union RGBA8888
 	{
@@ -1242,6 +1244,7 @@ namespace X432R
 		template <SOURCELAYER LAYER, BLENDMODE MODE>
 		void SetBackgroundColor(const u32 x, const u16 color_rgb555, const u8 alpha);
 		#endif
+      bool IsVramInvalid(const u8 vram_block);
 	};
 	
 	extern HighResolutionFramebuffers backBuffer;

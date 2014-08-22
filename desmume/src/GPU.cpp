@@ -3135,7 +3135,7 @@ namespace X432R
 	
 	
 	#ifndef X432R_SAMPLEDVRAMDATACHECK_TEST
-	inline bool HighResolutionFramebuffers::IsVramInvalid(const u8 vram_block)
+	bool HighResolutionFramebuffers::IsVramInvalid(const u8 vram_block)
 	{
 		return !vramIsValid[vram_block];
 	}
@@ -3157,7 +3157,7 @@ namespace X432R
 		sampled_pixels[8] = source_buffer[ (144 * 256) + 192 ];
 	}
 	
-	inline bool HighResolutionFramebuffers::IsVramValid(const u8 vram_block)		// temp
+	bool HighResolutionFramebuffers::IsVramValid(const u8 vram_block)		// temp
 	{
 		if( !vramIsValid[vram_block] ) return false;
 		

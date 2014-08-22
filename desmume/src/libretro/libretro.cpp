@@ -31,6 +31,18 @@ static int analog_stick_acceleration=2048;
 #ifdef X432R_CUSTOMRENDERER_ENABLED
 static bool highres_enabled = false;
 static int internal_res = 1;
+
+namespace X432R
+{
+   void ClearBuffers()
+   {
+   }
+
+   u32 GetCurrentRenderMagnification()
+   {
+      return internal_res;
+   }
+}
 #endif
 
 

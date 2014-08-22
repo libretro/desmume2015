@@ -1,3 +1,5 @@
+X432R_CUSTOMRENDERER_ENABLED=0
+
 ifeq ($(platform),)
 platform = unix
 ifeq ($(shell uname -a),)
@@ -275,6 +277,10 @@ ifeq ($(RETRO_PROFILE),1)
 endif
 
 CPPFLAGS += $(OPTIMIZE)
+
+ifeq ($(X432R_CUSTOMRENDERER_ENABLED),1)
+	CPPFLAGS += -DX432R_CUSTOMRENDERER_ENABLED
+endif
 
 CPPFLAGS += -DHAVE_LIBZ
 ifeq ($(INCLUDE_ZLIB_HEADERS),1)
