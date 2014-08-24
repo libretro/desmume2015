@@ -426,6 +426,9 @@ static int WritePNGChunk(FILE *fp, uint32 size, const char *type, const uint8 *d
 
 int NDS_WritePNG(const char *fname, u8 *data)
 {
+#ifdef __LIBRETRO__
+   return 0;
+#else
 	int x, y;
 	int width=256;
 	int height=192*2;
@@ -521,6 +524,7 @@ PNGerr:
 	if(pp)
 		fclose(pp);
 	return(0);
+#endif
 }
 
 typedef struct
