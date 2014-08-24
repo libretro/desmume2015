@@ -20,7 +20,11 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <math.h>
+#if defined(HAVE_LIBZ)
 #include <zlib.h>
+#elif defined(__LIBRETRO__)
+extern unsigned long crc32(unsigned long, const unsigned char*,unsigned int);
+#endif
 
 #include "common.h"
 #include "NDSSystem.h"

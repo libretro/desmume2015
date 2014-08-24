@@ -943,6 +943,17 @@ static void savestate_WriteChunk(EMUFILE* os, int type, void (*saveproc)(EMUFILE
 
 static void writechunks(EMUFILE* os);
 
+#ifndef HAVE_LIBZ
+
+#ifndef Z_OK
+#define Z_OK 0
+#endif
+
+#ifndef Z_NO_COMPRESSION
+#define Z_NO_COMPRESSION 0
+#endif
+#endif
+
 bool savestate_save(EMUFILE* outstream, int compressionLevel)
 {
 #ifdef HAVE_JIT 

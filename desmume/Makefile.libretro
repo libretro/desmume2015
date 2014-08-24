@@ -47,7 +47,6 @@ else ifeq ($(platform), ps3)
    CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-g++.exe
    AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
    CPPFLAGS += -D__ppc__ -D__CELLOS_LV2__
-   INCLUDE_ZLIB_HEADERS = 1
    STATIC_LINKING = 1
 else ifeq ($(platform), sncps3)
    TARGET := $(TARGET_NAME)_libretro_ps3.a
@@ -55,7 +54,6 @@ else ifeq ($(platform), sncps3)
    CXX = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
    AR = $(CELL_SDK)/host-win32/sn/bin/ps3snarl.exe
    CPPFLAGS += -D__ppc__-D__CELLOS_LV2__
-   INCLUDE_ZLIB_HEADERS = 1
    STATIC_LINKING = 1
 else ifeq ($(platform), psl1ght)
    TARGET := $(TARGET_NAME)_libretro_psl1ght.a
@@ -63,7 +61,6 @@ else ifeq ($(platform), psl1ght)
    CXX = $(PS3DEV)/ppu/bin/ppu-g++$(EXE_EXT)
    AR = $(PS3DEV)/ppu/bin/ppu-ar$(EXE_EXT)
    CPPFLAGS += -D__ppc__ -D__CELLOS_LV2__
-   INCLUDE_ZLIB_HEADERS = 1
    STATIC_LINKING = 1
 else ifeq ($(platform), psp1)
    TARGET := $(TARGET_NAME)_libretro_psp1.a
@@ -71,7 +68,6 @@ else ifeq ($(platform), psp1)
    CXX = psp-g++$(EXE_EXT)
    AR = psp-ar$(EXE_EXT)
    CPPFLAGS += -DPSP -G0
-   INCLUDE_ZLIB_HEADERS = 1
    STATIC_LINKING = 1
 else ifeq ($(platform), xenon)
    TARGET := $(TARGET_NAME)_libretro_xenon360.a
@@ -79,7 +75,6 @@ else ifeq ($(platform), xenon)
    CXX = xenon-g++$(EXE_EXT)
    AR = xenon-ar$(EXE_EXT)
    CPPFLAGS += -D__LIBXENON__ -m32 -D__ppc__
-   INCLUDE_ZLIB_HEADERS = 1
    STATIC_LINKING = 1
 else ifeq ($(platform), wii)
    TARGET := $(TARGET_NAME)_libretro_wii.a
@@ -87,7 +82,6 @@ else ifeq ($(platform), wii)
    CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
    AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
    CFLAGS += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -D__ppc__
-   INCLUDE_ZLIB_HEADERS = 1
    STATIC_LINKING = 1
 else ifeq ($(platform), android)
    TARGET := $(TARGET_NAME)_libretro_$(TARGET_NAME).so
@@ -282,15 +276,9 @@ ifeq ($(X432R_CUSTOMRENDERER_ENABLED),1)
 	CPPFLAGS += -DX432R_CUSTOMRENDERER_ENABLED
 endif
 
-CPPFLAGS += -DHAVE_LIBZ
-ifeq ($(INCLUDE_ZLIB_HEADERS),1)
-   CPPFLAGS += -I$(SRC_DIR)/libretro/zlib
-endif
-
-SOURCES2   = $(SOURCES) $(SRC_DIR)/libretro/libretro.cpp
+SOURCES2   = $(SOURCES) $(SRC_DIR)/libretro/libretro.cpp $(SRC_DIR)/libretro/scrc32.cpp
 
 OBJECTS    = $(SOURCES2:.cpp=.o) $(SRC_DIR)/utils/ConvertUTF.o
-LIBS       = -lz
 CFLAGS     += -std=gnu99
 CPPFLAGS   += -D__LIBRETRO__ $(fpic) -iquote $(SRC_DIR) -iquote $(SRC_DIR)/libretro $(INCDIR)
 
