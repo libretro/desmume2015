@@ -195,7 +195,7 @@ static void QuickSwap(void)
 	}
 }
 
-static void CheckSettings(void)
+static void check_variables(void)
 {
 	struct retro_variable var = {0};
 	
@@ -482,7 +482,7 @@ void retro_init (void)
     if(!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &colorMode))
        return;
 
-    CheckSettings();
+    check_variables();
 
     // Init DeSmuME
     struct NDS_fw_config_data fw_config;
@@ -517,18 +517,16 @@ void retro_reset (void)
 void retro_run (void)
 {
     // Settings
-    bool changed = false;	
+    bool updated = false;	
     bool render_fullscreen = false;
     
-	environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &changed);
-    if(changed)
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
 	{
-        CheckSettings();
+      check_variables();
 		struct retro_system_av_info new_av_info;
 		retro_get_system_av_info(&new_av_info);
 
 		environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);		
-		//environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &new_av_info);		
 	}
 
     poll_cb();
