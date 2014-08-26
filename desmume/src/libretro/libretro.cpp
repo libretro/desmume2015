@@ -139,7 +139,7 @@ namespace /* VIDEO */
         screenLayout = &layouts[0];
 
         for(int i = 0; aLayout && layouts[i].name; i ++)
-            if(strcmp(aLayout, layouts[i].name) == 0)
+            if(!strcmp(aLayout, layouts[i].name))
                 screenLayout = &layouts[i];
     }
 
@@ -178,7 +178,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 }
 
 
-static void QuickSwap()
+static void QuickSwap(void)
 {
 	if(quick_switch_enable)
 	{
@@ -203,33 +203,37 @@ static void CheckSettings(void)
 	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-	{	
 		CommonSettings.num_cores = var.value ? strtol(var.value, 0, 10) : 1;
-	}
+   else
+      CommonSettings.num_cores = 1;
 	
 	var.key = "desmume_cpu_mode";
 	var.value = 0;
 	
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
-		if (strcmp(var.value, "jit") == 0)
+		if (!strcmp(var.value, "jit"))
 			CommonSettings.use_jit = true;
-		else if (strcmp(var.value, "interpreter") == 0)
+		else if (!strcmp(var.value, "interpreter"))
 			CommonSettings.use_jit = false;
-		else
-			CommonSettings.use_jit = false;
-#ifndef HAVE_JIT
-			CommonSettings.use_jit = false;
-#endif
 	}
+   else
+   {
+#ifdef HAVE_JIT
+      CommonSettings.use_jit = true;
+#else
+      CommonSettings.use_jit = false;
+#endif
+   }
 
 #ifdef HAVE_JIT
 	var.key = "desmume_jit_block_size";
 	var.value = 0;
+
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-	{
 		CommonSettings.jit_max_block_size = var.value ? strtol(var.value, 0, 10) : 100;
-	}    
+   else
+		CommonSettings.jit_max_block_size = 100;
 #endif
 	
 	var.key = "desmume_screens_layout";
@@ -237,15 +241,14 @@ static void CheckSettings(void)
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{	
-		if (strcmp(var.value, "quick switch") == 0)
+		if (!strcmp(var.value, "quick switch"))
 			quick_switch_enable = true;
 		else 
 			quick_switch_enable = false;
 		SetupScreens(var.value);
-		
-		
-		
 	}	
+   else
+      quick_switch_enable = false;
 	
 
 	var.key = "desmume_pointer_mouse";
@@ -253,25 +256,28 @@ static void CheckSettings(void)
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
-		if (strcmp(var.value, "enable") == 0)
+		if (!strcmp(var.value, "enable"))
 			mouse_enable = true;
-		else 
+      else if (!strcmp(var.value, "disable"))
 			mouse_enable = false;
 	}
+   else
+      mouse_enable = false;
 
 	var.key = "desmume_pointer_device";
 	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
-		if (strcmp(var.value, "l-stick") == 0)
+		if (!strcmp(var.value, "l-stick"))
 			pointer_device = 1;
-		else if(strcmp(var.value, "r-stick") == 0)
+		else if(!strcmp(var.value, "r-stick"))
 			pointer_device = 2;
 		else 
 			pointer_device=0;
-	}	
-		
+	}
+   else
+      pointer_device=0;
 		
 	var.key = "desmume_pointer_device_deadzone";
 	var.value = NULL;
@@ -284,16 +290,16 @@ static void CheckSettings(void)
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
-		absolutePointer = var.value && (strcmp(var.value, "absolute") == 0);
+		absolutePointer = var.value && (!strcmp(var.value, "absolute"));
 	}
 	
 	var.key = "desmume_frameskip";
 	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-	{
 		frameSkip = var.value ? strtol(var.value, 0, 10) : 0;
-	}
+   else
+      frameSkip = 0;
 	 
 #ifdef X432R_CUSTOMRENDERER_ENABLED
 	var.key = "desmume_high_res_renderer_enabled";
@@ -301,27 +307,30 @@ static void CheckSettings(void)
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
-		if (strcmp(var.value, "enable") == 0)
+		if (!strcmp(var.value, "enable"))
 			highres_enabled = true;
-		else 
+      else if (!strcmp(var.value, "disable"))
 			highres_enabled = false;
-	}	  
-	  
+	}
+   else
+      highres_enabled = false;
 	
 	var.key = "desmume_internal_res";
 	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
-		if (strcmp(var.value, "2x") == 0)
+		if (!strcmp(var.value, "2x"))
 			internal_res = 2;
-		else if(strcmp(var.value, "3x") == 0)
+		else if(!strcmp(var.value, "3x"))
 			internal_res = 3;
-		else if(strcmp(var.value, "4x") == 0)
+		else if(!strcmp(var.value, "4x"))
 			internal_res = 4;			
 		else 
-			internal_res = 1;
+         internal_res = 1;
 	}		
+   else
+      internal_res = 1;
 #endif
 	
 	
@@ -342,13 +351,15 @@ static void CheckSettings(void)
 		
 		for (int i = 0; i < 6; i ++)
 		{
-			if (strcmp(languages[i].name, var.value) == 0)
+			if (!strcmp(languages[i].name, var.value))
 			{
 				firmwareLanguage = languages[i].id;
 				break;
 			}
 		}		
-	}		
+	}
+   else
+      firmwareLanguage = 1;
 }
 
 void frontend_process_samples(u32 frames, const s16* data)
