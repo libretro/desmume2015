@@ -545,7 +545,7 @@ u32 GameInfo::readROM(u32 pos)
 	}
 	else
 	{
-		if(pos + 4 >= romsize)
+		if(pos + 4 > romsize)
 		{
 			printf("Panic! GameInfo reading out of buffer!\n");
 			exit(-1);
