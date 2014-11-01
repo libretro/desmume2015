@@ -1,14 +1,13 @@
-#ifndef DIRENT_INCLUDED
-#define DIRENT_INCLUDED
+#ifndef _LIBRETRO_SDK_COMPAT_WIN32_DIRENT
+#define _LIBRETRO_SDK_COMPAT_WIN32_DIRENT
 
 /*
+   Declaration of POSIX directory browsing functions and types for Win32.
 
-    Declaration of POSIX directory browsing functions and types for Win32.
+Author:  Kevlin Henney (kevlin@acm.org, kevlin@curbralan.com)
+History: Created March 1997. Updated June 2003.
+Rights:  See end of file.
 
-    Author:  Kevlin Henney (kevlin@acm.org, kevlin@curbralan.com)
-    History: Created March 1997. Updated June 2003.
-    Rights:  See end of file.
-    
 */
 
 #ifdef __cplusplus
@@ -20,7 +19,7 @@ typedef struct DIR DIR;
 
 struct dirent
 {
-    char *d_name;
+   char *d_name;
 };
 
 DIR           *opendir(const char *);
@@ -30,16 +29,16 @@ void          rewinddir(DIR *);
 
 /*
 
-    Copyright Kevlin Henney, 1997, 2003. All rights reserved.
+   Copyright Kevlin Henney, 1997, 2003. All rights reserved.
 
-    Permission to use, copy, modify, and distribute this software and its
-    documentation for any purpose is hereby granted without fee, provided
-    that this copyright and permissions notice appear in all copies and
-    derivatives.
-    
-    This software is supplied "as is" without express or implied warranty.
+   Permission to use, copy, modify, and distribute this software and its
+   documentation for any purpose is hereby granted without fee, provided
+   that this copyright and permissions notice appear in all copies and
+   derivatives.
 
-    But that said, if there are any problems please get in touch.
+   This software is supplied "as is" without express or implied warranty.
+
+   But that said, if there are any problems please get in touch.
 
 */
 

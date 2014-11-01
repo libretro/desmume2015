@@ -130,7 +130,7 @@ else
    CXX = g++
    SHARED := -shared -static-libgcc -static-libstdc++ -s -Wl,--version-script=$(SRC_DIR)/libretro/link.T
    DESMUME_JIT = 1
-   SOURCES += $(SRC_DIR)/libretro/dirent_win32/dirent.cpp
+   SOURCES += $(SRC_DIR)/libretro/dirent_win32/dirent.c
    INCDIR += -iquote $(SRC_DIR)/libretro/dirent_win32 -iquote $(SRC_DIR)/windows
 endif
 
