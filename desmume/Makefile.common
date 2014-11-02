@@ -1,0 +1,139 @@
+SOURCES_CXX :=
+
+ifeq ($(HAVE_DIRENT_WIN), 1)
+INCDIR += -iquote $(CORE_DIR)/libretro/dirent_win32 -iquote $(CORE_DIR)/windows
+SOURCES_CXX += $(CORE_DIR)/libretro/dirent_win32/dirent.c
+endif
+
+SOURCES_CXX += \
+	$(CORE_DIR)/armcpu.cpp \
+	$(CORE_DIR)/arm_instructions.cpp \
+	$(CORE_DIR)/bios.cpp \
+	$(CORE_DIR)/cp15.cpp \
+	$(CORE_DIR)/common.cpp \
+	$(CORE_DIR)/debug.cpp \
+	$(CORE_DIR)/Disassembler.cpp \
+	$(CORE_DIR)/emufile.cpp \
+	$(CORE_DIR)/encrypt.cpp \
+	$(CORE_DIR)/FIFO.cpp \
+	$(CORE_DIR)/firmware.cpp \
+	$(CORE_DIR)/GPU.cpp \
+	$(CORE_DIR)/mc.cpp \
+	$(CORE_DIR)/path.cpp \
+	$(CORE_DIR)/readwrite.cpp \
+	$(CORE_DIR)/wifi.cpp \
+	$(CORE_DIR)/MMU.cpp \
+	$(CORE_DIR)/NDSSystem.cpp \
+	$(CORE_DIR)/ROMReader.cpp \
+	$(CORE_DIR)/render3D.cpp \
+	$(CORE_DIR)/rtc.cpp \
+	$(CORE_DIR)/saves.cpp \
+	$(CORE_DIR)/slot1.cpp \
+	$(CORE_DIR)/slot2.cpp \
+	$(CORE_DIR)/SPU.cpp \
+	$(CORE_DIR)/matrix.cpp \
+	$(CORE_DIR)/gfx3d.cpp \
+	$(CORE_DIR)/thumb_instructions.cpp \
+	$(CORE_DIR)/movie.cpp \
+	$(CORE_DIR)/utils/advanscene.cpp \
+	$(CORE_DIR)/utils/datetime.cpp \
+   $(CORE_DIR)/utils/guid.cpp \
+	$(CORE_DIR)/utils/emufat.cpp \
+	$(CORE_DIR)/utils/fsnitro.cpp \
+	$(CORE_DIR)/utils/md5.cpp \
+	$(CORE_DIR)/utils/xstring.cpp \
+	$(CORE_DIR)/utils/decrypt/crc.cpp \
+	$(CORE_DIR)/utils/decrypt/decrypt.cpp \
+	$(CORE_DIR)/utils/decrypt/header.cpp \
+	$(CORE_DIR)/utils/task.cpp \
+   $(CORE_DIR)/utils/vfat.cpp \
+	$(CORE_DIR)/utils/dlditool.cpp \
+	$(CORE_DIR)/utils/libfat/cache.cpp \
+	$(CORE_DIR)/utils/libfat/directory.cpp \
+	$(CORE_DIR)/utils/libfat/disc.cpp \
+	$(CORE_DIR)/utils/libfat/fatdir.cpp \
+	$(CORE_DIR)/utils/libfat/fatfile.cpp \
+	$(CORE_DIR)/utils/libfat/filetime.cpp \
+	$(CORE_DIR)/utils/libfat/file_allocation_table.cpp \
+	$(CORE_DIR)/utils/libfat/libfat.cpp \
+	$(CORE_DIR)/utils/libfat/libfat_public_api.cpp \
+	$(CORE_DIR)/utils/libfat/lock.cpp \
+	$(CORE_DIR)/utils/libfat/partition.cpp \
+	$(CORE_DIR)/utils/tinyxml/tinystr.cpp \
+	$(CORE_DIR)/utils/tinyxml/tinyxml.cpp \
+	$(CORE_DIR)/utils/tinyxml/tinyxmlerror.cpp \
+	$(CORE_DIR)/utils/tinyxml/tinyxmlparser.cpp \
+	$(CORE_DIR)/addons/slot2_auto.cpp \
+	$(CORE_DIR)/addons/slot2_mpcf.cpp \
+	$(CORE_DIR)/addons/slot2_paddle.cpp \
+	$(CORE_DIR)/addons/slot2_gbagame.cpp \
+	$(CORE_DIR)/addons/slot2_none.cpp \
+	$(CORE_DIR)/addons/slot2_rumblepak.cpp \
+	$(CORE_DIR)/addons/slot2_guitarGrip.cpp \
+	$(CORE_DIR)/addons/slot2_expMemory.cpp \
+	$(CORE_DIR)/addons/slot2_piano.cpp \
+	$(CORE_DIR)/addons/slot2_passme.cpp \
+	$(CORE_DIR)/addons/slot1_none.cpp \
+	$(CORE_DIR)/addons/slot1_r4.cpp \
+	$(CORE_DIR)/addons/slot1comp_mc.cpp \
+	$(CORE_DIR)/addons/slot1comp_rom.cpp \
+	$(CORE_DIR)/addons/slot1comp_protocol.cpp \
+	$(CORE_DIR)/addons/slot1_retail_mcrom.cpp \
+	$(CORE_DIR)/addons/slot1_retail_mcrom_debug.cpp \
+	$(CORE_DIR)/addons/slot1_retail_nand.cpp \
+	$(CORE_DIR)/addons/slot1_retail_auto.cpp \
+	$(CORE_DIR)/cheatSystem.cpp \
+	$(CORE_DIR)/texcache.cpp \
+	$(CORE_DIR)/rasterize.cpp \
+	$(CORE_DIR)/metaspu/metaspu.cpp \
+	$(CORE_DIR)/version.cpp \
+	$(CORE_DIR)/mic.cpp \
+	$(CORE_DIR)/GPU_osd_stub.cpp \
+	$(CORE_DIR)/driver.cpp \
+	$(CORE_DIR)/fs-linux.cpp \
+	$(CORE_DIR)/libretro/libretro.cpp \
+   $(CORE_DIR)/libretro/scrc32.cpp
+
+SOURCES_C := $(CORE_DIR)/utils/ConvertUTF.c
+
+ifeq ($(DESMUME_JIT_ARM),1)
+SOURCES_CXX += \
+   $(CORE_DIR)/libretro/arm_arm/arm_gen.cpp \
+   $(CORE_DIR)/libretro/arm_arm/arm_jit.cpp
+endif
+
+ifeq ($(DESMUME_JIT),1)
+SOURCES_CXX += \
+	$(CORE_DIR)/arm_jit.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/assembler.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/assert.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/buffer.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/compiler.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/compilercontext.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/compilerfunc.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/compileritem.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/context.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/cpuinfo.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/defs.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/func.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/logger.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/memorymanager.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/memorymarker.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/operand.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/stringbuilder.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/stringutil.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/virtualmemory.cpp \
+   $(CORE_DIR)/utils/AsmJit/core/zonememory.cpp \
+   $(CORE_DIR)/utils/AsmJit/x86/x86assembler.cpp \
+   $(CORE_DIR)/utils/AsmJit/x86/x86compiler.cpp \
+   $(CORE_DIR)/utils/AsmJit/x86/x86compilercontext.cpp \
+   $(CORE_DIR)/utils/AsmJit/x86/x86compilerfunc.cpp \
+   $(CORE_DIR)/utils/AsmJit/x86/x86compileritem.cpp \
+   $(CORE_DIR)/utils/AsmJit/x86/x86cpuinfo.cpp \
+   $(CORE_DIR)/utils/AsmJit/x86/x86defs.cpp \
+   $(CORE_DIR)/utils/AsmJit/x86/x86func.cpp \
+   $(CORE_DIR)/utils/AsmJit/x86/x86operand.cpp \
+   $(CORE_DIR)/utils/AsmJit/x86/x86util.cpp
+endif
+
+INCDIR += -iquote $(CORE_DIR) -iquote $(CORE_DIR)/libretro 
