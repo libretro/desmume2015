@@ -1,159 +1,183 @@
 X432R_CUSTOMRENDERER_ENABLED=0
 
 ifeq ($(platform),)
-platform = unix
-ifeq ($(shell uname -a),)
-   platform = win
-else ifneq ($(findstring MINGW,$(shell uname -a)),)
-   platform = win
-else ifneq ($(findstring Darwin,$(shell uname -a)),)
-   platform = osx
-else ifneq ($(findstring win,$(shell uname -a)),)
-   platform = win
-endif
+	platform = unix
+	ifeq ($(shell uname -a),)
+		platform = win
+	else ifneq ($(findstring MINGW,$(shell uname -a)),)
+		platform = win
+	else ifneq ($(findstring Darwin,$(shell uname -a)),)
+		platform = osx
+	else ifneq ($(findstring win,$(shell uname -a)),)
+		platform = win
+	endif
 endif
 
 TARGET_NAME := desmume
 CORE_DIR := src
 
+# Unix
 ifeq ($(platform), unix)
-   TARGET := $(TARGET_NAME)_libretro.so
-   fpic := -fPIC
-   SHARED := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
-   DESMUME_JIT = 1
+	TARGET := $(TARGET_NAME)_libretro.so
+	fpic := -fPIC
+	SHARED := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
+	DESMUME_JIT = 1
+
+# OS X
 else ifeq ($(platform), osx)
-   TARGET := $(TARGET_NAME)_libretro.dylib
-   fpic := -fPIC
-   SHARED := -dynamiclib
-   DESMUME_JIT = 1
+	TARGET := $(TARGET_NAME)_libretro.dylib
+	fpic := -fPIC
+	SHARED := -dynamiclib
+	DESMUME_JIT = 1
+
+# iOS
 else ifeq ($(platform), ios)
-   TARGET := $(TARGET_NAME)_libretro_ios.dylib
+	TARGET := $(TARGET_NAME)_libretro_ios.dylib
 
-ifeq ($(IOSSDK),)
-   IOSSDK := $(shell xcrun -sdk iphoneos -show-sdk-path)
-endif
+	ifeq ($(IOSSDK),)
+		IOSSDK := $(shell xcrun -sdk iphoneos -show-sdk-path)
+	endif
 
-   CC = clang -arch armv7 -isysroot $(IOSSDK)
-   CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
-   CPPFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
-   fpic := -fPIC
-   SHARED := -dynamiclib
-   DESMUME_JIT_ARM = 1
-   OSXVER = `sw_vers -productVersion | cut -d. -f 2`
-   OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
-ifeq ($(OSX_LT_MAVERICKS),"YES")
-   CC += -miphoneos-version-min=5.0
-   CXX += -miphoneos-version-min=5.0
-   CFLAGS += -miphoneos-version-min=5.0
-   CPPFLAGS += -miphoneos-version-min=5.0
-endif
+	CC = clang -arch armv7 -isysroot $(IOSSDK)
+	CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
+	CPPFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
+	fpic := -fPIC
+	SHARED := -dynamiclib
+	DESMUME_JIT_ARM = 1
+	OSXVER = `sw_vers -productVersion | cut -d. -f 2`
+	OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
+	ifeq ($(OSX_LT_MAVERICKS),"YES")
+		CC += -miphoneos-version-min=5.0
+		CXX += -miphoneos-version-min=5.0
+		CFLAGS += -miphoneos-version-min=5.0
+		CPPFLAGS += -miphoneos-version-min=5.0
+	endif
+
+# PS3
 else ifeq ($(platform), ps3)
-   TARGET := $(TARGET_NAME)_libretro_ps3.a
-   CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
-   CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-g++.exe
-   AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
-   CPPFLAGS += -D__ppc__ -D__CELLOS_LV2__
-   STATIC_LINKING = 1
-else ifeq ($(platform), sncps3)
-   TARGET := $(TARGET_NAME)_libretro_ps3.a
-   CC = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
-   CXX = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
-   AR = $(CELL_SDK)/host-win32/sn/bin/ps3snarl.exe
-   CPPFLAGS += -D__ppc__-D__CELLOS_LV2__
-   STATIC_LINKING = 1
-else ifeq ($(platform), psl1ght)
-   TARGET := $(TARGET_NAME)_libretro_psl1ght.a
-   CC = $(PS3DEV)/ppu/bin/ppu-gcc$(EXE_EXT)
-   CXX = $(PS3DEV)/ppu/bin/ppu-g++$(EXE_EXT)
-   AR = $(PS3DEV)/ppu/bin/ppu-ar$(EXE_EXT)
-   CPPFLAGS += -D__ppc__ -D__CELLOS_LV2__
-   STATIC_LINKING = 1
-else ifeq ($(platform), psp1)
-   TARGET := $(TARGET_NAME)_libretro_psp1.a
-   CC = psp-gcc$(EXE_EXT)
-   CXX = psp-g++$(EXE_EXT)
-   AR = psp-ar$(EXE_EXT)
-   CPPFLAGS += -DPSP -G0
-   STATIC_LINKING = 1
-else ifeq ($(platform), xenon)
-   TARGET := $(TARGET_NAME)_libretro_xenon360.a
-   CC = xenon-gcc$(EXE_EXT)
-   CXX = xenon-g++$(EXE_EXT)
-   AR = xenon-ar$(EXE_EXT)
-   CPPFLAGS += -D__LIBXENON__ -m32 -D__ppc__
-   STATIC_LINKING = 1
-else ifeq ($(platform), wii)
-   TARGET := $(TARGET_NAME)_libretro_wii.a
-   CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
-   CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
-   AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
-   CFLAGS += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -D__ppc__
-   STATIC_LINKING = 1
-else ifeq ($(platform), android)
-   TARGET := $(TARGET_NAME)_libretro_$(TARGET_NAME).so
-   CC = arm-linux-androideabi-gcc$(EXE_EXT)
-   CXX = arm-linux-androideabi-g++$(EXE_EXT)
-   CPPFLAGS += -D__RETRO_ARM__
-   fpic := -fPIC
-   SHARED := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
-   DESMUME_JIT_ARM = 1
+	TARGET := $(TARGET_NAME)_libretro_ps3.a
+	CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
+	CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-g++.exe
+	AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
+	CPPFLAGS += -D__ppc__ -D__CELLOS_LV2__
+	STATIC_LINKING = 1
 
-   ifeq ($(RETRO_PROFILE),1)
-      LDFLAGS += -llog
-   endif
+# sncps3
+else ifeq ($(platform), sncps3)
+	TARGET := $(TARGET_NAME)_libretro_ps3.a
+	CC = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
+	CXX = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
+	AR = $(CELL_SDK)/host-win32/sn/bin/ps3snarl.exe
+	CPPFLAGS += -D__ppc__-D__CELLOS_LV2__
+	STATIC_LINKING = 1
+
+# Lightweight PS3 Homebrew SDK
+else ifeq ($(platform), psl1ght)
+	TARGET := $(TARGET_NAME)_libretro_psl1ght.a
+	CC = $(PS3DEV)/ppu/bin/ppu-gcc$(EXE_EXT)
+	CXX = $(PS3DEV)/ppu/bin/ppu-g++$(EXE_EXT)
+	AR = $(PS3DEV)/ppu/bin/ppu-ar$(EXE_EXT)
+	CPPFLAGS += -D__ppc__ -D__CELLOS_LV2__
+	STATIC_LINKING = 1
+
+# PSP
+else ifeq ($(platform), psp1)
+	TARGET := $(TARGET_NAME)_libretro_psp1.a
+	CC = psp-gcc$(EXE_EXT)
+	CXX = psp-g++$(EXE_EXT)
+	AR = psp-ar$(EXE_EXT)
+	CPPFLAGS += -DPSP -G0
+	STATIC_LINKING = 1
+
+# Xbox 360
+else ifeq ($(platform), xenon)
+	TARGET := $(TARGET_NAME)_libretro_xenon360.a
+	CC = xenon-gcc$(EXE_EXT)
+	CXX = xenon-g++$(EXE_EXT)
+	AR = xenon-ar$(EXE_EXT)
+	CPPFLAGS += -D__LIBXENON__ -m32 -D__ppc__
+	STATIC_LINKING = 1
+
+# Nintendo Wii
+else ifeq ($(platform), wii)
+	TARGET := $(TARGET_NAME)_libretro_wii.a
+	CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
+	CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
+	AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
+	CFLAGS += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -D__ppc__
+	STATIC_LINKING = 1
+
+# Android
+else ifeq ($(platform), android)
+	TARGET := $(TARGET_NAME)_libretro_$(TARGET_NAME).so
+	CC = arm-linux-androideabi-gcc$(EXE_EXT)
+	CXX = arm-linux-androideabi-g++$(EXE_EXT)
+	CPPFLAGS += -D__RETRO_ARM__
+	fpic := -fPIC
+	SHARED := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
+	DESMUME_JIT_ARM = 1
+
+	ifeq ($(RETRO_PROFILE),1)
+		LDFLAGS += -llog
+	endif
+
+# ARM
 else ifneq (,$(findstring armv,$(platform)))
-   CPPFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
-   TARGET := $(TARGET_NAME)_libretro.so
-   SHARED := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
-   fpic := -fPIC
-   CC = gcc
-   DESMUME_JIT_ARM = 1
-ifneq (,$(findstring cortexa8,$(platform)))
-   CPPFLAGS += -marm -mcpu=cortex-a8
-else ifneq (,$(findstring cortexa9,$(platform)))
-   CPPFLAGS += -marm -mcpu=cortex-a9
-endif
-   CPPFLAGS += -marm
-ifneq (,$(findstring neon,$(platform)))
-   CPPFLAGS += -mfpu=neon
-   HAVE_NEON = 1
-endif
-ifneq (,$(findstring softfloat,$(platform)))
-   CPPFLAGS += -mfloat-abi=softfp
-else ifneq (,$(findstring hardfloat,$(platform)))
-   CPPFLAGS += -mfloat-abi=hard
-endif
-   CPPFLAGS += -DARM
+	CPPFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
+	TARGET := $(TARGET_NAME)_libretro.so
+	SHARED := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
+	fpic := -fPIC
+	CC = gcc
+	DESMUME_JIT_ARM = 1
+	ifneq (,$(findstring cortexa8,$(platform)))
+		CPPFLAGS += -marm -mcpu=cortex-a8
+	else ifneq (,$(findstring cortexa9,$(platform)))
+		CPPFLAGS += -marm -mcpu=cortex-a9
+	endif
+	CPPFLAGS += -marm
+	ifneq (,$(findstring neon,$(platform)))
+		CPPFLAGS += -mfpu=neon
+		HAVE_NEON = 1
+	endif
+	ifneq (,$(findstring softfloat,$(platform)))
+		CPPFLAGS += -mfloat-abi=softfp
+	else ifneq (,$(findstring hardfloat,$(platform)))
+		CPPFLAGS += -mfloat-abi=hard
+	endif
+	CPPFLAGS += -DARM
+
+# Windows
 else
-   TARGET := $(TARGET_NAME)_libretro.dll
-   CC = gcc
-   CXX = g++
-   SHARED := -shared -static-libgcc -static-libstdc++ -s -Wl,--version-script=$(CORE_DIR)/libretro/link.T
-   DESMUME_JIT = 1
+	TARGET := $(TARGET_NAME)_libretro.dll
+	CC = gcc
+	CXX = g++
+	SHARED := -shared -static-libgcc -static-libstdc++ -s -Wl,--version-script=$(CORE_DIR)/libretro/link.T
+	DESMUME_JIT = 1
 	HAVE_DIRENT_WIN = 1
+
 endif
 
 ifeq ($(DESMUME_JIT_ARM),1)
-CPPFLAGS += -DHAVE_JIT
+	CPPFLAGS += -DHAVE_JIT
 endif
 
 ifeq ($(DESMUME_JIT),1)
-CPPFLAGS += -DHAVE_JIT
+	CPPFLAGS += -DHAVE_JIT
 endif
 
 include Makefile.common
 
 DEBUG=0
 ifeq ($(DEBUG), 1)
-   CPPFLAGS += -g
-   OPTIMIZE = -O0
+	CPPFLAGS += -g
+	OPTIMIZE = -O0
 else
-   CPPFLAGS += -DNDEBUG
-   OPTIMIZE = -O3
+	CPPFLAGS += -DNDEBUG
+	OPTIMIZE = -O3
 endif
 
 ifeq ($(RETRO_PROFILE),1)
-   CPPFLAGS += -DRETRO_PROFILE=1
+	CPPFLAGS += -DRETRO_PROFILE=1
 endif
 
 CPPFLAGS += $(OPTIMIZE)
@@ -162,9 +186,9 @@ ifeq ($(X432R_CUSTOMRENDERER_ENABLED),1)
 	CPPFLAGS += -DX432R_CUSTOMRENDERER_ENABLED
 endif
 
-OBJECTS    = $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
-CFLAGS     += -std=gnu99
-CPPFLAGS   += -D__LIBRETRO__ $(fpic) $(INCDIR)
+OBJECTS		= $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
+CFLAGS		+= -std=gnu99
+CPPFLAGS	+= -D__LIBRETRO__ $(fpic) $(INCDIR)
 
 all: $(TARGET)
 
