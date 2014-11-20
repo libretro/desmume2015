@@ -375,6 +375,16 @@ SoundInterface_struct* SNDCoreList[] =
 GPU3DInterface* core3DList[] =
 {
     &gpu3DRasterize,
+#ifdef X432R_CUSTOMRENDERER_ENABLED
+#if 0
+    &X432R::gpu3Dgl_X2,
+    &X432R::gpu3Dgl_X3,
+    &X432R::gpu3Dgl_X4,
+#endif
+    &X432R::gpu3DRasterize_X2,
+    &X432R::gpu3DRasterize_X3,
+    &X432R::gpu3DRasterize_X4,
+#endif
     NULL
 };
 
@@ -493,7 +503,10 @@ void retro_init (void)
     //addonsChangePak(NDS_ADDON_NONE);
     NDS_Init();
     NDS_CreateDummyFirmware(&fw_config);
+
+    cur3DCore = GPU3D_NULL;
     NDS_3D_ChangeCore(0);
+
     backup_setManualBackupType(MC_TYPE_AUTODETECT);
 
     msgbox = &msgBoxWnd;
