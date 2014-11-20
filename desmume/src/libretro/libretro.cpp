@@ -34,8 +34,6 @@ static int internal_res = 1;
 
 namespace X432R
 {
-}
-
 	#ifdef X432R_CUSTOMRENDERER_DEBUG
 	bool debugModeEnabled = true;
 	#endif
