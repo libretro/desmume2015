@@ -4286,8 +4286,9 @@ namespace X432R
 	#endif
 	
 	template <SOURCELAYER LAYER, BLENDMODE MODE>
-	inline void HighResolutionFramebuffers::SetFinalColor(const u32 dest_x, const u32 source_x, const u16 color_rgb555, u8 alpha, const u8 layer_num)
+	inline void HighResolutionFramebuffers::SetFinalColor(const u32 dest_x, const u32 source_x, const u16 color_rgb555, u8 alpha_, const u8 layer_num)
 	{
+		u8 alpha=alpha_;
 		assert(layer_num <= 4);		// 0-3:BG, 4:OBJ, 5:Backdrop
 		
 		if(renderLine_SkipHighResolutionRednering) return;
