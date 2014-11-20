@@ -626,17 +626,6 @@ public:
 #include "X432R_BuildSwitch.h"
 #include <set>
 
-/*
-#ifdef X432R_MENUITEMMOD_ENABLED
-namespace X432R
-{
-	void ChangeOpenGLTextureFilter(bool enable);
-	bool IsOpenGLTextureFilterEnabled();
-	void ToggleOpenGLTextureFilter();
-}
-#endif
-*/
-
 #ifdef X432R_CUSTOMRENDERER_ENABLED
 namespace X432R
 {

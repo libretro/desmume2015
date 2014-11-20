@@ -676,10 +676,6 @@ void savestate_slot(int num)
 	   osd->setLineColor(255, 0, 0);
 	   osd->addLine("Error saving %i slot", num);
 		
-		#ifdef X432R_MENUITEMMOD_ENABLED
-		osd->setLineColor(255, 255, 255);
-		#endif
-		
 	   return;
    }
 
@@ -713,10 +709,6 @@ void loadstate_slot(int num)
    {
 	   osd->setLineColor(255, 0, 0);
 	   osd->addLine("Error loading %i slot", num);
-		
-		#ifdef X432R_MENUITEMMOD_ENABLED
-		osd->setLineColor(255, 255, 255);
-		#endif
    }
 }
 
