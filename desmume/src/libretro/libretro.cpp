@@ -384,6 +384,24 @@ SoundInterface_struct* SNDCoreList[] =
 #define GPU3D_SWRAST     1
 #endif
 
+#ifdef X432R_CUSTOMRENDERER_ENABLED
+
+#ifdef HAVE_OPENGL
+#define GPU3D_OPENGL_X2 4
+#define GPU3D_OPENGL_X3 5
+#define GPU3D_OPENGL_X4 6
+
+#define GPU3D_SWRAST_X2 7
+#define GPU3D_SWRAST_X3 8
+#define GPU3D_SWRAST_X4 9
+#else
+#define GPU3D_SWRAST_X2 4
+#define GPU3D_SWRAST_X3 5
+#define GPU3D_SWRAST_X4 6
+#endif
+
+#endif
+
 GPU3DInterface* core3DList[] =
 {
    &gpu3DNull,
@@ -395,7 +413,7 @@ GPU3DInterface* core3DList[] =
     &gpu3DglOld,
 #endif
 #ifdef X432R_CUSTOMRENDERER_ENABLED
-#if 0
+#ifdef HAVE_OPENGL
     &X432R::gpu3Dgl_X2,
     &X432R::gpu3Dgl_X3,
     &X432R::gpu3Dgl_X4,
@@ -501,6 +519,18 @@ static void check_system_specs(void)
 
 static void Change3DCoreWithFallback(int newCore)
 {
+#ifdef X432R_CUSTOMRENDERER_ENABLED
+   if( (newCore < 0) || (newCore > GPU3D_SWRAST_X4) )
+      newCore = GPU3D_SWRAST;
+#else
+   if( (newCore < 0)
+#ifdef HAVE_OPENGL
+         || (newCore > GPU3D_OPENGL_OLD)
+#endif
+         )
+      newCore = GPU3D_SWRAST;
+#endif
+   
    printf("Attempting change to 3d core to: %s\n",core3DList[newCore]->name);
 
 #ifdef HAVE_OPENGL
@@ -515,7 +545,7 @@ static void Change3DCoreWithFallback(int newCore)
    {
       NDS_3D_ChangeCore(GPU3D_NULL);
       cur3DCore = GPU3D_NULL;
-      return;
+      goto DONE;
    }
 
 #ifdef HAVE_OPENGL
@@ -526,7 +556,7 @@ static void Change3DCoreWithFallback(int newCore)
       goto TRY_OGL_OLD;
    }
 #endif
-   return;
+   goto DONE;
 
 #ifdef HAVE_OPENGL
 TRY_OGL_OLD:
@@ -536,12 +566,47 @@ TRY_OGL_OLD:
       cur3DCore = GPU3D_OPENGL_OLD;
       goto TRY_SWRAST;
    }
-   return;
+   goto DONE;
 
 #endif
 TRY_SWRAST:
    cur3DCore = GPU3D_SWRAST;
    NDS_3D_ChangeCore(GPU3D_SWRAST);
+
+DONE:
+   (void)0;
+#ifdef X432R_CUSTOMRENDERER_ENABLED
+	switch(newCore)
+	{
+		case GPU3D_NULL:
+			NDS_3D_ChangeCore(GPU3D_NULL);
+			break;
+#ifdef HAVE_OPENGL
+		case GPU3D_OPENGL_X2:
+		case GPU3D_OPENGL_X3:
+		case GPU3D_OPENGL_X4:
+#endif
+		case GPU3D_SWRAST_X2:
+		case GPU3D_SWRAST_X3:
+		case GPU3D_SWRAST_X4:
+         /* FIXME/TODO - do something here to do with 
+          * scaling */
+#ifdef HAVE_OPENGL
+		case GPU3D_OPENGL_3_2:
+			if( NDS_3D_ChangeCore(newCore) ) break;
+			
+			printf("falling back to 3d core: %s\n", core3DList[GPU3D_OPENGL_OLD]->name);
+		
+		case GPU3D_OPENGL_OLD:
+			if( NDS_3D_ChangeCore(GPU3D_OPENGL_OLD) ) break;
+			
+			printf("falling back to 3d core: %s\n", core3DList[GPU3D_SWRAST]->name);
+#endif
+		default:
+			NDS_3D_ChangeCore(GPU3D_SWRAST);
+			break;
+	}
+#endif
 }
 
 void retro_init (void)
