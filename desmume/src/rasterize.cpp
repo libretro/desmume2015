@@ -1428,15 +1428,9 @@ void SoftRasterizerEngine::framebufferProcess()
 			edgeMarkDisabled[i] = 0;
 		}
 
-		#ifndef X432R_CUSTOMRENDERER_ENABLED
-		for(int i=0,y=0;y<192;y++)
-		{
-			for(int x=0;x<256;x++,i++)
-		#else
 		for(int i = 0, y = 0; y < this->height; y++)
 		{
 			for(int x = 0; x < this->width; x++, i++)
-		#endif
 			{
 				Fragment destFragment = screen[i];
 				u8 self = destFragment.polyid.opaque;
@@ -1450,13 +1444,8 @@ void SoftRasterizerEngine::framebufferProcess()
 
 				FragmentColor edgeColor = edgeMarkColors[self>>3];
 
-#ifndef X432R_CUSTOMRENDERER_ENABLED
-#define PIXOFFSET(dx,dy) ((dx)+(256*(dy)))
-#define ISEDGE(dx,dy) ((x+(dx)!=256) && (x+(dx)!=-1) && (y+(dy)!=192) && (y+(dy)!=-1) && self > screen[i+PIXOFFSET(dx,dy)].polyid.opaque)
-#else
 #define PIXOFFSET(dx,dy)	( (dx) + ( this->width * (dy) ) )
 #define ISEDGE(dx,dy)		( (x + (dx) != this->width ) && ( x + (dx) != -1 ) && ( y + (dy) != this->height ) && ( y + (dy) != -1 ) && (self > screen[i + PIXOFFSET(dx, dy)].polyid.opaque) )
-#endif
 
 #define DRAWEDGE(dx,dy)		alphaBlend(screenColor[i+PIXOFFSET(dx,dy)], edgeColor)
 
