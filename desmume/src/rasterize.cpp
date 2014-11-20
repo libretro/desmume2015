@@ -793,22 +793,11 @@ public:
 
 		//CONSIDER: in case some other math is wrong (shouldve been clipped OK), we might go out of bounds here.
 		//better check the Y value.
-		#ifndef X432R_CUSTOMRENDERER_ENABLED
-		if(RENDERER && (pLeft->Y<0 || pLeft->Y>191)) {
-			printf("rasterizer rendering at y=%d! oops!\n",pLeft->Y);
-			return;
-		}
-		if(!RENDERER && (pLeft->Y<0 || pLeft->Y>=engine->height)) {
-			printf("rasterizer rendering at y=%d! oops!\n",pLeft->Y);
-			return;
-		}
-		#else
 		if( (pLeft->Y < 0) || (pLeft->Y >= engine->height) )
 		{
 			printf("rasterizer rendering at y=%d! oops!\n", pLeft->Y);
 			return;
 		}
-		#endif
 
 		int x = XStart;
 
@@ -831,17 +820,6 @@ public:
 			x = 0;
 		}
 		
-		#ifndef X432R_CUSTOMRENDERER_ENABLED
-		if(x+width > (RENDERER?256:engine->width))
-		{
-			if(RENDERER && !lineHack)
-			{
-				printf("rasterizer rendering at x=%d! oops!\n",x+width-1);
-				return;
-			}
-			width = (RENDERER?256:engine->width)-x;
-		}
-		#else
 		if( (x + width) > engine->width )
 		{
 			if(RENDERER && !lineHack)
@@ -852,7 +830,6 @@ public:
 			
 			width = engine->width - x;
 		}
-		#endif
 
 		while(width-- > 0)
 		{
