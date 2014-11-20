@@ -3313,8 +3313,8 @@ namespace X432R
 		memset( vramBlockOBJ, 0xFF, sizeof(vramBlockOBJ) );
 		memset( highResolutionBGNum, 0xFF, sizeof(highResolutionBGNum) );
 		
-		const _DISPCNT * const displaycontrol_main = &(_DISPCNT)(MainScreen.gpu->dispx_st)->dispx_DISPCNT.bits;
-		const _DISPCNT * const displaycontrol_sub = &(_DISPCNT)(SubScreen.gpu->dispx_st)->dispx_DISPCNT.bits;
+		const _DISPCNT * const displaycontrol_main = (_DISPCNT*)&(MainScreen.gpu->dispx_st)->dispx_DISPCNT.bits;
+		const _DISPCNT * const displaycontrol_sub = (_DISPCNT*)&(SubScreen.gpu->dispx_st)->dispx_DISPCNT.bits;
 		mainGpuBG03DEnabled = (bool)displaycontrol_main->BG0_Enable && (bool)displaycontrol_main->BG0_3D;
 //		mainGpuBG03DEnabled = (bool)displaycontrol_main->BG0_Enable && (bool)displaycontrol_main->BG0_3D && (gfx3d.vertlist->count > 0);
 		

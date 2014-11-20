@@ -1,4 +1,4 @@
-X432R_CUSTOMRENDERER_ENABLED=0
+X432R_CUSTOMRENDERER_ENABLED=1
 
 ifeq ($(platform),)
 	platform = unix
