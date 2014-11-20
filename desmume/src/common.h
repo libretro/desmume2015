@@ -113,4 +113,7 @@ extern int NDS_WritePNG(const char *fname, u8 *data);
 extern int NDS_WriteBMP(const char *filename, u8 *data);
 extern int NDS_WriteBMP_32bppBuffer(int width, int height, const void* buf, const char *filename);
 
+#define X432R_STATIC_RENDER_MAGNIFICATION_CHECK() \
+	extern char X432R_invalid_rendering_magnification[( (RENDER_MAGNIFICATION >= 2) && (RENDER_MAGNIFICATION <= 4)) ? 1 : -1];
+
 #endif
