@@ -1391,6 +1391,7 @@ namespace X432R
 #endif
 	}
 	
+#ifdef HAVE_OPENGL
 //	inline GLuint GetScreenTexture()
 	inline u32 GetScreenTexture()
 	{
@@ -1416,6 +1417,7 @@ namespace X432R
 			hudTexture = 0;
 		}
 	}
+#endif
 }
 #endif
 
