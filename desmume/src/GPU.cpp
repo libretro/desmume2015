@@ -607,22 +607,14 @@ FORCEINLINE FASTCALL void GPU::_master_setFinal3dColor(int dstX, int srcX)
 	{
 		final = R6G6B6TORGB15(red,green,blue);
 		//perform the special effect
-		#ifndef X432R_CUSTOMRENDERER_ENABLED
-		if(windowEffect)
-			switch(FUNC) {
-				case Increase: final = currentFadeInColors[final&0x7FFF]; break;
-				case Decrease: final = currentFadeOutColors[final&0x7FFF]; break;
-				case NoBlend: 
-				case Blend:
-					break;
-			}
-#else
 		switch(FUNC)
       {
          case Increase:
             if( !windowEffect || (BLDY_EVY == 0) ) goto noblend;
 
+#ifdef X432R_CUSTOMRENDERER_ENABLED
             X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_3D, X432R::BLENDMODE_BRIGHTUP>(dstX, srcX, 0, 0, 0);
+#endif
 
             final = currentFadeInColors[final&0x7FFF];
             break;
@@ -630,7 +622,9 @@ FORCEINLINE FASTCALL void GPU::_master_setFinal3dColor(int dstX, int srcX)
          case Decrease:
             if( !windowEffect || (BLDY_EVY == 0) ) goto noblend;
 
+#ifdef X432R_CUSTOMRENDERER_ENABLED
             X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_3D, X432R::BLENDMODE_BRIGHTDOWN>(dstX, srcX, 0, 0, 0);
+#endif
 
             final = currentFadeOutColors[final&0x7FFF];
             break;
@@ -639,11 +633,11 @@ FORCEINLINE FASTCALL void GPU::_master_setFinal3dColor(int dstX, int srcX)
             //			case Blend:
          default:
 noblend:
-
+#ifdef X432R_CUSTOMRENDERER_ENABLED
             X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_3D, X432R::BLENDMODE_DISABLED>(dstX, srcX, 0, 0, 0);
+#endif
             break;
       }
-#endif
 	}
 
 	HostWriteWord(dst, passing, (final | 0x8000));
@@ -662,34 +656,6 @@ FORCEINLINE FASTCALL bool GPU::_master_setFinalBGColor(u16 &color, const u32 x)
 
 	bool windowEffect = true;
 
-	#ifndef X432R_CUSTOMRENDERER_ENABLED
-	if(WINDOW)
-	{
-		bool windowDraw = false;
-		renderline_checkWindows(x, windowDraw, windowEffect);
-
-		//backdrop must always be drawn
-		if(BACKDROP) windowDraw = true;
-
-		//we never have anything more to do if the window rejected us
-		if(!windowDraw) return false;
-	}
-
-	//special effects rejected. just draw it.
-	if(!(blend1 && windowEffect))
-		return true;
-
-	const u8 bg_under = bgPixels[x];
-
-	//perform the special effect
-	switch(FUNC) {
-		case Blend: if(blend2[bg_under]) color = blend(color,HostReadWord(currDst, x<<1)); break;
-		case Increase: color = currentFadeInColors[color]; break;
-		case Decrease: color = currentFadeOutColors[color]; break;
-		case NoBlend: break;
-	}
-	return true;
-	#else
 	if( !BACKDROP && WINDOW )	//backdrop must always be drawn
 	{
 		bool windowDraw = false;
@@ -698,14 +664,14 @@ FORCEINLINE FASTCALL bool GPU::_master_setFinalBGColor(u16 &color, const u32 x)
 		//we never have anything more to do if the window rejected us
 		if( !windowDraw ) return false;
 	}
-	
+
 	const u8 bg_under = bgPixels[x];
 	const u16 backcolor = HostReadWord(currDst, x << 1);
 	const u16 original_color = color;
 	
 	//special effects rejected. just draw it.
 	if(blend1 && windowEffect)
-	{
+   {
 		//perform the special effect
 		switch(FUNC)
       {
@@ -714,8 +680,10 @@ FORCEINLINE FASTCALL bool GPU::_master_setFinalBGColor(u16 &color, const u32 x)
 
             color = blend(color, backcolor);
 
+#ifdef X432R_CUSTOMRENDERER_ENABLED
             if( !BACKDROP )
                X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_BG, X432R::BLENDMODE_ENABLED>(x, 0, original_color, 0, currBgNum);
+#endif
 
             return true;
 
@@ -724,8 +692,10 @@ FORCEINLINE FASTCALL bool GPU::_master_setFinalBGColor(u16 &color, const u32 x)
 
             color = currentFadeInColors[color];
 
+#ifdef X432R_CUSTOMRENDERER_ENABLED
             if( !BACKDROP )
                X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_BG, X432R::BLENDMODE_BRIGHTUP>(x, 0, color, 0, currBgNum);
+#endif
 
             return true;
 
@@ -734,8 +704,10 @@ FORCEINLINE FASTCALL bool GPU::_master_setFinalBGColor(u16 &color, const u32 x)
 
             color = currentFadeOutColors[color];
 
+#ifdef X432R_CUSTOMRENDERER_ENABLED
             if( !BACKDROP )
                X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_BG, X432R::BLENDMODE_BRIGHTDOWN>(x, 0, color, 0, currBgNum);
+#endif
 
             return true;
 
@@ -744,11 +716,12 @@ FORCEINLINE FASTCALL bool GPU::_master_setFinalBGColor(u16 &color, const u32 x)
       }
 	}
 	
-	if( !BACKDROP )
-		X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_BG, X432R::BLENDMODE_DISABLED>(x, 0, color, 0, currBgNum);
+#ifdef X432R_CUSTOMRENDERER_ENABLED
+   if( !BACKDROP )
+      X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_BG, X432R::BLENDMODE_DISABLED>(x, 0, color, 0, currBgNum);
+#endif
 	
 	return true;
-	#endif
 }
 
 template<BlendFunc FUNC, bool WINDOW>
@@ -804,18 +777,6 @@ static FORCEINLINE void _master_setFinalOBJColor(GPU *gpu, u8 *dst, u16 color, u
 			}
 		}
 
-	
-#ifndef X432R_CUSTOMRENDERER_ENABLED
-      switch(selectedFunc) 
-      {
-         case NoBlend: break;
-         case Increase: color = gpu->currentFadeInColors[color&0x7FFF]; break;
-         case Decrease: color = gpu->currentFadeOutColors[color&0x7FFF]; break;
-         case Blend: 
-                        color = _blend(color,backcolor,&gpuBlendTable555[eva][evb]); 
-                        break;
-      }
-#else
       const u16 original_color = color;
 
       switch(selectedFunc)
@@ -825,34 +786,36 @@ static FORCEINLINE void _master_setFinalOBJColor(GPU *gpu, u8 *dst, u16 color, u
 
             color = gpu->currentFadeInColors[color&0x7FFF];
 
+#ifdef X432R_CUSTOMRENDERER_ENABLED
             X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_OBJ, X432R::BLENDMODE_BRIGHTUP>(x, 0, color, 0, 4);
-            goto finish;
+#endif
+            break;
 
          case Decrease:
             if(gpu->BLDY_EVY == 0) break;
 
             color = gpu->currentFadeOutColors[color&0x7FFF];
 
+#ifdef X432R_CUSTOMRENDERER_ENABLED
             X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_OBJ, X432R::BLENDMODE_BRIGHTUP>(x, 0, color, 0, 4);
-            goto finish;
+#endif
+            break;
 
          case Blend:
             color = _blend( color, backcolor, &gpuBlendTable555[eva][evb] );
 
+#ifdef X432R_CUSTOMRENDERER_ENABLED
             X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_OBJ, X432R::BLENDMODE_ENABLED>(x, 0, original_color, alpha, 4);
-            goto finish;
+#endif
+            break;
 
          case NoBlend:
+#ifdef X432R_CUSTOMRENDERER_ENABLED
+            X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_OBJ, X432R::BLENDMODE_DISABLED>(x, 0, color, 0, 4);
+#endif
             break;
       }
-#endif
 	}
-
-	#ifdef X432R_CUSTOMRENDERER_ENABLED
-	X432R::backBuffer.SetFinalColor<X432R::SOURCELAYER_OBJ, X432R::BLENDMODE_DISABLED>(x, 0, color, 0, 4);
-	
-	finish:
-	#endif
 
 	HostWriteWord(dst, x<<1, (color | 0x8000));
 	gpu->bgPixels[x] = 4;	
@@ -2737,34 +2700,22 @@ void GPU_RenderLine(NDS_Screen * screen, u16 l, bool skip)
 		return;
 	}
 
-	#ifndef X432R_CUSTOMRENDERER_ENABLED
-	// skip some work if master brightness makes the screen completely white or completely black
-	if(gpu->MasterBrightFactor >= 16 && (gpu->MasterBrightMode == 1 || gpu->MasterBrightMode == 2))
-	{
-		// except if it could cause any side effects (for example if we're capturing), then don't skip anything
-		if(!(gpu->core == GPU_MAIN && (gpu->dispCapCnt.enabled || l == 0 || l == 191)))
-		{
-			gpu->currLine = l;
-			GPU_RenderLine_MasterBrightness(screen, l);
-			return;
-		}
-	}
-	#else
-	if( X432R::backBuffer.IsHighResolutionRedneringSkipped() )
-	{
-		// skip some work if master brightness makes the screen completely white or completely black
-		if(gpu->MasterBrightFactor >= 16 && (gpu->MasterBrightMode == 1 || gpu->MasterBrightMode == 2))
-		{
-			// except if it could cause any side effects (for example if we're capturing), then don't skip anything
-			if(!(gpu->core == GPU_MAIN && (gpu->dispCapCnt.enabled || l == 0 || l == 191)))
-			{
-				gpu->currLine = l;
-				GPU_RenderLine_MasterBrightness(screen, l);
-				return;
-			}
-		}
-	}
-	#endif
+#ifdef X432R_CUSTOMRENDERER_ENABLED
+   if( X432R::backBuffer.IsHighResolutionRedneringSkipped() )
+#endif
+   {
+      // skip some work if master brightness makes the screen completely white or completely black
+      if(gpu->MasterBrightFactor >= 16 && (gpu->MasterBrightMode == 1 || gpu->MasterBrightMode == 2))
+      {
+         // except if it could cause any side effects (for example if we're capturing), then don't skip anything
+         if(!(gpu->core == GPU_MAIN && (gpu->dispCapCnt.enabled || l == 0 || l == 191)))
+         {
+            gpu->currLine = l;
+            GPU_RenderLine_MasterBrightness(screen, l);
+            return;
+         }
+      }
+   }
 
 	#ifdef X432R_PROCESSTIME_CHECK
 	X432R::AutoStopTimeCounter timecounter(X432R::timeCounter_2D);
