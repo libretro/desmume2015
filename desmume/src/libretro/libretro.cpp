@@ -372,9 +372,28 @@ SoundInterface_struct* SNDCoreList[] =
     NULL
 };
 
+#ifndef GPU3D_NULL
+#define GPU3D_NULL 0
+#endif
+
+#ifdef HAVE_OPENGL
+#define GPU3D_OPENGL_3_2 1
+#define GPU3D_SWRAST     2
+#define GPU3D_OPENGL_OLD 3
+#else
+#define GPU3D_SWRAST     1
+#endif
+
 GPU3DInterface* core3DList[] =
 {
+   &gpu3DNull,
+#ifdef HAVE_OPENGL
+   &gpu3Dgl_3_2,
+#endif
     &gpu3DRasterize,
+#ifdef HAVE_OPENGL
+    &gpu3DglOld,
+#endif
 #ifdef X432R_CUSTOMRENDERER_ENABLED
 #if 0
     &X432R::gpu3Dgl_X2,
@@ -480,6 +499,51 @@ static void check_system_specs(void)
    environ_cb(RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL, &level);
 }
 
+static void Change3DCoreWithFallback(int newCore)
+{
+   printf("Attempting change to 3d core to: %s\n",core3DList[newCore]->name);
+
+#ifdef HAVE_OPENGL
+   if(newCore == GPU3D_OPENGL_OLD)
+      goto TRY_OGL_OLD;
+#endif
+
+   if(newCore == GPU3D_SWRAST)
+      goto TRY_SWRAST;
+
+   if(newCore == GPU3D_NULL)
+   {
+      NDS_3D_ChangeCore(GPU3D_NULL);
+      cur3DCore = GPU3D_NULL;
+      return;
+   }
+
+#ifdef HAVE_OPENGL
+   if(!NDS_3D_ChangeCore(GPU3D_OPENGL_3_2))
+   {
+      printf("falling back to 3d core: %s\n",core3DList[GPU3D_OPENGL_OLD]->name);
+      cur3DCore = GPU3D_OPENGL_3_2;
+      goto TRY_OGL_OLD;
+   }
+#endif
+   return;
+
+#ifdef HAVE_OPENGL
+TRY_OGL_OLD:
+   if(!NDS_3D_ChangeCore(GPU3D_OPENGL_OLD))
+   {
+      printf("falling back to 3d core: %s\n",core3DList[GPU3D_SWRAST]->name);
+      cur3DCore = GPU3D_OPENGL_OLD;
+      goto TRY_SWRAST;
+   }
+   return;
+
+#endif
+TRY_SWRAST:
+   cur3DCore = GPU3D_SWRAST;
+   NDS_3D_ChangeCore(GPU3D_SWRAST);
+}
+
 void retro_init (void)
 {
    struct retro_log_callback log;
@@ -504,8 +568,7 @@ void retro_init (void)
     NDS_Init();
     NDS_CreateDummyFirmware(&fw_config);
 
-    cur3DCore = GPU3D_NULL;
-    NDS_3D_ChangeCore(0);
+    Change3DCoreWithFallback(GPU3D_SWRAST);
 
     backup_setManualBackupType(MC_TYPE_AUTODETECT);
 
