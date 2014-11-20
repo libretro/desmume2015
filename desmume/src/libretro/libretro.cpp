@@ -34,14 +34,1390 @@ static int internal_res = 1;
 
 namespace X432R
 {
-   void ClearBuffers()
-   {
-   }
+}
 
-   u32 GetCurrentRenderMagnification()
+	#ifdef X432R_CUSTOMRENDERER_DEBUG
+	bool debugModeEnabled = true;
+	#endif
+	
+	CRITICAL_SECTION customFrontBufferSync;
+//	static GLuint screenTexture[2] = {0};
+	static GLuint screenTexture = 0;
+	static GLuint hudTexture = 0;
+	static u32 lastRenderMagnification = 1;
+	
+	HighResolutionFramebuffers backBuffer;
+	static u32 frontBuffer[3][1024 * 768 * 2] = {0};
+	static u32 masterBrightness[3][2] = {0};
+	static bool isHighResolutionScreen[3][2] = {0};
+	static u32 hudBuffer[256 * 192 * 2] = {0};
+	
+	static volatile bool screenTextureUpdated = false;
+	
+	
+	void ClearBuffers()
+	{
+		Lock lock(customFrontBufferSync);
+		
+		backBuffer.Clear();
+		
+		memset( frontBuffer, 0xFF, sizeof(frontBuffer) );
+		memset( masterBrightness, 0, sizeof(masterBrightness) );
+		memset( isHighResolutionScreen, 0, sizeof(isHighResolutionScreen) );
+		
+		screenTextureUpdated = false;
+	}
+	
+	
+	inline bool IsHighResolutionRendererSelected()
+	{
+		switch(cur3DCore)
+		{
+			case GPU3D_SWRAST_X2:
+			case GPU3D_SWRAST_X3:
+			case GPU3D_SWRAST_X4:
+			case GPU3D_OPENGL_X2:
+			case GPU3D_OPENGL_X3:
+			case GPU3D_OPENGL_X4:
+				return true;
+		}
+		
+		return false;
+	}
+	
+	inline bool IsSoftRasterzierSelected()
+	{
+		switch(cur3DCore)
+		{
+			case GPU3D_SWRAST:
+			case GPU3D_SWRAST_X2:
+			case GPU3D_SWRAST_X3:
+			case GPU3D_SWRAST_X4:
+				return true;
+		}
+		
+		return false;
+	}
+	
+   inline u32 GetCurrentRenderMagnification()
    {
       return internal_res;
    }
+	
+	
+	static inline void Lock_forHighResolutionFrontBuffer()
+	{
+      /* TODO/FIXME - just omit for now */
+		//EnterCriticalSection(&customFrontBufferSync);
+	}
+	
+	static inline void Unlock_forHighResolutionFrontBuffer()
+	{
+      /* TODO/FIXME - just omit for now */
+		//LeaveCriticalSection(&customFrontBufferSync);
+	}
+	
+	#ifdef X432R_CUSTOMRENDERER_DEBUG
+	void ShowDebugMessage(std::string message)
+	{
+		if( (osd == NULL) || !debugModeEnabled ) return;
+		
+		osd->setLineColor(0xFF, 0x80, 0);
+		osd->addLine( message.c_str() );
+		osd->setLineColor(0xFF, 0xFF, 0xFF);
+	}
+	#endif
+	
+	
+	static inline void UpdateWindowCaptionFPS(const u32 fps, const u32 fps3d)
+	{
+	}
+	
+	
+	//---------- MainThreadp ----------
+	
+	static void UpdateFrontBuffer()
+	{
+		static bool buffers_cleared = false;
+		
+		if( !IsHighResolutionRendererSelected() || !romloaded || finished || display_die )
+		{
+			if( !buffers_cleared )
+			{
+				ClearBuffers();
+				
+				buffers_cleared = true;
+			}
+			
+			return;
+		}
+		
+		buffers_cleared = false;
+		
+		Lock lock(customFrontBufferSync);		// XR[vð²¯Ä±ÌCX^XÌfXgN^ªÄÎêéÆ©®IÉbNªð³êé
+		
+		const u8 buffer_index = CommonSettings.single_core() ? 0 : clamp(newestDisplayBuffer, 0, 2);
+		
+		u32 * const front_buffer = frontBuffer[buffer_index];
+		u32 * const master_brightness = masterBrightness[buffer_index];
+		bool * const is_highreso_screen = isHighResolutionScreen[buffer_index];
+		
+		switch(cur3DCore)
+		{
+			case GPU3D_SWRAST_X2:
+#ifdef HAVE_OPENGL
+			case GPU3D_OPENGL_X2:
+#endif
+				backBuffer.UpdateFrontBufferAndDisplayCapture<2>(front_buffer, master_brightness, is_highreso_screen);
+				break;
+			
+			case GPU3D_SWRAST_X3:
+#ifdef HAVE_OPENGL
+			case GPU3D_OPENGL_X3:
+#endif
+				backBuffer.UpdateFrontBufferAndDisplayCapture<3>(front_buffer, master_brightness, is_highreso_screen);
+				break;
+			
+			case GPU3D_SWRAST_X4:
+#ifdef HAVE_OPENGL
+			case GPU3D_OPENGL_X4:
+#endif
+				backBuffer.UpdateFrontBufferAndDisplayCapture<4>(front_buffer, master_brightness, is_highreso_screen);
+				break;
+		}
+		
+		screenTextureUpdated = false;
+	}
+	
+	static void ChangeRenderMagnification(u32 magnification)
+	{
+		if(magnification < 1)
+			magnification = 1;
+		
+		else if(magnification > 4)
+			magnification = 4;
+		
+		bool softrast = false;
+		
+		switch(cur3DCore)
+		{
+			case GPU3D_SWRAST:
+			case GPU3D_SWRAST_X2:
+			case GPU3D_SWRAST_X3:
+			case GPU3D_SWRAST_X4:
+				softrast = true;
+				break;
+		}
+		
+		switch(magnification)
+		{
+			case 2:
+				cur3DCore = softrast ? GPU3D_SWRAST_X2 : GPU3D_OPENGL_X2;
+				break;
+			
+			case 3:
+				cur3DCore = softrast ? GPU3D_SWRAST_X3 : GPU3D_OPENGL_X3;
+				break;
+			
+			case 4:
+				cur3DCore = softrast ? GPU3D_SWRAST_X4 : GPU3D_OPENGL_X4;
+				break;
+			
+			default:
+				cur3DCore = softrast ? GPU3D_SWRAST : GPU3D_OPENGL_3_2;
+				break;
+		}
+		
+		Change3DCoreWithFallbackAndSave(cur3DCore);
+	}
+	
+	
+	//---------- DisplayThreadp ----------
+	
+	static inline bool IsHudVisible()
+	{
+		if(osd == NULL) return false;
+		
+		return
+		(
+			CommonSettings.hud.ShowInputDisplay ||
+			CommonSettings.hud.ShowGraphicalInputDisplay ||
+			CommonSettings.hud.FpsDisplay ||
+			CommonSettings.hud.FrameCounterDisplay ||
+			CommonSettings.hud.ShowLagFrameCounter ||
+			CommonSettings.hud.ShowMicrophone ||
+			CommonSettings.hud.ShowRTC ||
+			( osd->GetLineCount() > 0 )
+		);
+	}
+	
+	
+	#ifdef X432R_SMOOTHINGFILTER_TEST
+	static const u8 maxSmoothingLevel = 12;
+	static u8 smoothingLevel = 0;
+	
+	bool IsSmoothingFilterEnabled()
+	{
+		return (smoothingLevel > 0);
+	}
+	
+	struct RGBA8888_CompareAlpha
+	{
+		bool operator()(const RGBA8888 &color1, const RGBA8888 &color2) const
+		{
+			return (color1.A < color2.A);
+		}
+	};
+	
+	static inline void SetColorIntensity(RGBA8888 *color)
+	{
+		#if 1
+		static const float ntscCoefR = 0.2989f;
+		static const float ntscCoefG = 0.5866f;
+		static const float ntscCoefB = 0.1145f;
+		
+		color->A = (u8)( ( ntscCoefR * (float)color->R ) + ( ntscCoefG * (float)color->G ) + ( ntscCoefB * (float)color->B ) );
+		#else
+		color->A = (color->R + color->G + color->B) / 3;
+		#endif
+	}
+	
+	
+	template <u32 RENDER_MAGNIFICATION, u8 SMOOTHING_LEVEL>
+	static inline RGBA8888 DD_GetSmoothedPixelData1(const u32 x, const u32 y, const u32 * const source_buffer)
+	{
+		// 3x3 bilateralhL (ÌÈª»Ì½ß³KªzðgpµÈ¢)
+		
+		
+		#if 1
+		if( (x < 1) || ( x >= ( (256 * RENDER_MAGNIFICATION) - 1 ) ) || (y < 1) || ( y >= ( (192 * RENDER_MAGNIFICATION) - 1 ) ) )
+			return source_buffer[ (y * 256 * RENDER_MAGNIFICATION) + x ];
+		
+		const u32 y0 = (y - 1) * 256 * RENDER_MAGNIFICATION;
+		const u32 y1 = y * 256 * RENDER_MAGNIFICATION;
+		const u32 y2 = (y + 1) * 256 * RENDER_MAGNIFICATION;
+		const u32 x0 = x - 1;
+		const u32 x2 = x + 1;
+		#else
+		const u32 y0 = (u32)std::max<s32>( (s32)y - 1, 0 ) * 256 * RENDER_MAGNIFICATION;
+		const u32 y1 = y * 256 * RENDER_MAGNIFICATION;
+		const u32 y2 = (u32)std::min<s32>( (s32)y + 1, 192 * RENDER_MAGNIFICATION ) * 256 * RENDER_MAGNIFICATION;
+		const u32 x0 = (u32)std::max<s32>( (s32)x - 1, 0 );
+		const u32 x2 = (u32)std::min<s32>( (s32)x + 1, 256 * RENDER_MAGNIFICATION );
+		#endif
+		
+		
+/*		// sigma = 0.509
+		static const float coef0 = 0.6f;			// 48
+		static const float coef1 = 0.087f;			// 7
+		static const float coef2 = 0.0126f;			// 1
+		
+		// sigma = 0.563
+//		static const float coef0 = 0.5f;			// 25
+//		static const float coef1 = 0.1034f;			// 5
+//		static const float coef2 = 0.0213f;			// 1
+		
+		// sigma = 0.636
+//		static const float coef0 = 0.4f;			// 12
+//		static const float coef1 = 0.1162f;			// 3
+//		static const float coef2 = 0.0337f;			// 1
+		
+		// sigma = 0.751
+//		static const float coef0 = 0.3f;			// 12
+//		static const float coef1 = 0.1238f;			// 5
+//		static const float coef2 = 0.051f;			// 2
+		
+		// sigma = 0.849
+//		static const float coef0 = 0.25f;			// 4
+//		static const float coef1 = 0.125f;			// 2
+//		static const float coef2 = 0.0625f;			// 1
+*/		
+		static const u32 gaussian_coef1[9] =
+		{
+			1,		7,		1,
+			7,		48,		7,
+			1,		7,		1
+		};
+		
+		static const u32 gaussian_coef2[9] =
+		{
+			1,		3,		1,
+			3,		12,		3,
+			1,		3,		1
+		};
+		
+		static const u32 gaussian_coef3[9] =
+		{
+			2,		5,		2,
+			5,		12,		5,
+			2,		5,		2
+		};
+		
+		
+		RGBA8888 color = source_buffer[y1 + x];
+		
+		RGBA8888 colors[9] =
+		{
+			source_buffer[y0 + x0],		source_buffer[y0 + x],		source_buffer[y0 + x2],
+			source_buffer[y1 + x0],		color,						source_buffer[y1 + x2],
+			source_buffer[y2 + x0],		source_buffer[y2 + x],		source_buffer[y2 + x2]
+		};
+		
+		u32 total_r = 0;
+		u32 total_g = 0;
+		u32 total_b = 0;
+		u32 total_coef = 0;
+		u32 intensity_delta, coef;
+		
+		
+		#define X432R_ADD_PIXELDATA(gaussian_coef) \
+			for(u32 i = 0; i < 9; ++i) \
+			{ \
+				intensity_delta = ( 255 - abs(color.A - colors[i].A) ); \
+				coef = gaussian_coef[i] * intensity_delta; \
+				\
+				total_r += ( colors[i].R * coef ); \
+				total_g += ( colors[i].G * coef ); \
+				total_b += ( colors[i].B * coef ); \
+				\
+				total_coef += coef; \
+			}
+		
+		
+		switch(SMOOTHING_LEVEL)
+		{
+			case 1:
+				X432R_ADD_PIXELDATA(gaussian_coef1)
+				break;
+			
+			case 2:
+				X432R_ADD_PIXELDATA(gaussian_coef2)
+				break;
+			
+			case 3:
+				X432R_ADD_PIXELDATA(gaussian_coef3)
+				break;
+		}
+		
+		
+		#undef X432R_ADD_PIXELDATA
+		
+		
+		color.R = (u8)(total_r / total_coef);
+		color.G = (u8)(total_g / total_coef);
+		color.B = (u8)(total_b / total_coef);
+		color.A = 0xFF;
+		
+		return color;
+	}
+	
+	template <u32 RENDER_MAGNIFICATION, u8 SMOOTHING_LEVEL>
+	static inline RGBA8888 DD_GetSmoothedPixelData2(const u32 x, const u32 y, const u32 * const source_buffer)
+	{
+		// 3x3 Trimmed Mean
+		
+		
+		#if 1
+		if( (x < 1) || ( x >= ( (256 * RENDER_MAGNIFICATION) - 1 ) ) || (y < 1) || ( y >= ( (192 * RENDER_MAGNIFICATION) - 1 ) ) )
+			return source_buffer[ (y * 256 * RENDER_MAGNIFICATION) + x ];
+		
+		const u32 y0 = (y - 1) * 256 * RENDER_MAGNIFICATION;
+		const u32 y1 = y * 256 * RENDER_MAGNIFICATION;
+		const u32 y2 = (y + 1) * 256 * RENDER_MAGNIFICATION;
+		const u32 x0 = x - 1;
+		const u32 x2 = x + 1;
+		#else
+		const u32 y0 = (u32)std::max<s32>( (s32)y - 1, 0 ) * 256 * RENDER_MAGNIFICATION;
+		const u32 y1 = y * 256 * RENDER_MAGNIFICATION;
+		const u32 y2 = (u32)std::min<s32>( (s32)y + 1, 192 * RENDER_MAGNIFICATION ) * 256 * RENDER_MAGNIFICATION;
+		const u32 x0 = (u32)std::max<s32>( (s32)x - 1, 0 );
+		const u32 x2 = (u32)std::min<s32>( (s32)x + 1, 256 * RENDER_MAGNIFICATION );
+		#endif
+		
+		
+		RGBA8888 color = source_buffer[y1 + x];
+		
+		RGBA8888 colors[9] =
+		{
+			source_buffer[y0 + x0],		source_buffer[y0 + x],		source_buffer[y0 + x2],
+			source_buffer[y1 + x0],		color,						source_buffer[y1 + x2],
+			source_buffer[y2 + x0],		source_buffer[y2 + x],		source_buffer[y2 + x2]
+		};
+		
+		u32 total_r = 0;
+		u32 total_g = 0;
+		u32 total_b = 0;
+		
+		
+		std::sort( colors, colors + 9, RGBA8888_CompareAlpha() );
+		
+		
+		#define X432R_ADD_PIXELDATA(bein_index,end_index) \
+			for(u32 i = bein_index; i <= end_index; ++i) \
+			{ \
+				total_r += colors[i].R; \
+				total_g += colors[i].G; \
+				total_b += colors[i].B; \
+			}
+		
+		#define X432R_GET_WEIGHTED_MEAN(original_weight,data_count) \
+			total_r += (color.R * original_weight); \
+			total_g += (color.G * original_weight); \
+			total_b += (color.B * original_weight); \
+			color.R = total_r / (data_count + original_weight); \
+			color.G = total_g / (data_count + original_weight); \
+			color.B = total_b / (data_count + original_weight);
+		
+		#define X432R_GET_MEAN(data_count) \
+			color.R = total_r / data_count; \
+			color.G = total_g / data_count; \
+			color.B = total_b / data_count;
+		
+		
+		switch(SMOOTHING_LEVEL)
+		{
+			case 4:
+			case 5:
+			case 6:
+				switch(color.A >> 6)				// ³f[^ÌPxÉ¶ÄgÍÍðÂÏ
+				{
+					case 0:							// 0`63
+						X432R_ADD_PIXELDATA(2, 4)
+						break;
+					
+					case 1:							// 64`191
+					case 2:
+						X432R_ADD_PIXELDATA(3, 5)
+						break;
+					
+					case 3:							// 192`255
+						X432R_ADD_PIXELDATA(4, 6)
+						break;
+				}
+				break;
+			
+			case 7:
+			case 8:
+			case 9:
+				switch(color.A / 85)
+				{
+					case 0:							// 0`84
+						X432R_ADD_PIXELDATA(2, 4)
+						break;
+					
+					case 1:							// 85`169
+						X432R_ADD_PIXELDATA(3, 5)
+						break;
+					
+					case 2:							// 170`255
+					case 3:
+						X432R_ADD_PIXELDATA(4, 6)
+						break;
+				}
+				break;
+			
+			case 10:
+			case 11:
+			case 12:
+				switch(color.A / 51)
+				{
+					case 0:							// 0`50
+						X432R_ADD_PIXELDATA(1, 3)
+						break;
+					
+					case 1:							// 51`101
+						X432R_ADD_PIXELDATA(2, 4)
+						break;
+					
+					case 2:							// 102`152
+						X432R_ADD_PIXELDATA(3, 5)
+						break;
+					
+					case 3:							// 153`203
+						X432R_ADD_PIXELDATA(4, 6)
+						break;
+					
+					case 4:							// 204`255
+					case 5:
+						X432R_ADD_PIXELDATA(5, 7)
+						break;
+				}
+				break;
+		}
+		
+		switch(SMOOTHING_LEVEL)
+		{
+			case 4:
+			case 7:
+			case 10:
+				X432R_GET_WEIGHTED_MEAN(6, 3)
+				break;
+			
+			case 5:
+			case 8:
+			case 11:
+				X432R_GET_WEIGHTED_MEAN(3, 3)
+				break;
+			
+			case 6:
+			case 9:
+			case 12:
+				X432R_GET_MEAN(3)
+				break;
+		}
+		
+		
+		#undef X432R_ADD_PIXELDATA
+		#undef X432R_GET_WEIGHTED_MEAN
+		#undef X432R_GET_MEAN
+		
+		
+		color.A = 0xFF;
+		
+		return color;
+	}
+	#endif
+	
+	#ifndef X432R_SMOOTHINGFILTER_TEST
+	template <u32 RENDER_MAGNIFICATION, u32 ROTATION_ANGLE, bool HIGHRESO, bool HUD_VISIBLE>
+	static void DD_UpdateBackSurface(const u32 *source_buffer, const u32 master_brightness, const u32 screen_index)
+	#else
+	template <u32 RENDER_MAGNIFICATION, u32 ROTATION_ANGLE, bool HIGHRESO, u8 SMOOTHING_LEVEL, bool HUD_VISIBLE>
+	static void DD_UpdateBackSurface(u32 *source_buffer, const u32 master_brightness, const u32 screen_index)
+	#endif
+	{
+		const u32 dest_linepitch = ddraw.surfDescBack.lPitch / 4;		// ddraw.surfDescBack.lPitch / ( sizeof(u32) / sizeof(u8) )
+		u32 * const destbuffer_begin = (u32 *)ddraw.surfDescBack.lpSurface;
+		u32 *dest_buffer;
+		
+		source_buffer += (screen_index * 256 * 192 * RENDER_MAGNIFICATION * RENDER_MAGNIFICATION);
+		
+		const u32 * const hud_buffer = hudBuffer + (screen_index * 256 * 192);
+		
+		s32 dest_x, dest_y, dest_begin_x, dest_begin_y, dest_end_x, dest_end_y;
+		s32 source_x, source_y, source_begin_x, source_begin_y;
+		s32 downscaled_index;
+		
+		RGBA8888 color_rgba8888, hud_rgba8888;
+		
+		switch(ROTATION_ANGLE)
+		{
+			case 90:
+//				dest_begin_x = screen_index ? (192 * RENDER_MAGNIFICATION) : 0;
+				dest_begin_x = screen_index ? 0 : (192 * RENDER_MAGNIFICATION);
+				dest_begin_y = 0;
+				dest_end_x = dest_begin_x + (192 * RENDER_MAGNIFICATION);
+				dest_end_y = dest_begin_y + (256 * RENDER_MAGNIFICATION);
+				
+				source_begin_x = 0;
+				source_begin_y = (192 * RENDER_MAGNIFICATION) - 1;
+				break;
+				
+			case 180:
+				dest_begin_x = 0;
+//				dest_begin_y = screen_index ? (192 * RENDER_MAGNIFICATION) : 0;
+				dest_begin_y = screen_index ? 0 : (192 * RENDER_MAGNIFICATION);
+				dest_end_x = 256 * RENDER_MAGNIFICATION;
+				dest_end_y = dest_begin_y + (192 * RENDER_MAGNIFICATION);
+				
+				source_begin_x = (256 * RENDER_MAGNIFICATION) - 1;
+				source_begin_y = (192 * RENDER_MAGNIFICATION) - 1;
+				break;
+				
+			case 270:
+				dest_begin_x = screen_index ? (192 * RENDER_MAGNIFICATION) : 0;
+				dest_begin_y = 0;
+				dest_end_x = dest_begin_x + (192 * RENDER_MAGNIFICATION);
+				dest_end_y = dest_begin_y + (256 * RENDER_MAGNIFICATION);
+				
+				source_begin_x = (256 * RENDER_MAGNIFICATION) - 1;
+				source_begin_y = 0;
+				break;
+				
+			default:
+				dest_begin_x = 0;
+				dest_begin_y = screen_index ? (192 * RENDER_MAGNIFICATION) : 0;
+				dest_end_x = 256 * RENDER_MAGNIFICATION;
+				dest_end_y = dest_begin_y + (192 * RENDER_MAGNIFICATION);
+				
+				source_begin_x = 0;
+				source_begin_y = 0;
+				break;
+		}
+		
+		source_x = source_begin_x;
+		source_y = source_begin_y;
+		
+		
+		#ifdef X432R_SMOOTHINGFILTER_TEST
+		if( IsSmoothingFilterEnabled() )
+		{
+			RGBA8888 *buffer = (RGBA8888 *)source_buffer;
+			
+			for(u32 i = 0; i < 256 * 192 * RENDER_MAGNIFICATION * RENDER_MAGNIFICATION; ++i, ++buffer)
+			{
+				SetColorIntensity(buffer);
+			}
+		}
+		#endif
+		
+		
+		for(dest_y = dest_begin_y; dest_y < dest_end_y; ++dest_y)
+		{
+			dest_buffer = destbuffer_begin + (dest_y * dest_linepitch) + dest_begin_x;
+			
+			for(dest_x = dest_begin_x; dest_x < dest_end_x; ++dest_x, ++dest_buffer)
+			{
+				#ifndef X432R_SMOOTHINGFILTER_TEST
+				if( !HIGHRESO || HUD_VISIBLE )
+					downscaled_index = ( (source_y / RENDER_MAGNIFICATION) * 256 ) + (source_x / RENDER_MAGNIFICATION);
+				
+				if(HIGHRESO)
+					color_rgba8888 = RGBA8888::AlphaBlend( master_brightness, source_buffer[ (source_y * 256 * RENDER_MAGNIFICATION) + source_x ] );
+				else
+					color_rgba8888 = source_buffer[downscaled_index];
+				#else
+				if( ( !HIGHRESO && (SMOOTHING_LEVEL == 0) ) || HUD_VISIBLE )
+					downscaled_index = ( (source_y / RENDER_MAGNIFICATION) * 256 ) + (source_x / RENDER_MAGNIFICATION);
+				
+				if(SMOOTHING_LEVEL > 0)
+				{
+					if(SMOOTHING_LEVEL <= 3)
+						color_rgba8888 = DD_GetSmoothedPixelData1<RENDER_MAGNIFICATION, SMOOTHING_LEVEL>(source_x, source_y, source_buffer);
+					else
+						color_rgba8888 = DD_GetSmoothedPixelData2<RENDER_MAGNIFICATION, SMOOTHING_LEVEL>(source_x, source_y, source_buffer);
+				}
+				
+				else if(HIGHRESO)
+					color_rgba8888 = source_buffer[ (source_y * 256 * RENDER_MAGNIFICATION) + source_x ];
+				
+				else
+					color_rgba8888 = source_buffer[downscaled_index];
+				
+				color_rgba8888.AlphaBlend(master_brightness);
+				#endif
+				
+				if(HUD_VISIBLE)
+					color_rgba8888.AlphaBlend( hud_buffer[downscaled_index] );
+				
+				*dest_buffer = color_rgba8888.Color;
+				
+				switch(ROTATION_ANGLE)
+				{
+					case 90:	--source_y;		break;
+					case 180:	--source_x;		break;
+					case 270:	++source_y;		break;
+					default:	++source_x;		break;
+				}
+			}
+			
+			switch(ROTATION_ANGLE)
+			{
+				case 90:	++source_x;		source_y = source_begin_y;		break;
+				case 180:	--source_y;		source_x = source_begin_x;		break;
+				case 270:	--source_x;		source_y = source_begin_y;		break;
+				default:	++source_y;		source_x = source_begin_x;		break;
+			}
+		}
+	}
+	
+	static void DD_FillRect(LPDIRECTDRAWSURFACE7 surface, const u32 left, const u32 top, const u32 right, const u32 bottom)
+	{
+      /* FIXME - DirectDraw crap. */
+		RECT rect;
+		SetRect(&rect, left, top, right, bottom);
+		
+		DDBLTFX effect;
+		memset( &effect, 0, sizeof(DDBLTFX) );
+		effect.dwSize = sizeof(DDBLTFX);
+		
+		effect.dwFillColor = ScreenGapColor;		// 32bppÂ«ÌÝl¶
+		
+		surface->Blt(&rect, NULL, NULL, DDBLT_COLORFILL | DDBLT_WAIT, &effect);
+	}
+	
+	#ifndef X432R_SMOOTHINGFILTER_TEST
+	template <u32 RENDER_MAGNIFICATION>
+	#else
+	template <u32 RENDER_MAGNIFICATION, u8 SMOOTHING_LEVEL>
+	#endif
+	static void DD_DoDisplay()
+	{
+      /* FIXME - Windows crap. */
+		const HWND window_handle = MainWindow->getHWnd();
+		const bool hud_visible = IsHudVisible();
+		
+		const u32 rotation_angle = (video.layout == 0) ? video.rotation : 0;
+		const bool source_rect_rotation = (rotation_angle == 90) || (rotation_angle == 270);
+		bool screen_swap = false;
+		
+		switch(video.swap)
+		{
+			case 1:
+            screen_swap = true;
+            break;
+			case 2:
+            screen_swap = (MainScreen.offset > 0);	
+            break;
+			case 3:
+            screen_swap = (SubScreen.offset > 0);
+            break;
+		}
+		
+		if( !screenTextureUpdated || hud_visible )
+		{
+         /* TODO - FIXME - figure out what this stuff is */
+			if(hud_visible)
+			{
+				osd->swapScreens = screen_swap;
+				aggDraw.hud->attach( (u8*)hudBuffer, 256, 192 * 2, 256 * 4 );
+				aggDraw.hud->clear();
+				DoDisplay_DrawHud();
+			}
+			
+			if( !ddraw.lock() ) return;
+			
+			const u32 color_depth = ddraw.surfDescBack.ddpfPixelFormat.dwRGBBitCount;
+			
+			if(color_depth != 32)
+			{
+            /* FIXME - DirectDraw crap. */
+				ddraw.unlock();
+				
+				if(color_depth != 0)
+				{
+					INFO("X432R: DirectDraw Output failed.\n");
+					INFO("Unsupported color depth: %i bpp\n", color_depth);
+				
+					SetStyle( ( GetStyle() & ~DWS_DISPMETHODS ) | DWS_OPENGL );
+					WritePrivateProfileInt("Video","Display Method", DISPMETHOD_OPENGL, IniName);
+					ddraw.createSurfaces(window_handle);
+				}
+				
+				return;
+			}
+			
+			static u8 buffer_index = 0;
+			
+			if( !screenTextureUpdated )
+			{
+				Lock lock(customFrontBufferSync);
+				
+				screenTextureUpdated = true;
+				
+				buffer_index = CommonSettings.single_core() ? 0 : clamp(currDisplayBuffer, 0, 2);
+			}
+			
+			#ifndef X432R_SMOOTHINGFILTER_TEST
+			const u32 * const front_buffer = frontBuffer[buffer_index];
+			#else
+			u32 * const front_buffer = frontBuffer[buffer_index];
+			#endif
+			
+			const u32 * const master_brightness = masterBrightness[buffer_index];
+			const bool * const is_highreso_screen = isHighResolutionScreen[buffer_index];
+			
+			#ifndef X432R_SMOOTHINGFILTER_TEST
+			#define X432R_CALL_UPDATEBACKSURFACE(rotation_angle,screen_index) \
+			{ \
+				if( is_highreso_screen[screen_index] ) \
+				{ \
+					if(hud_visible) \
+						DD_UpdateBackSurface<RENDER_MAGNIFICATION, rotation_angle, true, true>(front_buffer, master_brightness[screen_index], screen_index); \
+					else \
+						DD_UpdateBackSurface<RENDER_MAGNIFICATION, rotation_angle, true, false>(front_buffer, master_brightness[screen_index], screen_index); \
+				} \
+				else \
+				{ \
+					if(hud_visible) \
+						DD_UpdateBackSurface<RENDER_MAGNIFICATION, rotation_angle, false, true>(front_buffer, 0, screen_index); \
+					else \
+						DD_UpdateBackSurface<RENDER_MAGNIFICATION, rotation_angle, false, false>(front_buffer, 0, screen_index); \
+				} \
+			}
+			#else
+			#define X432R_CALL_UPDATEBACKSURFACE(rotation_angle,screen_index) \
+			{ \
+					if( is_highreso_screen[screen_index] ) \
+					{ \
+						if(hud_visible) \
+							DD_UpdateBackSurface<RENDER_MAGNIFICATION, rotation_angle, true, SMOOTHING_LEVEL, true>(front_buffer, master_brightness[screen_index], screen_index); \
+						else \
+							DD_UpdateBackSurface<RENDER_MAGNIFICATION, rotation_angle, true, SMOOTHING_LEVEL, false>(front_buffer, master_brightness[screen_index], screen_index); \
+					} \
+					else \
+					{ \
+						if(hud_visible) \
+							DD_UpdateBackSurface<RENDER_MAGNIFICATION, rotation_angle, false, SMOOTHING_LEVEL, true>(front_buffer, 0, screen_index); \
+						else \
+							DD_UpdateBackSurface<RENDER_MAGNIFICATION, rotation_angle, false, SMOOTHING_LEVEL, false>(front_buffer, 0, screen_index); \
+				} \
+			}
+			#endif
+			
+			for(u32 i = 0; i < 2; ++i)
+			{
+				switch(rotation_angle)
+				{
+					case 90:	X432R_CALL_UPDATEBACKSURFACE(90, i);	break;
+					case 180:	X432R_CALL_UPDATEBACKSURFACE(180, i);	break;
+					case 270:	X432R_CALL_UPDATEBACKSURFACE(270, i);	break;
+					default:	X432R_CALL_UPDATEBACKSURFACE(0, i);		break;
+				}
+			}
+			
+			#undef X432R_CALL_UPDATEBACKSURFACE
+			
+			if( !ddraw.unlock() ) return;
+		}
+		
+		RECT screen_source_rect[2] =
+		{
+			{
+				0,
+				0,
+				source_rect_rotation ?	(192 * RENDER_MAGNIFICATION)			: (256 * RENDER_MAGNIFICATION),
+				source_rect_rotation ?	(256 * RENDER_MAGNIFICATION)			: (192 * RENDER_MAGNIFICATION)
+			},
+			{
+				source_rect_rotation ?	(192 * RENDER_MAGNIFICATION)			: 0,
+				source_rect_rotation ?	0										: (192 * RENDER_MAGNIFICATION),
+				source_rect_rotation ?	(192 * RENDER_MAGNIFICATION * 2)		: (256 * RENDER_MAGNIFICATION),
+				source_rect_rotation ?	(256 * RENDER_MAGNIFICATION)			: (192 * RENDER_MAGNIFICATION * 2)
+			}
+		};
+		
+		RECT *source_rect[2] =
+		{
+			&screen_source_rect[0],
+			&screen_source_rect[1]
+		};
+		
+		RECT *dest_rect[2] =
+		{
+			screen_swap ? &SubScreenRect : &MainScreenRect,
+			screen_swap ? &MainScreenRect : &SubScreenRect
+		};
+		
+		
+		RECT window_rect;
+		
+		#if 1
+      /* FIXME - Windows crap. */
+		GetWindowRect(window_handle, &window_rect);
+		#else
+		u32 toolbar_height = MainWindowToolbar->GetHeight();
+		
+		GetClientRect(window_handle, &window_rect);
+		window_rect.top += toolbar_height;
+		window_rect.bottom += toolbar_height;
+		#endif
+		
+		const u32 window_width = window_rect.right - window_rect.left;
+		const u32 window_height = window_rect.bottom - window_rect.top;
+		
+		RECT screen_rect;
+		GetNdsScreenRect(&screen_rect);
+		
+		if( IsZoomed(window_handle) )
+		{
+         /* FIXME - DirectDraw crap. */
+			DD_FillRect(ddraw.surface.primary,	0,					0,						screen_rect.left,		window_height);			// left
+			DD_FillRect(ddraw.surface.primary,	screen_rect.right,	0,						window_width,			window_height);			// right
+			DD_FillRect(ddraw.surface.primary,	screen_rect.left,	0,						screen_rect.right,		screen_rect.top);		// top
+			DD_FillRect(ddraw.surface.primary,	screen_rect.left,	screen_rect.bottom,		screen_rect.right,		window_height);			// bottom
+		}
+		
+		if( (video.layout == 0) && (video.screengap > 0) )
+		{
+         /* FIXME - DirectDraw crap. */
+			#if 1
+			if(source_rect_rotation)
+				DD_FillRect(ddraw.surface.primary, MainScreenRect.right, MainScreenRect.top, SubScreenRect.left, MainScreenRect.bottom);
+			else
+				DD_FillRect(ddraw.surface.primary, MainScreenRect.left, MainScreenRect.bottom, MainScreenRect.right, SubScreenRect.top);
+			#else
+			RECT gap_rect = GapRect;
+			gap_rect.top += toolbar_height;
+			gap_rect.bottom += toolbar_height;
+			
+			DD_FillRect(ddraw.surface.primary, gap_rect.left, gap_rect.top, gap_rect.right, gap_rect.bottom);
+			#endif
+		}
+		
+		if(video.layout == 2)
+		{
+         /* FIXME - DirectDraw crap. */
+			const u32 screen_index = screen_swap ? 1 : 0;
+			
+			ddraw.blt( dest_rect[screen_index], source_rect[screen_index] );
+		}
+		else
+		{
+         /* FIXME - DirectDraw crap. */
+			for(int i = 0; i < 2; ++i)
+			{
+				if( !ddraw.blt( dest_rect[i], source_rect[i] ) ) break;
+			}
+		}
+	}
+	
+	
+	template <u32 RENDER_MAGNIFICATION>
+	static void DoDisplay()
+	{
+		X432R_STATIC_RENDER_MAGNIFICATION_CHECK();
+		assert( (lastRenderMagnification >= 1) && (lastRenderMagnification <= 4) );
+		
+		
+		static const u32 RENDER_WIDTH = 256 * RENDER_MAGNIFICATION;
+		static const u32 RENDER_HEIGHT = 192 * RENDER_MAGNIFICATION;
+		static const u32 TEXTURE_WIDTH = RENDER_WIDTH;
+		static const u32 TEXTURE_HEIGHT = RENDER_HEIGHT * 2;
+		
+		
+		if( finished || display_die || (gpu3D == NULL) ) return;
+		
+		
+		if(screenTextureUpdated)
+		{
+			if( displayPostponeType && !displayNoPostponeNext && ( displayPostponeType < 0 || ( timeGetTime() < displayPostponeUntil ) ) ) return;
+			
+			displayNoPostponeNext = false;
+		}
+		
+		
+#ifdef HAVE_LUA
+		if( AnyLuaActive() )
+		{
+			if( g_thread_self() == display_thread )
+				InvokeOnMainThread( ( void(*)(DWORD) )CallRegisteredLuaFunctions, LUACALL_AFTEREMULATIONGUI );
+			
+			else
+				CallRegisteredLuaFunctions(LUACALL_AFTEREMULATIONGUI);
+		}
+#endif
+		
+		
+      /* FIXME - Windows crap */
+		const HWND window_handle = MainWindow->getHWnd();
+		const u32 window_style = GetStyle();
+		
+		if( (window_style & DWS_DDRAW_HW) || (window_style & DWS_DDRAW_SW) )
+		{
+			DeleteScreenTexture();
+#ifdef HAVE_OPENGL
+			gldisplay.kill();
+#endif
+			
+			#ifndef X432R_SMOOTHINGFILTER_TEST
+			DD_DoDisplay<RENDER_MAGNIFICATION>();
+			#else
+         /* FIXME - DirectDraw crap. */
+			switch(smoothingLevel)
+			{
+				case 1:
+					DD_DoDisplay<RENDER_MAGNIFICATION, 1>();
+					break;
+				
+				case 2:
+					DD_DoDisplay<RENDER_MAGNIFICATION, 2>();
+					break;
+				
+				case 3:
+					DD_DoDisplay<RENDER_MAGNIFICATION, 3>();
+					break;
+				
+				case 4:
+					DD_DoDisplay<RENDER_MAGNIFICATION, 4>();
+					break;
+				
+				case 5:
+					DD_DoDisplay<RENDER_MAGNIFICATION, 5>();
+					break;
+				
+				case 6:
+					DD_DoDisplay<RENDER_MAGNIFICATION, 6>();
+					break;
+				
+				case 7:
+					DD_DoDisplay<RENDER_MAGNIFICATION, 7>();
+					break;
+				
+				case 8:
+					DD_DoDisplay<RENDER_MAGNIFICATION, 8>();
+					break;
+				
+				case 9:
+					DD_DoDisplay<RENDER_MAGNIFICATION, 9>();
+					break;
+				
+				case 10:
+					DD_DoDisplay<RENDER_MAGNIFICATION, 10>();
+					break;
+				
+				case 11:
+					DD_DoDisplay<RENDER_MAGNIFICATION, 11>();
+					break;
+				
+				case 12:
+					DD_DoDisplay<RENDER_MAGNIFICATION, 12>();
+					break;
+				
+				default:
+					DD_DoDisplay<RENDER_MAGNIFICATION, 0>();
+					break;
+			}
+			#endif
+			
+			return;
+		}
+		
+		
+#ifdef HAVE_OPENGL
+		//------ OGL_DoDisplay() ------
+		
+		if( !gldisplay.begin() )
+         return;
+		
+		// ì¬Â\ÈÅåeNX`TCYð`FbN
+		static int max_texture_size = 0;
+		
+		if(max_texture_size == 0)
+		{
+			glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_texture_size);
+			INFO( "X432R: OpenGL supported texture size:%d (required:%d)\n", max_texture_size, (TEXTURE_WIDTH * 4) );
+			
+			if( max_texture_size < (TEXTURE_WIDTH * 4) )
+			{
+				gldisplay.end();
+				
+				INFO("X432R: High-Resolution Output failed.\n");
+				Change3DCoreWithFallbackAndSave(GPU3D_OPENGL_3_2);
+				return;
+			}
+			
+			INFO("X432R: High-Resolution Output OK.\n");
+		}
+		
+		
+		RECT client_rect;
+		GetClientRect(window_handle, &client_rect);
+		
+		const int window_width = client_rect.right - client_rect.left;
+		const int window_height = client_rect.bottom - client_rect.top;
+		
+		
+		// æÊ`æpeNX`¶¬
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+		
+		if(hudTexture == 0)
+		{
+			glGenTextures(1, &hudTexture);
+			
+			glBindTexture(GL_TEXTURE_2D, hudTexture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 192 * 2, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+		}
+		
+		if(screenTexture == 0)
+			glGenTextures(1, &screenTexture);
+		
+		glBindTexture(GL_TEXTURE_2D, screenTexture);
+		
+		if(lastRenderMagnification != RENDER_MAGNIFICATION)
+		{
+			lastRenderMagnification = RENDER_MAGNIFICATION;
+			
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, TEXTURE_WIDTH, TEXTURE_HEIGHT, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);		// f[^ð]¹¸ÉÌæ¾¯mÛ
+		}
+		
+		static bool is_highreso_upper = false;
+		static bool is_highreso_lower = false;
+		static u32 upper_brightness = 0;
+		static u32 lower_brightness = 0;
+		
+		if( !screenTextureUpdated )
+		{
+			Lock_forHighResolutionFrontBuffer();
+			
+			screenTextureUpdated = true;
+			
+			const u8 buffer_index = CommonSettings.single_core() ? 0 : clamp(currDisplayBuffer, 0, 2);
+			const u32 * const front_buffer = frontBuffer[buffer_index];
+			
+			is_highreso_upper = isHighResolutionScreen[buffer_index][0];
+			is_highreso_lower = isHighResolutionScreen[buffer_index][1];
+			
+			upper_brightness = is_highreso_upper ? masterBrightness[buffer_index][0] : 0;
+			lower_brightness = is_highreso_lower ? masterBrightness[buffer_index][1] : 0;
+			
+			Unlock_forHighResolutionFrontBuffer();
+			
+			if(is_highreso_upper && is_highreso_lower)
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT, GL_BGRA, GL_UNSIGNED_BYTE, front_buffer);
+			else
+			{
+				if(is_highreso_upper)
+					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, RENDER_WIDTH, RENDER_HEIGHT, GL_BGRA, GL_UNSIGNED_BYTE, front_buffer);
+				else
+					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 192, GL_BGRA, GL_UNSIGNED_BYTE, front_buffer);
+				
+				if(is_highreso_lower)
+					glTexSubImage2D( GL_TEXTURE_2D, 0, 0, RENDER_HEIGHT, RENDER_WIDTH, RENDER_HEIGHT, GL_BGRA, GL_UNSIGNED_BYTE, front_buffer + (RENDER_WIDTH * RENDER_HEIGHT) );
+				else
+					glTexSubImage2D( GL_TEXTURE_2D, 0, 0, RENDER_HEIGHT, 256, 192, GL_BGRA, GL_UNSIGNED_BYTE, front_buffer + (RENDER_WIDTH * RENDER_HEIGHT) );
+			}
+		}
+		
+		
+		// eNX`ÀW¶¬
+		static const float default_texvert[2][8] =
+		{
+			{
+				0.0f,		0.0f,
+				1.0f,		0.0f,
+				1.0f,		0.5f,
+				0.0f,		0.5f
+			},
+			{
+				0.0f,		0.5f,
+				1.0f,		0.5f,
+				1.0f,		1.0f,
+				0.0f,		1.0f
+			}
+		};
+		
+		static const float lowreso_texvert[2][8] =
+		{
+			{
+				0.0f,								0.0f,
+				256.0f / (float)TEXTURE_WIDTH,		0.0f,
+				256.0f / (float)TEXTURE_WIDTH,		192.0f / (float)TEXTURE_HEIGHT,
+				0.0f,								192.0f / (float)TEXTURE_HEIGHT
+			},
+			{
+				0.0f,								0.5f,
+				256.0f / (float)TEXTURE_WIDTH,		0.5f,
+				256.0f / (float)TEXTURE_WIDTH,		0.5f + ( 192.0f / (float)TEXTURE_HEIGHT ),
+				0.0f,								0.5f + ( 192.0f / (float)TEXTURE_HEIGHT )
+			}
+		};
+		
+		float texvert[2][8];
+		float texvert_hud[2][8];
+		
+		bool screen_swap = false;
+		bool hud_swap = false;
+		u32 texture_index_offset = 0;
+		u32 i;
+		
+		switch(video.swap)
+		{
+			case 1:		screen_swap = true;							break;
+			case 2:		screen_swap = (MainScreen.offset > 0);		break;
+			case 3:		screen_swap = (SubScreen.offset > 0);		break;
+		}
+		
+		hud_swap = screen_swap;
+		
+		switch(video.rotation)
+		{
+			case 90:
+				texture_index_offset = 6;
+				screen_swap = !screen_swap;
+				break;
+				
+			case 180:
+				texture_index_offset = 4;
+				screen_swap = !screen_swap;
+				break;
+				
+			case 270:
+				texture_index_offset = 2;
+				break;
+		}
+		
+		for(i = 0; i < 8; ++i)
+		{
+			u32 index = (i + texture_index_offset) % 8;
+			
+			texvert[0][i] = is_highreso_upper ? default_texvert[0][index] : lowreso_texvert[0][index];
+			texvert[1][i] = is_highreso_lower ? default_texvert[1][index] : lowreso_texvert[1][index];
+			
+			texvert_hud[0][i] = default_texvert[0][index];
+			texvert_hud[1][i] = default_texvert[1][index];
+		}
+		
+		
+		// |SÀWzñ¶¬
+		const u32 upperscreen_index = screen_swap ? 1 : 0;
+		const u32 lowerscreen_index = screen_swap ? 0 : 1;
+		const RECT screen_rect[] = {MainScreenRect, SubScreenRect};
+		
+		for(i = 0; i < 2; ++i)
+		{
+			ScreenToClient(window_handle, (LPPOINT)&screen_rect[i].left);
+			ScreenToClient(window_handle, (LPPOINT)&screen_rect[i].right);
+		}
+		
+		const float polygon_vertices[2][8] =
+		{
+			{
+				screen_rect[upperscreen_index].left,		screen_rect[upperscreen_index].top,
+				screen_rect[upperscreen_index].right,		screen_rect[upperscreen_index].top,
+				screen_rect[upperscreen_index].right,		screen_rect[upperscreen_index].bottom,
+				screen_rect[upperscreen_index].left,		screen_rect[upperscreen_index].bottom
+			},
+			{
+				screen_rect[lowerscreen_index].left,		screen_rect[lowerscreen_index].top,
+				screen_rect[lowerscreen_index].right,		screen_rect[lowerscreen_index].top,
+				screen_rect[lowerscreen_index].right,		screen_rect[lowerscreen_index].bottom,
+				screen_rect[lowerscreen_index].left,		screen_rect[lowerscreen_index].bottom
+			}
+		};
+		
+		
+		// `æJn
+		const RGBA8888 clearcolor = (u32)ScreenGapColor;
+		const GLuint texture_filter = ( GetStyle() & DWS_FILTER ) ? GL_LINEAR : GL_NEAREST;
+		
+		glDisable(GL_LIGHTING);
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_STENCIL_TEST);
+		glDisable(GL_CULL_FACE);
+		glDisable(GL_ALPHA);
+		
+		glEnable(GL_TEXTURE_2D);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		
+		glViewport(0, 0, window_width, window_height);
+		
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho( 0.0f, (float)window_width, (float)window_height, 0.0f, -100.0f, 100.0f );
+		
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		
+		glClearColor( (float)clearcolor.R / 255.0f, (float)clearcolor.G / 255.0f, (float)clearcolor.B / 255.0f, 1.0f );
+		glClear(GL_COLOR_BUFFER_BIT);				// ViewportSÌðScreen GapÌFÅNA
+		
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, texture_filter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, texture_filter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		
+//		glColor4ub(0xFF, 0xFF, 0xFF, 0xFF);
+		glVertexPointer(2, GL_FLOAT, 0, polygon_vertices);
+		
+		
+		glTexCoordPointer(2, GL_FLOAT, 0, texvert);
+		
+		if(video.layout == 2)
+			glDrawArrays(GL_QUADS, screen_swap ? 4 : 0, 4);
+		else
+			glDrawArrays(GL_QUADS, 0, 4 * 2);
+		
+		if( (upper_brightness != 0) || (lower_brightness != 0) )
+		{
+//			glDisable(GL_TEXTURE_2D);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glEnableClientState(GL_COLOR_ARRAY);
+			
+			#if 0
+			u8 fade_colors[2][4][4];
+			RGBA8888 brightness;
+			u32 j;
+			
+			for(i = 0; i < 2; ++i)
+			{
+				brightness = (i == 0) ? upper_brightness : lower_brightness;
+				
+				for(j = 0; j < 4; ++j)
+				{
+					fade_colors[i][j][0] = brightness.R;
+					fade_colors[i][j][1] = brightness.G;
+					fade_colors[i][j][2] = brightness.B;
+					fade_colors[i][j][3] = brightness.A;
+				}
+			}
+			#else
+			const u32 fade_colors[8] =
+			{
+				upper_brightness, upper_brightness, upper_brightness, upper_brightness,
+				lower_brightness, lower_brightness, lower_brightness, lower_brightness
+			};
+			#endif
+			
+			glColorPointer(4, GL_UNSIGNED_BYTE, 0, fade_colors);
+			glDrawArrays(GL_QUADS, 0, 4 * 2);
+			
+			glDisableClientState(GL_COLOR_ARRAY);
+//			glEnable(GL_TEXTURE_2D);
+		}
+		
+		if( IsHudVisible() )
+		{
+			osd->swapScreens = hud_swap;
+			aggDraw.hud->attach( (u8*)hudBuffer, 256, 192 * 2, 256 * 4 );
+			aggDraw.hud->clear();
+			DoDisplay_DrawHud();
+			
+			glBindTexture(GL_TEXTURE_2D, hudTexture);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 192 * 2, GL_BGRA, GL_UNSIGNED_BYTE, hudBuffer);
+			
+			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+//			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+//			glColor4ub(0xFF, 0xFF, 0xFF, 0x7F);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			
+			glTexCoordPointer(2, GL_FLOAT, 0, texvert_hud);
+			glDrawArrays(GL_QUADS, 0, 4 * 2);
+		}
+		
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_BLEND);
+		glDisableClientState(GL_VERTEX_ARRAY);
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		
+		gldisplay.showPage();
+		gldisplay.end();
+#endif
+	}
+	
+//	inline GLuint GetScreenTexture()
+	inline u32 GetScreenTexture()
+	{
+		if(screenTexture == 0)
+			glGenTextures(1, &screenTexture);
+		
+		return screenTexture;
+	}
+	
+	static inline void DeleteScreenTexture()
+	{
+		lastRenderMagnification = 1;
+		
+		if(screenTexture != 0)
+		{
+			glDeleteTextures(1, &screenTexture);
+			screenTexture = 0;
+		}
+		
+		if(hudTexture != 0)
+		{
+			glDeleteTextures(1, &hudTexture);
+			hudTexture = 0;
+		}
+	}
 }
 #endif
 
