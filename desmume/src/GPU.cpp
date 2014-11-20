@@ -3339,7 +3339,7 @@ namespace X432R
 			
 			switch(purpose)
 			{
-				case VramConfiguration::Purpose::ABG:
+				case VramConfiguration::ABG:
 					if( !IsVramValid(i) || !UpdateHighResolutionBGNum(MainScreen.gpu, displaycontrol_main, mainScreenIndex) ) break;
 					
 					#if !defined(X432R_LAYERPOSITIONOFFSET_TEST2) || !defined(X432R_HIGHRESO_BG_OBJ_ROTSCALE_TEST)
@@ -3355,7 +3355,7 @@ namespace X432R
 					skipHighResolutionRendering[mainScreenIndex] = false;
 					continue;
 				
-				case VramConfiguration::Purpose::AOBJ:
+				case VramConfiguration::AOBJ:
 					if( !IsVramValid(i) || !CheckOBJParams(MainScreen.gpu, displaycontrol_main, mainScreenIndex) ) break;
 					
 					#if !defined(X432R_LAYERPOSITIONOFFSET_TEST2) || !defined(X432R_HIGHRESO_BG_OBJ_ROTSCALE_TEST)
@@ -3367,7 +3367,7 @@ namespace X432R
 					skipHighResolutionRendering[mainScreenIndex] = false;
 					continue;
 				
-				case VramConfiguration::Purpose::BBG:
+				case VramConfiguration::BBG:
 					if( !IsVramValid(i) || !UpdateHighResolutionBGNum(SubScreen.gpu, displaycontrol_sub, subScreenIndex) ) break;
 					
 					#if !defined(X432R_LAYERPOSITIONOFFSET_TEST2) || !defined(X432R_HIGHRESO_BG_OBJ_ROTSCALE_TEST)
@@ -3383,7 +3383,7 @@ namespace X432R
 					skipHighResolutionRendering[subScreenIndex] = false;
 					continue;
 				
-				case VramConfiguration::Purpose::BOBJ:
+				case VramConfiguration::BOBJ:
 					if( !IsVramValid(i) || !CheckOBJParams(SubScreen.gpu, displaycontrol_sub, subScreenIndex) ) break;
 					
 					#if !defined(X432R_LAYERPOSITIONOFFSET_TEST2) || !defined(X432R_HIGHRESO_BG_OBJ_ROTSCALE_TEST)
@@ -3395,7 +3395,7 @@ namespace X432R
 					skipHighResolutionRendering[subScreenIndex] = false;
 					continue;
 				
-				case VramConfiguration::Purpose::LCDC:
+				case VramConfiguration::LCDC:
 					vramPurpose[i] = purpose;
 					
 					if( !IsVramValid(i) || (mainGpuDisplayMode != 2) || (i != MainScreen.gpu->vramBlock) ) continue;
@@ -3487,7 +3487,7 @@ namespace X432R
 		
 		vram_writeblock = params.writeBlock;
 		
-		if( (vram_writeblock > 3) || ( vramPurpose[vram_writeblock] != VramConfiguration::Purpose::LCDC ) || skipHighResolutionRendering[mainScreenIndex] ) return;
+		if( (vram_writeblock > 3) || ( vramPurpose[vram_writeblock] != VramConfiguration::LCDC ) || skipHighResolutionRendering[mainScreenIndex] ) return;
 		
 		u8 vram_readblock = 0xFF;
 		u8 source_a = 0xFF;
@@ -3511,7 +3511,7 @@ namespace X432R
 				{
 					vram_readblock = params.readBlock;
 					
-//					if( (vram_readblock > 3) || ( vramPurpose[vram_readblock] != VramConfiguration::Purpose::LCDC ) ) return;
+//					if( (vram_readblock > 3) || ( vramPurpose[vram_readblock] != VramConfiguration::LCDC ) ) return;
 					if(vram_readblock > 3) return;
 					
 /*					if( !VramIsValid[vram_readblock] )
@@ -3540,7 +3540,7 @@ namespace X432R
 				{
 					vram_readblock = params.readBlock;
 					
-//					if( (vram_readblock > 3) || ( vramPurpose[vram_readblock] != VramConfiguration::Purpose::LCDC ) ) return;
+//					if( (vram_readblock > 3) || ( vramPurpose[vram_readblock] != VramConfiguration::LCDC ) ) return;
 					if(vram_readblock > 3) return;
 					
 /*					if( !VramIsValid[vram_readblock] )
