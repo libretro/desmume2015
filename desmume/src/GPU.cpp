@@ -766,9 +766,7 @@ static FORCEINLINE void _master_setFinalOBJColor(GPU *gpu, u8 *dst, u16 color, u
 			return;
 	}
 
-	#ifdef X432R_CUSTOMRENDERER_ENABLED
 	const u16 backcolor = HostReadWord(dst, x << 1);
-	#endif
 
 	//if the window effect is satisfied, then we can do color effects to modify the color
 	if(windowEffectSatisfied)
@@ -814,8 +812,7 @@ static FORCEINLINE void _master_setFinalOBJColor(GPU *gpu, u8 *dst, u16 color, u
          case Increase: color = gpu->currentFadeInColors[color&0x7FFF]; break;
          case Decrease: color = gpu->currentFadeOutColors[color&0x7FFF]; break;
          case Blend: 
-                        u16 backColor = HostReadWord(dst,x<<1);
-                        color = _blend(color,backColor,&gpuBlendTable555[eva][evb]); 
+                        color = _blend(color,backcolor,&gpuBlendTable555[eva][evb]); 
                         break;
       }
 #else

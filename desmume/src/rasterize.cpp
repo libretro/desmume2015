@@ -881,11 +881,7 @@ public:
 		bool first=true;
 
 		//HACK: special handling for horizontal line poly
-		#ifndef X432R_CUSTOMRENDERER_ENABLED
-		if (lineHack && left->Height == 0 && right->Height == 0 && left->Y<192 && left->Y>=0)
-		#else
 		if( lineHack && (left->Height == 0) && (right->Height == 0) && (left->Y < engine->height) && (left->Y >= 0) )
-		#endif
 		{
 			bool draw = (!SLI || (left->Y & SLI_MASK) == SLI_VALUE);
 			if(draw) drawscanline(left,right,lineHack);
