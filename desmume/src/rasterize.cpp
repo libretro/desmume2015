@@ -116,8 +116,8 @@ static FORCEINLINE int fastFloor(float f)
 //}
 
 #ifndef X432R_CUSTOMRENDERER_ENABLED
-static Fragment _screen[256*192];
-static FragmentColor _screenColor[256*192];
+static Fragment _screen[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT];
+static FragmentColor _screenColor[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT];
 #else
 static Fragment _screen[1024 * 768];
 static FragmentColor _screenColor[1024 * 768];
@@ -1221,7 +1221,7 @@ static void SoftRastVramReconfigureSignal()
 
 static void SoftRastConvertFramebuffer()
 {
-	memcpy(gfx3d_convertedScreen,_screenColor,256*192*4);
+	memcpy(gfx3d_convertedScreen,_screenColor,GFX3D_FRAMEBUFFER_WIDTH* GFX3D_FRAMEBUFFER_HEIGHT * 4);
 }
 
 void SoftRasterizerEngine::initFramebuffer(const int width, const int height, const bool clearImage)
@@ -1250,7 +1250,7 @@ void SoftRasterizerEngine::initFramebuffer(const int width, const int height, co
 	if(clearImage)
 	{
 		//need to handle this somehow..
-		assert(width==256 && height==192);
+		assert(width== GFX3D_FRAMEBUFFER_WIDTH && height== GFX3D_FRAMEBUFFER_HEIGHT);
 
 		u16* clearImage = (u16*)MMU.texInfo.textureSlotAddr[2];
 		u16* clearDepth = (u16*)MMU.texInfo.textureSlotAddr[3];
@@ -1264,9 +1264,9 @@ void SoftRasterizerEngine::initFramebuffer(const int width, const int height, co
 		FragmentColor *dstColor = screenColor;
 		Fragment *dst = screen;
 
-		for(int iy=0;iy<192;iy++) {
+		for(int iy=0;iy< GFX3D_FRAMEBUFFER_HEIGHT;iy++) {
 			int y = ((iy + yscroll)&255)<<8;
-			for(int ix=0;ix<256;ix++) {
+			for(int ix=0;ix< GFX3D_FRAMEBUFFER_WIDTH;ix++) {
 				int x = (ix + xscroll)&255;
 				int adr = y + x;
 				
@@ -1478,7 +1478,7 @@ void SoftRasterizerEngine::framebufferProcess()
 		u32 b = GFX3D_5TO6((gfx3d.renderState.fogColor>>10)&0x1F);
 		u32 a = (gfx3d.renderState.fogColor>>16)&0x1F;
 		
-		for(int i=0;i<256*192;i++)
+		for(int i=0;i< GFX3D_FRAMEBUFFER_WIDTH* GFX3D_FRAMEBUFFER_HEIGHT;i++)
 		{
 			Fragment &destFragment = screen[i];
 			if(!destFragment.fogged) continue;
@@ -1498,7 +1498,7 @@ void SoftRasterizerEngine::framebufferProcess()
 	}
 
 	////debug alpha channel framebuffer contents
-	//for(int i=0;i<256*192;i++)
+	//for(int i=0;i< GFX3D_FRAMEBUFFER_WIDTH* GFX3D_FRAMEBUFFER_HEIGHT;i++)
 	//{
 	//	FragmentColor &destFragmentColor = screenColor[i];
 	//	destFragmentColor.r = destFragmentColor.a;
@@ -1533,10 +1533,10 @@ void SoftRasterizerEngine::performClipping(bool hirez)
 
 template<bool CUSTOM> void SoftRasterizerEngine::performViewportTransforms(int width, int height)
 {
-	const float xfactor = width/256.0f;
-	const float yfactor = height/192.0f;
-	const float xmax = 256.0f*xfactor-(CUSTOM?0.001f:0); //fudge factor to keep from overrunning render buffers
-	const float ymax = 192.0f*yfactor-(CUSTOM?0.001f:0);
+	const float xfactor = (float)width/GFX3D_FRAMEBUFFER_WIDTH;
+	const float yfactor = (float)height/GFX3D_FRAMEBUFFER_HEIGHT;
+	const float xmax = GFX3D_FRAMEBUFFER_WIDTH *xfactor-(CUSTOM?0.001f:0); //fudge factor to keep from overrunning render buffers
+	const float ymax = GFX3D_FRAMEBUFFER_HEIGHT *yfactor-(CUSTOM?0.001f:0);
 
 
 	//viewport transforms
@@ -1689,18 +1689,18 @@ static void SoftRastRender()
 	mainSoftRasterizer.indexlist = &gfx3d.indexlist;
 	mainSoftRasterizer.screen = _screen;
 	mainSoftRasterizer.screenColor = _screenColor;
-	mainSoftRasterizer.width = 256;
-	mainSoftRasterizer.height = 192;
+	mainSoftRasterizer.width = GFX3D_FRAMEBUFFER_WIDTH;
+	mainSoftRasterizer.height = GFX3D_FRAMEBUFFER_HEIGHT;
 
 	//setup fog variables (but only if fog is enabled)
 	if(gfx3d.renderState.enableFog)
 		mainSoftRasterizer.updateFogTable();
 	
-	mainSoftRasterizer.initFramebuffer(256,192,gfx3d.renderState.enableClearImage?true:false);
+	mainSoftRasterizer.initFramebuffer(GFX3D_FRAMEBUFFER_WIDTH,GFX3D_FRAMEBUFFER_HEIGHT,gfx3d.renderState.enableClearImage?true:false);
 	mainSoftRasterizer.updateToonTable();
 	mainSoftRasterizer.updateFloatColors();
 	mainSoftRasterizer.performClipping(CommonSettings.GFX3D_HighResolutionInterpolateColor);
-	mainSoftRasterizer.performViewportTransforms<false>(256,192);
+	mainSoftRasterizer.performViewportTransforms<false>(GFX3D_FRAMEBUFFER_WIDTH,GFX3D_FRAMEBUFFER_HEIGHT);
 	mainSoftRasterizer.performBackfaceTests();
 	mainSoftRasterizer.performCoordAdjustment(true);
 	mainSoftRasterizer.setupTextures(true);
@@ -1765,16 +1765,16 @@ void SoftRasterizerEngine::ProcessClippedPolygons()
 {
 	const float xfactor = (float)RENDER_MAGNIFICATION;
 	const float yfactor = (float)RENDER_MAGNIFICATION;
-	const float xmax = (256.0f * xfactor) - ( (RENDER_MAGNIFICATION != 1) ? 0.001f : 0.0f);		//fudge factor to keep from overrunning render buffers
-	const float ymax = (192.0f * yfactor) - ( (RENDER_MAGNIFICATION != 1) ? 0.001f : 0.0f);
+	const float xmax = (GFX3D_FRAMEBUFFER_WIDTH * xfactor) - ( (RENDER_MAGNIFICATION != 1) ? 0.001f : 0.0f);		//fudge factor to keep from overrunning render buffers
+	const float ymax = (GFX3D_FRAMEBUFFER_HEIGHT * yfactor) - ( (RENDER_MAGNIFICATION != 1) ? 0.001f : 0.0f);
 */	
 template<bool CUSTOM>
 void SoftRasterizerEngine::ProcessClippedPolygons(const u32 width, const u32 height)
 {
-	const float xfactor = (float)width / 256.0f;
-	const float yfactor = (float)height / 192.0f;
-	const float xmax = (256.0f * xfactor) - (CUSTOM ? 0.001f : 0.0f);		//fudge factor to keep from overrunning render buffers
-	const float ymax = (192.0f * yfactor) - (CUSTOM ? 0.001f : 0.0f);
+	const float xfactor = (float)width / GFX3D_FRAMEBUFFER_WIDTH;
+	const float yfactor = (float)height / GFX3D_FRAMEBUFFER_HEIGHT;
+	const float xmax = (GFX3D_FRAMEBUFFER_WIDTH * xfactor) - (CUSTOM ? 0.001f : 0.0f);		//fudge factor to keep from overrunning render buffers
+	const float ymax = (GFX3D_FRAMEBUFFER_HEIGHT * yfactor) - (CUSTOM ? 0.001f : 0.0f);
 	
 	TexCacheItem* last_texture_key = NULL;
 	u32 last_texture_format = 0, last_texture_palette = 0;
@@ -1906,8 +1906,8 @@ void SoftRasterizerEngine::ProcessClippedPolygons(const u32 width, const u32 hei
 template <u32 RENDER_MAGNIFICATION>
 void SoftRasterizerEngine::InitFramebuffer(const bool clear_image)
 {
-	const u32 width = 256 * RENDER_MAGNIFICATION;
-	const u32 height = 192 * RENDER_MAGNIFICATION;
+	const u32 width = GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
+	const u32 height = GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION;
 */	
 template <u32 RENDER_MAGNIFICATION>
 void SoftRasterizerEngine::InitFramebuffer(const u32 width, const u32 height, const bool clear_image)
@@ -2010,7 +2010,7 @@ void SoftRasterizerEngine::DrawFog_forHighResolution()
 	#if 0
 	const u32 fragment_count = mainSoftRasterizer.width * mainSoftRasterizer.height;
 	#else
-	const u32 fragment_count = 256 * 192 * RENDER_MAGNIFICATION * RENDER_MAGNIFICATION;
+	const u32 fragment_count = GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION * RENDER_MAGNIFICATION;
 	#endif
 	
 	const Fragment *destFragment;
@@ -2131,8 +2131,8 @@ namespace X432R
 		mainSoftRasterizer.screen = _screen;
 		mainSoftRasterizer.screenColor = _screenColor;
 		
-		mainSoftRasterizer.width = 256 * RENDER_MAGNIFICATION;
-		mainSoftRasterizer.height = 192 * RENDER_MAGNIFICATION;
+		mainSoftRasterizer.width  = GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
+		mainSoftRasterizer.height = GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION;
 		
 		//setup fog variables (but only if fog is enabled)
 		if(gfx3d.renderState.enableFog)
@@ -2226,12 +2226,12 @@ namespace X432R
 		
 		u32 x, y;
 		
-		for( y = 0; y < (192 * RENDER_MAGNIFICATION); ++y )
+		for( y = 0; y < (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION); ++y )
 		{
 			remainder_y = (y % RENDER_MAGNIFICATION) << 16;
 			downscaled_y = (y / RENDER_MAGNIFICATION) * 256;
 			
-			for( x = 0; x < (256 * RENDER_MAGNIFICATION); ++x, ++source_buffer, ++highreso_buffer )
+			for( x = 0; x < (GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION); ++x, ++source_buffer, ++highreso_buffer )
 			{
 				remainder_x = (x % RENDER_MAGNIFICATION);
 //				downscaled_index = downscaled_y + (x / RENDER_MAGNIFICATION);
