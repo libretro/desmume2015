@@ -48,7 +48,7 @@ namespace X432R
 	static u32 frontBuffer[3][1024 * 768 * 2] = {0};
 	static u32 masterBrightness[3][2] = {0};
 	static bool isHighResolutionScreen[3][2] = {0};
-	static u32 hudBuffer[256 * 192 * 2] = {0};
+	static u32 hudBuffer[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT * 2] = {0};
 	
 	static volatile bool screenTextureUpdated = false;
 	
@@ -288,20 +288,20 @@ namespace X432R
 		
 		
 		#if 1
-		if( (x < 1) || ( x >= ( (256 * RENDER_MAGNIFICATION) - 1 ) ) || (y < 1) || ( y >= ( (192 * RENDER_MAGNIFICATION) - 1 ) ) )
-			return source_buffer[ (y * 256 * RENDER_MAGNIFICATION) + x ];
+		if( (x < 1) || ( x >= ( (GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION) - 1 ) ) || (y < 1) || ( y >= ( (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION) - 1 ) ) )
+			return source_buffer[ (y * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION) + x ];
 		
-		const u32 y0 = (y - 1) * 256 * RENDER_MAGNIFICATION;
-		const u32 y1 = y * 256 * RENDER_MAGNIFICATION;
-		const u32 y2 = (y + 1) * 256 * RENDER_MAGNIFICATION;
+		const u32 y0 = (y - 1) * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
+		const u32 y1 = y * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
+		const u32 y2 = (y + 1) * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
 		const u32 x0 = x - 1;
 		const u32 x2 = x + 1;
 		#else
-		const u32 y0 = (u32)std::max<s32>( (s32)y - 1, 0 ) * 256 * RENDER_MAGNIFICATION;
-		const u32 y1 = y * 256 * RENDER_MAGNIFICATION;
-		const u32 y2 = (u32)std::min<s32>( (s32)y + 1, 192 * RENDER_MAGNIFICATION ) * 256 * RENDER_MAGNIFICATION;
+		const u32 y0 = (u32)std::max<s32>( (s32)y - 1, 0 ) * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
+		const u32 y1 = y * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
+		const u32 y2 = (u32)std::min<s32>( (s32)y + 1, GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION ) * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
 		const u32 x0 = (u32)std::max<s32>( (s32)x - 1, 0 );
-		const u32 x2 = (u32)std::min<s32>( (s32)x + 1, 256 * RENDER_MAGNIFICATION );
+		const u32 x2 = (u32)std::min<s32>( (s32)x + 1, GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION );
 		#endif
 		
 		
@@ -416,20 +416,20 @@ namespace X432R
 		
 		
 		#if 1
-		if( (x < 1) || ( x >= ( (256 * RENDER_MAGNIFICATION) - 1 ) ) || (y < 1) || ( y >= ( (192 * RENDER_MAGNIFICATION) - 1 ) ) )
-			return source_buffer[ (y * 256 * RENDER_MAGNIFICATION) + x ];
+		if( (x < 1) || ( x >= ( (GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION) - 1 ) ) || (y < 1) || ( y >= ( (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION) - 1 ) ) )
+			return source_buffer[ (y * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION) + x ];
 		
-		const u32 y0 = (y - 1) * 256 * RENDER_MAGNIFICATION;
-		const u32 y1 = y * 256 * RENDER_MAGNIFICATION;
-		const u32 y2 = (y + 1) * 256 * RENDER_MAGNIFICATION;
+		const u32 y0 = (y - 1) * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
+		const u32 y1 = y * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
+		const u32 y2 = (y + 1) * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
 		const u32 x0 = x - 1;
 		const u32 x2 = x + 1;
 		#else
-		const u32 y0 = (u32)std::max<s32>( (s32)y - 1, 0 ) * 256 * RENDER_MAGNIFICATION;
-		const u32 y1 = y * 256 * RENDER_MAGNIFICATION;
-		const u32 y2 = (u32)std::min<s32>( (s32)y + 1, 192 * RENDER_MAGNIFICATION ) * 256 * RENDER_MAGNIFICATION;
+		const u32 y0 = (u32)std::max<s32>( (s32)y - 1, 0 ) * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
+		const u32 y1 = y * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
+		const u32 y2 = (u32)std::min<s32>( (s32)y + 1, GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION ) * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
 		const u32 x0 = (u32)std::max<s32>( (s32)x - 1, 0 );
-		const u32 x2 = (u32)std::min<s32>( (s32)x + 1, 256 * RENDER_MAGNIFICATION );
+		const u32 x2 = (u32)std::min<s32>( (s32)x + 1, GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION );
 		#endif
 		
 		
@@ -588,9 +588,9 @@ namespace X432R
 		u32 * const destbuffer_begin = (u32 *)ddraw.surfDescBack.lpSurface;
 		u32 *dest_buffer;
 		
-		source_buffer += (screen_index * 256 * 192 * RENDER_MAGNIFICATION * RENDER_MAGNIFICATION);
+		source_buffer += (screen_index * GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION * RENDER_MAGNIFICATION);
 		
-		const u32 * const hud_buffer = hudBuffer + (screen_index * 256 * 192);
+		const u32 * const hud_buffer = hudBuffer + (screen_index * GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT);
 		
 		s32 dest_x, dest_y, dest_begin_x, dest_begin_y, dest_end_x, dest_end_y;
 		s32 source_x, source_y, source_begin_x, source_begin_y;
@@ -601,42 +601,42 @@ namespace X432R
 		switch(ROTATION_ANGLE)
 		{
 			case 90:
-//				dest_begin_x = screen_index ? (192 * RENDER_MAGNIFICATION) : 0;
-				dest_begin_x = screen_index ? 0 : (192 * RENDER_MAGNIFICATION);
+//				dest_begin_x = screen_index ? (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION) : 0;
+				dest_begin_x = screen_index ? 0 : (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION);
 				dest_begin_y = 0;
-				dest_end_x = dest_begin_x + (192 * RENDER_MAGNIFICATION);
-				dest_end_y = dest_begin_y + (256 * RENDER_MAGNIFICATION);
+				dest_end_x = dest_begin_x + (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION);
+				dest_end_y = dest_begin_y + (GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION);
 				
 				source_begin_x = 0;
-				source_begin_y = (192 * RENDER_MAGNIFICATION) - 1;
+				source_begin_y = (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION) - 1;
 				break;
 				
 			case 180:
 				dest_begin_x = 0;
-//				dest_begin_y = screen_index ? (192 * RENDER_MAGNIFICATION) : 0;
-				dest_begin_y = screen_index ? 0 : (192 * RENDER_MAGNIFICATION);
-				dest_end_x = 256 * RENDER_MAGNIFICATION;
-				dest_end_y = dest_begin_y + (192 * RENDER_MAGNIFICATION);
+//				dest_begin_y = screen_index ? (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION) : 0;
+				dest_begin_y = screen_index ? 0 : (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION);
+				dest_end_x = GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
+				dest_end_y = dest_begin_y + (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION);
 				
-				source_begin_x = (256 * RENDER_MAGNIFICATION) - 1;
-				source_begin_y = (192 * RENDER_MAGNIFICATION) - 1;
+				source_begin_x = (GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION) - 1;
+				source_begin_y = (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION) - 1;
 				break;
 				
 			case 270:
-				dest_begin_x = screen_index ? (192 * RENDER_MAGNIFICATION) : 0;
+				dest_begin_x = screen_index ? (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION) : 0;
 				dest_begin_y = 0;
-				dest_end_x = dest_begin_x + (192 * RENDER_MAGNIFICATION);
-				dest_end_y = dest_begin_y + (256 * RENDER_MAGNIFICATION);
+				dest_end_x = dest_begin_x + (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION);
+				dest_end_y = dest_begin_y + (GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION);
 				
-				source_begin_x = (256 * RENDER_MAGNIFICATION) - 1;
+				source_begin_x = (GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION) - 1;
 				source_begin_y = 0;
 				break;
 				
 			default:
 				dest_begin_x = 0;
-				dest_begin_y = screen_index ? (192 * RENDER_MAGNIFICATION) : 0;
-				dest_end_x = 256 * RENDER_MAGNIFICATION;
-				dest_end_y = dest_begin_y + (192 * RENDER_MAGNIFICATION);
+				dest_begin_y = screen_index ? (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION) : 0;
+				dest_end_x = GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
+				dest_end_y = dest_begin_y + (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION);
 				
 				source_begin_x = 0;
 				source_begin_y = 0;
@@ -652,7 +652,7 @@ namespace X432R
 		{
 			RGBA8888 *buffer = (RGBA8888 *)source_buffer;
 			
-			for(u32 i = 0; i < 256 * 192 * RENDER_MAGNIFICATION * RENDER_MAGNIFICATION; ++i, ++buffer)
+			for(u32 i = 0; i < GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION * RENDER_MAGNIFICATION; ++i, ++buffer)
 			{
 				SetColorIntensity(buffer);
 			}
@@ -668,15 +668,15 @@ namespace X432R
 			{
 				#ifndef X432R_SMOOTHINGFILTER_TEST
 				if( !HIGHRESO || HUD_VISIBLE )
-					downscaled_index = ( (source_y / RENDER_MAGNIFICATION) * 256 ) + (source_x / RENDER_MAGNIFICATION);
+					downscaled_index = ( (source_y / RENDER_MAGNIFICATION) * GFX3D_FRAMEBUFFER_WIDTH ) + (source_x / RENDER_MAGNIFICATION);
 				
 				if(HIGHRESO)
-					color_rgba8888 = RGBA8888::AlphaBlend( master_brightness, source_buffer[ (source_y * 256 * RENDER_MAGNIFICATION) + source_x ] );
+					color_rgba8888 = RGBA8888::AlphaBlend( master_brightness, source_buffer[ (source_y * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION) + source_x ] );
 				else
 					color_rgba8888 = source_buffer[downscaled_index];
 				#else
 				if( ( !HIGHRESO && (SMOOTHING_LEVEL == 0) ) || HUD_VISIBLE )
-					downscaled_index = ( (source_y / RENDER_MAGNIFICATION) * 256 ) + (source_x / RENDER_MAGNIFICATION);
+					downscaled_index = ( (source_y / RENDER_MAGNIFICATION) * GFX3D_FRAMEBUFFER_WIDTH ) + (source_x / RENDER_MAGNIFICATION);
 				
 				if(SMOOTHING_LEVEL > 0)
 				{
@@ -687,7 +687,7 @@ namespace X432R
 				}
 				
 				else if(HIGHRESO)
-					color_rgba8888 = source_buffer[ (source_y * 256 * RENDER_MAGNIFICATION) + source_x ];
+					color_rgba8888 = source_buffer[ (source_y * GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION) + source_x ];
 				
 				else
 					color_rgba8888 = source_buffer[downscaled_index];
@@ -768,7 +768,7 @@ namespace X432R
 			if(hud_visible)
 			{
 				osd->swapScreens = screen_swap;
-				aggDraw.hud->attach( (u8*)hudBuffer, 256, 192 * 2, 256 * 4 );
+				aggDraw.hud->attach( (u8*)hudBuffer, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT * 2, GFX3D_FRAMEBUFFER_WIDTH * 4 );
 				aggDraw.hud->clear();
 				DoDisplay_DrawHud();
 			}
@@ -874,14 +874,14 @@ namespace X432R
 			{
 				0,
 				0,
-				source_rect_rotation ?	(192 * RENDER_MAGNIFICATION)			: (256 * RENDER_MAGNIFICATION),
-				source_rect_rotation ?	(256 * RENDER_MAGNIFICATION)			: (192 * RENDER_MAGNIFICATION)
+				source_rect_rotation ?	(GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION)			: (GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION),
+				source_rect_rotation ?	(GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION)			: (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION)
 			},
 			{
-				source_rect_rotation ?	(192 * RENDER_MAGNIFICATION)			: 0,
-				source_rect_rotation ?	0										: (192 * RENDER_MAGNIFICATION),
-				source_rect_rotation ?	(192 * RENDER_MAGNIFICATION * 2)		: (256 * RENDER_MAGNIFICATION),
-				source_rect_rotation ?	(256 * RENDER_MAGNIFICATION)			: (192 * RENDER_MAGNIFICATION * 2)
+				source_rect_rotation ?	(GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION)			: 0,
+				source_rect_rotation ?	0										: (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION),
+				source_rect_rotation ?	(GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION * 2)		: (GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION),
+				source_rect_rotation ?	(GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION)			: (GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION * 2)
 			}
 		};
 		
@@ -968,8 +968,8 @@ namespace X432R
 		assert( (lastRenderMagnification >= 1) && (lastRenderMagnification <= 4) );
 		
 		
-		static const u32 RENDER_WIDTH = 256 * RENDER_MAGNIFICATION;
-		static const u32 RENDER_HEIGHT = 192 * RENDER_MAGNIFICATION;
+		static const u32 RENDER_WIDTH = GFX3D_FRAMEBUFFER_WIDTH * RENDER_MAGNIFICATION;
+		static const u32 RENDER_HEIGHT = GFX3D_FRAMEBUFFER_HEIGHT * RENDER_MAGNIFICATION;
 		static const u32 TEXTURE_WIDTH = RENDER_WIDTH;
 		static const u32 TEXTURE_HEIGHT = RENDER_HEIGHT * 2;
 		
@@ -1114,7 +1114,7 @@ namespace X432R
 			glGenTextures(1, &hudTexture);
 			
 			glBindTexture(GL_TEXTURE_2D, hudTexture);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 192 * 2, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT * 2, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 		}
 		
 		if(screenTexture == 0)
@@ -1158,12 +1158,12 @@ namespace X432R
 				if(is_highreso_upper)
 					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, RENDER_WIDTH, RENDER_HEIGHT, GL_BGRA, GL_UNSIGNED_BYTE, front_buffer);
 				else
-					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 192, GL_BGRA, GL_UNSIGNED_BYTE, front_buffer);
+					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GL_BGRA, GL_UNSIGNED_BYTE, front_buffer);
 				
 				if(is_highreso_lower)
 					glTexSubImage2D( GL_TEXTURE_2D, 0, 0, RENDER_HEIGHT, RENDER_WIDTH, RENDER_HEIGHT, GL_BGRA, GL_UNSIGNED_BYTE, front_buffer + (RENDER_WIDTH * RENDER_HEIGHT) );
 				else
-					glTexSubImage2D( GL_TEXTURE_2D, 0, 0, RENDER_HEIGHT, 256, 192, GL_BGRA, GL_UNSIGNED_BYTE, front_buffer + (RENDER_WIDTH * RENDER_HEIGHT) );
+					glTexSubImage2D( GL_TEXTURE_2D, 0, 0, RENDER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GL_BGRA, GL_UNSIGNED_BYTE, front_buffer + (RENDER_WIDTH * RENDER_HEIGHT) );
 			}
 		}
 		
@@ -1189,15 +1189,15 @@ namespace X432R
 		{
 			{
 				0.0f,								0.0f,
-				256.0f / (float)TEXTURE_WIDTH,		0.0f,
-				256.0f / (float)TEXTURE_WIDTH,		192.0f / (float)TEXTURE_HEIGHT,
-				0.0f,								192.0f / (float)TEXTURE_HEIGHT
+				GFX3D_FRAMEBUFFER_WIDTH / (float)TEXTURE_WIDTH,		0.0f,
+				GFX3D_FRAMEBUFFER_WIDTH / (float)TEXTURE_WIDTH,		GFX3D_FRAMEBUFFER_HEIGHT / (float)TEXTURE_HEIGHT,
+				0.0f,								GFX3D_FRAMEBUFFER_HEIGHT / (float)TEXTURE_HEIGHT
 			},
 			{
 				0.0f,								0.5f,
-				256.0f / (float)TEXTURE_WIDTH,		0.5f,
-				256.0f / (float)TEXTURE_WIDTH,		0.5f + ( 192.0f / (float)TEXTURE_HEIGHT ),
-				0.0f,								0.5f + ( 192.0f / (float)TEXTURE_HEIGHT )
+				GFX3D_FRAMEBUFFER_WIDTH / (float)TEXTURE_WIDTH,		0.5f,
+				GFX3D_FRAMEBUFFER_WIDTH / (float)TEXTURE_WIDTH,		0.5f + ( GFX3D_FRAMEBUFFER_HEIGHT / (float)TEXTURE_HEIGHT ),
+				0.0f,								0.5f + ( GFX3D_FRAMEBUFFER_HEIGHT / (float)TEXTURE_HEIGHT )
 			}
 		};
 		
@@ -1361,12 +1361,12 @@ namespace X432R
 		if( IsHudVisible() )
 		{
 			osd->swapScreens = hud_swap;
-			aggDraw.hud->attach( (u8*)hudBuffer, 256, 192 * 2, 256 * 4 );
+			aggDraw.hud->attach( (u8*)hudBuffer, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT * 2, GFX3D_FRAMEBUFFER_WIDTH * 4 );
 			aggDraw.hud->clear();
 			DoDisplay_DrawHud();
 			
 			glBindTexture(GL_TEXTURE_2D, hudTexture);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 192 * 2, GL_BGRA, GL_UNSIGNED_BYTE, hudBuffer);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT * 2, GL_BGRA, GL_UNSIGNED_BYTE, hudBuffer);
 			
 			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 //			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
@@ -1463,7 +1463,7 @@ namespace /* INPUT */
 
 namespace /* VIDEO */
 {
-    static uint16_t screenSwap[256 * 192 * 2];
+    static uint16_t screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT * 2];
     static retro_pixel_format colorMode;
     static uint32_t frameSkip;
     static uint32_t frameIndex;
@@ -1481,13 +1481,13 @@ namespace /* VIDEO */
 
     static const LayoutData layouts[] =
     {
-        { "top/bottom", { &screenSwap[0], &screenSwap[256 * 192] }, 0, 192, 256, 384, 256 },
-        { "bottom/top", { &screenSwap[256 * 192], &screenSwap[0] }, 0, 0, 256, 384, 256 },
-        { "left/right", { &screenSwap[0], &screenSwap[256] }, 256, 0, 512, 192, 512 },
-        { "right/left", { &screenSwap[256], &screenSwap[0] }, 0, 0, 512, 192, 512 },
-		{ "top only", { &screenSwap[0], &screenSwap[256 * 192] }, 0, 192, 256, 192, 256 },
-		{ "bottom only", { &screenSwap[256 * 192], &screenSwap[0] }, 0, 192, 256, 192, 256 },
-		{ "quick switch", { &screenSwap[0], &screenSwap[256 * 192] }, 0, 192, 256, 192, 256 },
+        { "top/bottom", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, (GFX3D_FRAMEBUFFER_HEIGHT * 2), GFX3D_FRAMEBUFFER_WIDTH },
+        { "bottom/top", { &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT], &screenSwap[0] }, 0, 0, GFX3D_FRAMEBUFFER_WIDTH, (GFX3D_FRAMEBUFFER_HEIGHT * 2), GFX3D_FRAMEBUFFER_WIDTH },
+        { "left/right", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH] }, GFX3D_FRAMEBUFFER_WIDTH, 0, (GFX3D_FRAMEBUFFER_WIDTH * 2), GFX3D_FRAMEBUFFER_HEIGHT, (GFX3D_FRAMEBUFFER_WIDTH * 2) },
+        { "right/left", { &screenSwap[GFX3D_FRAMEBUFFER_WIDTH], &screenSwap[0] }, 0, 0, (GFX3D_FRAMEBUFFER_WIDTH * 2), GFX3D_FRAMEBUFFER_HEIGHT, (GFX3D_FRAMEBUFFER_WIDTH * 2) },
+		{ "top only", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH },
+		{ "bottom only", { &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT], &screenSwap[0] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH },
+		{ "quick switch", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH },
         { 0, 0, 0, 0 }
     };
 
@@ -1496,9 +1496,9 @@ namespace /* VIDEO */
     static void SwapScreen(void *dst, const void *src, uint32_t pitch, bool render_fullscreen)
     {
         const uint32_t *_src = (const uint32_t*)src;
-        uint32_t width = render_fullscreen ? 256 : 128;
+        uint32_t width = render_fullscreen ? GFX3D_FRAMEBUFFER_WIDTH : (GFX3D_FRAMEBUFFER_WIDTH / 2);
         
-        for(int i = 0; i < 192; i ++)
+        for(int i = 0; i < GFX3D_FRAMEBUFFER_HEIGHT; i ++)
         {
             uint32_t *_dst = (uint32_t*)dst + (i * pitch);
 
@@ -1522,7 +1522,7 @@ namespace /* VIDEO */
     void SwapScreens(bool render_fullscreen)
     {
        SwapScreen(screenLayout->screens[0], (uint16_t*)&GPU_screen[0], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
-       SwapScreen(screenLayout->screens[1], (uint16_t*)&GPU_screen[256 * 192 * (render_fullscreen ? 1 : 2)], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
+       SwapScreen(screenLayout->screens[1], (uint16_t*)&GPU_screen[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT * (render_fullscreen ? 1 : 2)], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
        DrawPointer(screenLayout->screens[1], screenLayout->pitchInPix);
     }
 	
@@ -2126,8 +2126,8 @@ void retro_run (void)
 			float x = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X) + 32768.0f) * X_FACTOR;
 			float y = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y) + 32768.0f) * Y_FACTOR;
 
-			if (x >= screenLayout->touchScreenX && x < screenLayout->touchScreenX + 256 &&
-				y >= screenLayout->touchScreenY && y < screenLayout->touchScreenY + 192)
+			if (x >= screenLayout->touchScreenX && x < screenLayout->touchScreenX + GFX3D_FRAMEBUFFER_WIDTH &&
+				y >= screenLayout->touchScreenY && y < screenLayout->touchScreenY + GFX3D_FRAMEBUFFER_HEIGHT)
 			{
 				haveTouch = true;
 
