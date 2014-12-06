@@ -55,7 +55,6 @@ private:
 	u8					filename[MAX_PATH];
 	u32					currentGet;
 
-	void	clear();
 	void	ARparser(CHEATS_LIST& cheat);
 	char	*clearCode(char *s);
 
@@ -67,6 +66,7 @@ public:
 	}
 	~CHEATS() {}
 
+	void	clear();
 	void	init(char *path);
 	BOOL	add(u8 size, u32 address, u32 val, char *description, BOOL enabled);
 	BOOL	update(u8 size, u32 address, u32 val, char *description, BOOL enabled, u32 pos);

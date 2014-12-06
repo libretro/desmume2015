@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include "libretro.h"
 
+#include "cheatSystem.h"
 #include "MMU.h"
 #include "NDSSystem.h"
 #include "debug.h"
@@ -2278,8 +2279,31 @@ void retro_set_controller_port_device(unsigned in_port, unsigned device) { }
 void *retro_get_memory_data(unsigned type) { return 0; }
 size_t retro_get_memory_size(unsigned type) { return 0; }
 unsigned retro_api_version(void) { return RETRO_API_VERSION; }
-void retro_cheat_reset(void) { }
-void retro_cheat_set(unsigned unused, bool unused1, const char* unused2) { }
+
+extern CHEATS *cheats;
+
+void retro_cheat_reset(void)
+{
+   if (cheats)
+      cheats->clear();
+}
+
+void retro_cheat_set(unsigned index, bool enabled, const char *code)
+{
+   char ds_code[1024];
+   char desc[1024];
+   strcpy(ds_code, code);
+   strcpy(desc, "N/A");
+
+   if (!cheats)
+      return;
+
+   if (cheats->add_AR(ds_code, desc, 1) != TRUE)
+   {
+      /* Couldn't add Action Replay code */
+   }
+}
+
 unsigned retro_get_region (void) { return RETRO_REGION_NTSC; }
 
 #ifdef PSP
