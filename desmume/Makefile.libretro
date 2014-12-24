@@ -198,6 +198,7 @@ endif
 
 OBJECTS		= $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
 CXXFLAGS	+= -D__LIBRETRO__ $(fpic) $(INCDIR)
+CFLAGS		+= -D__LIBRETRO__ $(fpic) $(INCDIR)
 
 ifeq ($(platform), theos_ios)
 COMMON_FLAGS := -DIOS -DARM $(COMMON_DEFINES) $(INCFLAGS) -I$(THEOS_INCLUDE_PATH) -Wno-error
