@@ -30,8 +30,8 @@ else ifeq ($(platform), osx)
 	SHARED := -dynamiclib
 	DESMUME_JIT = 1
 
-# iOS
 else ifeq ($(platform), ios)
+	# iOS
 	TARGET := $(TARGET_NAME)_libretro_ios.dylib
 
 	ifeq ($(IOSSDK),)
@@ -40,7 +40,7 @@ else ifeq ($(platform), ios)
 
 	CC = clang -arch armv7 -isysroot $(IOSSDK)
 	CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
-	CPPFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
+	CXXFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
 	fpic := -fPIC
 	SHARED := -dynamiclib
 	DESMUME_JIT_ARM = 1
@@ -50,16 +50,30 @@ else ifeq ($(platform), ios)
 		CC += -miphoneos-version-min=5.0
 		CXX += -miphoneos-version-min=5.0
 		CFLAGS += -miphoneos-version-min=5.0
-		CPPFLAGS += -miphoneos-version-min=5.0
+		CXXFLAGS += -miphoneos-version-min=5.0
 	endif
 
-# PS3
+else ifeq ($(platform), theos_ios)
+	# Theos iOS
+DEPLOYMENT_IOSVERSION = 5.0
+TARGET = iphone:latest:$(DEPLOYMENT_IOSVERSION)
+ARCHS = armv7 armv7s
+TARGET_IPHONEOS_DEPLOYMENT_VERSION=$(DEPLOYMENT_IOSVERSION)
+THEOS_BUILD_DIR := objs
+include $(THEOS)/makefiles/common.mk
+
+LIBRARY_NAME = $(TARGET_NAME)_libretro_ios
+
+DESMUME_JIT_ARM = 1
+CXXFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
+
 else ifeq ($(platform), ps3)
+	# PS3
 	TARGET := $(TARGET_NAME)_libretro_ps3.a
 	CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
 	CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-g++.exe
 	AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
-	CPPFLAGS += -D__ppc__ -D__CELLOS_LV2__
+	CXXFLAGS += -D__ppc__ -D__CELLOS_LV2__
 	STATIC_LINKING = 1
 
 # sncps3
@@ -68,7 +82,7 @@ else ifeq ($(platform), sncps3)
 	CC = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
 	CXX = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
 	AR = $(CELL_SDK)/host-win32/sn/bin/ps3snarl.exe
-	CPPFLAGS += -D__ppc__-D__CELLOS_LV2__
+	CXXFLAGS += -D__ppc__-D__CELLOS_LV2__
 	STATIC_LINKING = 1
 
 # Lightweight PS3 Homebrew SDK
@@ -77,7 +91,7 @@ else ifeq ($(platform), psl1ght)
 	CC = $(PS3DEV)/ppu/bin/ppu-gcc$(EXE_EXT)
 	CXX = $(PS3DEV)/ppu/bin/ppu-g++$(EXE_EXT)
 	AR = $(PS3DEV)/ppu/bin/ppu-ar$(EXE_EXT)
-	CPPFLAGS += -D__ppc__ -D__CELLOS_LV2__
+	CXXFLAGS += -D__ppc__ -D__CELLOS_LV2__
 	STATIC_LINKING = 1
 
 # PSP
@@ -86,7 +100,7 @@ else ifeq ($(platform), psp1)
 	CC = psp-gcc$(EXE_EXT)
 	CXX = psp-g++$(EXE_EXT)
 	AR = psp-ar$(EXE_EXT)
-	CPPFLAGS += -DPSP -G0
+	CXXFLAGS += -DPSP -G0
 	STATIC_LINKING = 1
 
 # Xbox 360
@@ -95,7 +109,7 @@ else ifeq ($(platform), xenon)
 	CC = xenon-gcc$(EXE_EXT)
 	CXX = xenon-g++$(EXE_EXT)
 	AR = xenon-ar$(EXE_EXT)
-	CPPFLAGS += -D__LIBXENON__ -m32 -D__ppc__
+	CXXFLAGS += -D__LIBXENON__ -m32 -D__ppc__
 	STATIC_LINKING = 1
 
 # Nintendo Wii
@@ -112,7 +126,7 @@ else ifeq ($(platform), android)
 	TARGET := $(TARGET_NAME)_libretro_$(TARGET_NAME).so
 	CC = arm-linux-androideabi-gcc$(EXE_EXT)
 	CXX = arm-linux-androideabi-g++$(EXE_EXT)
-	CPPFLAGS += -D__RETRO_ARM__
+	CXXFLAGS += -D__RETRO_ARM__
 	fpic := -fPIC
 	SHARED := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
 	DESMUME_JIT_ARM = 1
@@ -123,28 +137,28 @@ else ifeq ($(platform), android)
 
 # ARM
 else ifneq (,$(findstring armv,$(platform)))
-	CPPFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
+	CXXFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
 	TARGET := $(TARGET_NAME)_libretro.so
 	SHARED := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
 	fpic := -fPIC
 	CC = gcc
 	DESMUME_JIT_ARM = 1
 	ifneq (,$(findstring cortexa8,$(platform)))
-		CPPFLAGS += -marm -mcpu=cortex-a8
+		CXXFLAGS += -marm -mcpu=cortex-a8
 	else ifneq (,$(findstring cortexa9,$(platform)))
-		CPPFLAGS += -marm -mcpu=cortex-a9
+		CXXFLAGS += -marm -mcpu=cortex-a9
 	endif
-	CPPFLAGS += -marm
+	CXXFLAGS += -marm
 	ifneq (,$(findstring neon,$(platform)))
-		CPPFLAGS += -mfpu=neon
+		CXXFLAGS += -mfpu=neon
 		HAVE_NEON = 1
 	endif
 	ifneq (,$(findstring softfloat,$(platform)))
-		CPPFLAGS += -mfloat-abi=softfp
+		CXXFLAGS += -mfloat-abi=softfp
 	else ifneq (,$(findstring hardfloat,$(platform)))
-		CPPFLAGS += -mfloat-abi=hard
+		CXXFLAGS += -mfloat-abi=hard
 	endif
-	CPPFLAGS += -DARM
+	CXXFLAGS += -DARM
 
 # Windows
 else
@@ -158,40 +172,41 @@ else
 endif
 
 ifeq ($(DESMUME_JIT_ARM),1)
-	CPPFLAGS += -DHAVE_JIT
+	CXXFLAGS += -DHAVE_JIT
 endif
 
 ifeq ($(DESMUME_JIT),1)
-	CPPFLAGS += -DHAVE_JIT
+	CXXFLAGS += -DHAVE_JIT
 endif
 
 include Makefile.common
 
 DEBUG=0
 ifeq ($(DEBUG), 1)
-	CPPFLAGS += -g
-	OPTIMIZE = -O0
+	CXXFLAGS += -g -O0
 else
-	CPPFLAGS += -DNDEBUG
-	OPTIMIZE = -O3
+	CXXFLAGS += -DNDEBUG -O3
 endif
 
 ifeq ($(RETRO_PROFILE),1)
-	CPPFLAGS += -DRETRO_PROFILE=1
+	CXXFLAGS += -DRETRO_PROFILE=1
 endif
 
-CPPFLAGS += $(OPTIMIZE)
-
 ifeq ($(X432R_CUSTOMRENDERER_ENABLED),1)
-	CPPFLAGS += -DX432R_CUSTOMRENDERER_ENABLED
+	CXXFLAGS += -DX432R_CUSTOMRENDERER_ENABLED
 endif
 
 OBJECTS		= $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
-CFLAGS		+= -std=gnu99
-CPPFLAGS	+= -D__LIBRETRO__ $(fpic) $(INCDIR)
+CXXFLAGS	+= -D__LIBRETRO__ $(fpic) $(INCDIR)
 
+ifeq ($(platform), theos_ios)
+COMMON_FLAGS := -DIOS -DARM $(COMMON_DEFINES) $(INCFLAGS) -I$(THEOS_INCLUDE_PATH) -Wno-error
+$(LIBRARY_NAME)_CFLAGS += $(CFLAGS) $(COMMON_FLAGS)
+$(LIBRARY_NAME)_CXXFLAGS += $(CXXFLAGS) $(COMMON_FLAGS)
+${LIBRARY_NAME}_FILES = $(SOURCES_CXX) $(SOURCES_C)
+include $(THEOS_MAKE_PATH)/library.mk
+else
 all: $(TARGET)
-
 $(TARGET): $(OBJECTS)
 ifeq ($(STATIC_LINKING), 1)
 	$(AR) rcs $@ $(OBJECTS)
@@ -203,3 +218,4 @@ clean:
 	rm -f $(OBJECTS) $(TARGET)
 
 .PHONY: clean
+endif
