@@ -53,19 +53,19 @@ else ifeq ($(platform), ios)
 		CXXFLAGS += -miphoneos-version-min=5.0
 	endif
 
+# Theos iOS
 else ifeq ($(platform), theos_ios)
-	# Theos iOS
-DEPLOYMENT_IOSVERSION = 5.0
-TARGET = iphone:latest:$(DEPLOYMENT_IOSVERSION)
-ARCHS = armv7 armv7s
-TARGET_IPHONEOS_DEPLOYMENT_VERSION=$(DEPLOYMENT_IOSVERSION)
-THEOS_BUILD_DIR := objs
-include $(THEOS)/makefiles/common.mk
+	DEPLOYMENT_IOSVERSION = 5.0
+	TARGET = iphone:latest:$(DEPLOYMENT_IOSVERSION)
+	ARCHS = armv7 armv7s
+	TARGET_IPHONEOS_DEPLOYMENT_VERSION=$(DEPLOYMENT_IOSVERSION)
+	THEOS_BUILD_DIR := objs
+	include $(THEOS)/makefiles/common.mk
 
-LIBRARY_NAME = $(TARGET_NAME)_libretro_ios
+	LIBRARY_NAME = $(TARGET_NAME)_libretro_ios
 
-DESMUME_JIT_ARM = 1
-CXXFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
+	DESMUME_JIT_ARM = 1
+	CXXFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
 
 else ifeq ($(platform), ps3)
 	# PS3
@@ -141,7 +141,15 @@ else ifneq (,$(findstring armv,$(platform)))
 	TARGET := $(TARGET_NAME)_libretro.so
 	SHARED := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
 	fpic := -fPIC
-	CC = gcc
+	ifneq (,$(findstring clang,$(platform)))
+		CC = clang
+		CXX = clang++
+		AR = clang
+	else
+		CC = gcc
+		CXX = g++
+		AR = @ar
+	endif
 	DESMUME_JIT_ARM = 1
 	ifneq (,$(findstring cortexa8,$(platform)))
 		CXXFLAGS += -marm -mcpu=cortex-a8
