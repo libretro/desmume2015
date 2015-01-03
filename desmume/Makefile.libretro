@@ -65,7 +65,7 @@ else ifeq ($(platform), theos_ios)
 	LIBRARY_NAME = $(TARGET_NAME)_libretro_ios
 
 	DESMUME_JIT_ARM = 1
-	CXXFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
+	COMMON_DEFINES = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
 
 else ifeq ($(platform), ps3)
 	# PS3
