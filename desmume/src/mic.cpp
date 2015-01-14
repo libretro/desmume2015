@@ -25,7 +25,7 @@
 #include "NDSSystem.h"
 #include "readwrite.h"
 
-#define MIC_NULL_SAMPLE_VALUE 0
+#define MIC_NULL_SAMPLE_VALUE 0x40
 #define MIC_MAX_BUFFER_SAMPLES 320
 #define MIC_BUFFER_SIZE (sizeof(u8) * MIC_MAX_BUFFER_SAMPLES)
 #define NUM_INTERNAL_NOISE_SAMPLES 32
@@ -116,17 +116,6 @@ static u8 Mic_DefaultBufferRead(void)
 	return theSample;
 }
 
-u8 Mic_ReadSample(void)
-{
-	// All mic modes other than Physical must have the mic hotkey pressed in order
-	// to work.
-	if (CommonSettings.micMode != TCommonSettings::Physical && !Mic_GetActivate()) {
-		return MIC_NULL_SAMPLE_VALUE;
-	}
-
-	return Mic_DefaultBufferRead();
-}
-
 static void Mic_DefaultBufferWrite(u8 theSample)
 {
 	if (micSampleBuffer == NULL || Mic_IsBufferFull()) {
@@ -192,6 +181,50 @@ void Mic_DoNoise(BOOL noise)
 	while (micBufferFillCount < MIC_MAX_BUFFER_SAMPLES) {
 		Mic_DefaultBufferWrite(generator());
 	}
+}
+
+u8 Mic_ReadSample(void)
+{
+	// All mic modes other than Physical must have the mic hotkey pressed in order
+	// to work.
+   #if defined(FAKE_MIC)
+   if (CommonSettings.micMode != TCommonSettings::Physical && Mic_GetActivate())
+      Mic_DoNoise(true);
+
+   #elif !defined(FAKE_MIC)
+   if (CommonSettings.micMode == TCommonSettings::Physical)
+   {
+      // TODO
+      return MIC_NULL_SAMPLE_VALUE;
+   }
+   else
+   {
+      if (Mic_GetActivate())
+      {
+         if (CommonSettings.micMode == TCommonSettings::InternalNoise)
+         {
+            while (micBufferFillCount < MIC_MAX_BUFFER_SAMPLES)
+               Mic_DefaultBufferWrite(Mic_GenerateInternalNoiseSample());
+         }
+         else if (CommonSettings.micMode == TCommonSettings::Random)
+         {
+            while (micBufferFillCount < MIC_MAX_BUFFER_SAMPLES)
+               Mic_DefaultBufferWrite(Mic_GenerateWhiteNoiseSample());
+         }
+         else if (CommonSettings.micMode == TCommonSettings::Sample)
+         {
+            // TODO
+            return MIC_NULL_SAMPLE_VALUE;
+         }
+      }
+      else
+      {
+         return MIC_NULL_SAMPLE_VALUE;
+      }
+	}
+   #endif
+
+	return Mic_DefaultBufferRead();
 }
 
 void mic_savestate(EMUFILE* os)

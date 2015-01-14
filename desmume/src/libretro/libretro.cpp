@@ -21,7 +21,7 @@ retro_environment_t environ_cb = NULL;
 
 volatile bool execute = false;
 
-static int swap_delay_timer = 0;
+static int delay_timer = 0;
 static int current_screen = 1;
 static bool quick_switch_enable=false;
 static bool mouse_enable=false;
@@ -1572,6 +1572,14 @@ static void QuickSwap(void)
 	}
 }
 
+static void MicrophoneToggle(void)
+{
+   if (NDS_getFinalUserInput().mic.micButtonPressed)
+      NDS_setMic(false);
+   else
+      NDS_setMic(true);
+}
+
 static void check_variables(void)
 {
 	struct retro_variable var = {0};
@@ -1737,6 +1745,56 @@ static void check_variables(void)
 	}
    else
       firmwareLanguage = 1;
+
+
+   var.key = "desmume_gfx_edgemark";
+   
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+		if (!strcmp(var.value, "enable"))
+         CommonSettings.GFX3D_EdgeMark = true;
+      else if (!strcmp(var.value, "disable"))
+         CommonSettings.GFX3D_EdgeMark = false;
+   }
+   else
+      CommonSettings.GFX3D_EdgeMark = true;
+
+   var.key = "desmume_gfx_depth_comparison_threshold";
+   
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      CommonSettings.GFX3D_Zelda_Shadow_Depth_Hack = atoi(var.value);
+   }
+   else
+      CommonSettings.GFX3D_Zelda_Shadow_Depth_Hack = 0;
+
+   var.key = "desmume_mic_enable";
+   
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "enable"))
+         NDS_setMic(true);
+      else if(!strcmp(var.value, "disable"))
+         NDS_setMic(false);
+   }
+   else
+      NDS_setMic(false);
+   
+   var.key = "desmume_mic_mode";
+   
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "internal"))
+         CommonSettings.micMode = TCommonSettings::InternalNoise;
+      else if(!strcmp(var.value, "sample"))
+         CommonSettings.micMode = TCommonSettings::Sample;
+      else if(!strcmp(var.value, "random"))
+         CommonSettings.micMode = TCommonSettings::Random;
+      else if(!strcmp(var.value, "physical"))
+         CommonSettings.micMode = TCommonSettings::Physical;
+   }
+   else
+      CommonSettings.micMode = TCommonSettings::InternalNoise;
 }
 
 void frontend_process_samples(u32 frames, const s16* data)
@@ -1818,22 +1876,26 @@ void retro_set_environment(retro_environment_t cb)
    {
       { "desmume_num_cores", "CPU cores; 1|2|3|4" },
 #ifdef HAVE_JIT
-	  { "desmume_cpu_mode", "CPU mode; jit|interpreter" },	
+      { "desmume_cpu_mode", "CPU mode; jit|interpreter" },	
       { "desmume_jit_block_size", "JIT block size; 100|99|98|97|96|95|94|93|92|91|90|89|88|87|86|85|84|83|82|81|80|79|78|77|76|75|74|73|72|71|70|69|68|67|66|65|64|63|62|61|60|59|58|57|56|55|54|53|52|51|50|49|48|47|46|45|44|43|42|41|40|39|38|37|36|35|34|33|32|31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10|9|8|7|6|5|4|3|2|1|0" },
 #else
       { "desmume_cpu_mode", "CPU mode; interpreter" },
 #endif
       { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch" },
 #ifdef X432R_CUSTOMRENDERER_ENABLED
-	  { "desmume_high_res_renderer_enabled", "Enable high resolution renderer; disable|enable" },
-	  { "desmume_internal_res", "Internal resolution; 1x|2x|3x|4x" },
+      { "desmume_high_res_renderer_enabled", "Enable high resolution renderer; disable|enable" },
+      { "desmume_internal_res", "Internal resolution; 1x|2x|3x|4x" },
 #endif	  
-	  { "desmume_pointer_mouse", "Enable mouse/pointer; enable|disable" },
-	  { "desmume_pointer_type", "Mouse/pointer mode; relative|absolute" },
-	  { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
-	  { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },	  
+      { "desmume_pointer_mouse", "Enable mouse/pointer; enable|disable" },
+      { "desmume_pointer_type", "Mouse/pointer mode; relative|absolute" },
+      { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
+      { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },	  
       { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
+      { "desmume_gfx_edgemark", "Enable Edgemark; enable|disable" },
+      { "desmume_gfx_depth_comparison_threshold", "Depth Comparison Threshold; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
+      { "desmume_mic_enable", "Enable Microphone; enable|disable" },
+      { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
       { 0, 0 }
    };
 
@@ -2148,33 +2210,41 @@ void retro_run (void)
 
     // BUTTONS
     NDS_beginProcessingInput();
-    UserButtons& input = NDS_getProcessingUserInput().buttons;
-    input.G = 0; // debug
-    input.E = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R); // right shoulder
-    input.W = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L); // left shoulder
-    input.X = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X);
-    input.Y = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
-    input.A = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A);
-    input.B = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
-    input.S = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START);
-    input.T = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT);
-    input.U = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP);
-    input.D = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN);
-    input.L = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT);
-    input.R = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT);
-    input.F = input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2); //Lid
+    
+   NDS_setPad(
+      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT),
+      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT),
+      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN),
+      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP),
+      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT),
+      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START),
+      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B),
+      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A),
+      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y),
+      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X),
+      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L),
+      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R),
+      0, // debug
+      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) //Lid
+   );
+   
+   if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3) && delay_timer == 0)
+   {
+      MicrophoneToggle();
+      delay_timer++;
+   }
 	
-	if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) && quick_switch_enable && swap_delay_timer == 0)
+	if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) && quick_switch_enable && delay_timer == 0)
 	{
 		QuickSwap();
-		swap_delay_timer++;
+		delay_timer++;
 	}
 	
-	if(swap_delay_timer != 0)
+	if(delay_timer != 0)
 	{
-		swap_delay_timer++;
-		if(swap_delay_timer == 30)
-			swap_delay_timer = 0;
+		delay_timer++;
+		if(delay_timer == 30)
+			delay_timer = 0;
 	}
 	
 	
@@ -2240,6 +2310,7 @@ bool retro_load_game(const struct retro_game_info *game)
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,      "A" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "L" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2,     "Lid Close/Open" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3,     "Toggle Microphone" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "R" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3,     "Quick Screen Switch" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
