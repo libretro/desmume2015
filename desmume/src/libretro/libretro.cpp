@@ -23,11 +23,13 @@ volatile bool execute = false;
 
 static int delay_timer = 0;
 static int current_screen = 1;
-static bool quick_switch_enable=false;
-static bool mouse_enable=false;
-static int pointer_device=0;
+static bool quick_switch_enable = false;
+static bool mouse_enable = false;
+static int pointer_device = 0;
 static int analog_stick_deadzone;
-static int analog_stick_acceleration=2048;
+static int analog_stick_acceleration = 2048;
+static int analog_stick_acceleration_modifier = 0;
+static int microphone_force_enable = 0;
 
 #ifdef X432R_CUSTOMRENDERER_ENABLED
 static bool highres_enabled = false;
@@ -1585,7 +1587,6 @@ static void check_variables(void)
 	struct retro_variable var = {0};
 	
 	var.key = "desmume_num_cores";
-	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 		CommonSettings.num_cores = var.value ? strtol(var.value, 0, 10) : 1;
@@ -1613,7 +1614,6 @@ static void check_variables(void)
 
 #ifdef HAVE_JIT
 	var.key = "desmume_jit_block_size";
-	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 		CommonSettings.jit_max_block_size = var.value ? strtol(var.value, 0, 10) : 100;
@@ -1622,7 +1622,6 @@ static void check_variables(void)
 #endif
 	
 	var.key = "desmume_screens_layout";
-	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{	
@@ -1637,7 +1636,6 @@ static void check_variables(void)
 	
 
 	var.key = "desmume_pointer_mouse";
-	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
@@ -1650,7 +1648,6 @@ static void check_variables(void)
       mouse_enable = false;
 
 	var.key = "desmume_pointer_device";
-	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
@@ -1665,13 +1662,11 @@ static void check_variables(void)
       pointer_device=0;
 		
 	var.key = "desmume_pointer_device_deadzone";
-	var.value = NULL;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       analog_stick_deadzone = (int)(atoi(var.value));
 		
 	var.key = "desmume_pointer_type";
-	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
@@ -1679,7 +1674,6 @@ static void check_variables(void)
 	}
 	
 	var.key = "desmume_frameskip";
-	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 		frameSkip = var.value ? strtol(var.value, 0, 10) : 0;
@@ -1688,7 +1682,6 @@ static void check_variables(void)
 	 
 #ifdef X432R_CUSTOMRENDERER_ENABLED
 	var.key = "desmume_high_res_renderer_enabled";
-	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
@@ -1701,7 +1694,6 @@ static void check_variables(void)
       highres_enabled = false;
 	
 	var.key = "desmume_internal_res";
-	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
@@ -1720,7 +1712,6 @@ static void check_variables(void)
 	
 	
 	var.key = "desmume_firmware_language";
-	var.value = 0;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
@@ -1768,14 +1759,14 @@ static void check_variables(void)
    else
       CommonSettings.GFX3D_Zelda_Shadow_Depth_Hack = 0;
 
-   var.key = "desmume_mic_enable";
+   var.key = "desmume_mic_force_enable";
    
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "enable"))
-         NDS_setMic(true);
-      else if(!strcmp(var.value, "disable"))
-         NDS_setMic(false);
+      if (!strcmp(var.value, "yes"))
+         microphone_force_enable = 1;
+      else if(!strcmp(var.value, "no"))
+         microphone_force_enable = 0;
    }
    else
       NDS_setMic(false);
@@ -1795,6 +1786,15 @@ static void check_variables(void)
    }
    else
       CommonSettings.micMode = TCommonSettings::InternalNoise;
+   
+   var.key = "desmume_pointer_device_acceleration_mod";
+   
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      analog_stick_acceleration_modifier = atoi(var.value);
+   else
+      analog_stick_acceleration_modifier = 0;
+   
+   
 }
 
 void frontend_process_samples(u32 frames, const s16* data)
@@ -1890,11 +1890,12 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_pointer_type", "Mouse/pointer mode; relative|absolute" },
       { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
       { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },	  
+      { "desmume_pointer_device_acceleration_mod", "Emulated pointer acceleration modifier percent; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },	
       { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
       { "desmume_gfx_edgemark", "Enable Edgemark; enable|disable" },
       { "desmume_gfx_depth_comparison_threshold", "Depth Comparison Threshold; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
-      { "desmume_mic_enable", "Enable Microphone; enable|disable" },
+      { "desmume_mic_force_enable", "Force Microphone Enable; yes|no" },
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
       { 0, 0 }
    };
@@ -2117,16 +2118,18 @@ void retro_run (void)
 	{
 		int16_t analogX = 0;
 		int16_t analogY = 0;
+      
+      float final_acceleration = analog_stick_acceleration * (1.0 + (float)analog_stick_acceleration_modifier / 100.0);
 		
 		if(pointer_device == 1)
 		{
-			analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X) / analog_stick_acceleration;
-			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y) / analog_stick_acceleration;
+      analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X) / final_acceleration;
+			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y) / final_acceleration;
 		} 
 		else if(pointer_device == 2)
 		{
-			analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X) / analog_stick_acceleration;
-			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y) / analog_stick_acceleration;		
+			analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X) / final_acceleration;
+			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y) / final_acceleration;
 		}
 		else
 		{
@@ -2228,11 +2231,16 @@ void retro_run (void)
       input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) //Lid
    );
    
-   if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3) && delay_timer == 0)
-   {
-      MicrophoneToggle();
-      delay_timer++;
-   }
+  if (!microphone_force_enable)
+  {
+    if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3))
+      NDS_setMic(true);
+    else if(!input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3))
+      NDS_setMic(false);
+  }
+  else
+    NDS_setMic(true);
+  
 	
 	if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) && quick_switch_enable && delay_timer == 0)
 	{
