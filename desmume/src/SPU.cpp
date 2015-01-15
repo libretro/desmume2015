@@ -451,12 +451,24 @@ void SPU_struct::KeyOn(int channel)
 
 u8 SPU_struct::ReadByte(u32 addr)
 {
+	u8 * channel_timer;
+	u8 * channel_loopstart;
+
+	u8 * sound_bias = (u8 *)regs.soundbias;
+
+	u8 * cap0_dad = (u8 *)regs.cap[0].dad;
+	u8 * cap1_dad = (u8 *)regs.cap[1].dad;
+	u8 * cap0_len = (u8 *)regs.cap[0].len;
+	u8 * cap1_len = (u8 *)regs.cap[1].len;
+
 	//individual channel regs
 	if ((addr & 0x0F00) == 0x0400)
 	{
 		u32 chan_num = (addr >> 4) & 0xF;
-		channel_struct &thischan=channels[chan_num];
+		channel_struct &thischan = channels[chan_num];
 
+		channel_timer = (u8 *)thischan.timer;
+		channel_loopstart = (u8 *)thischan.loopstart;
 		switch (addr & 0xF)
 		{
 			case 0x0: return thischan.vol;
@@ -467,10 +479,10 @@ u8 SPU_struct::ReadByte(u32 addr)
 								| (thischan.format << 5)
 								| ((thischan.status == CHANSTAT_PLAY)?0x80:0)
 								);
-			case 0x8: return *(u8*)(thischan.timer + 0);
-			case 0x9: return *(u8*)(thischan.timer + 1);
-			case 0xA: return *(u8*)(thischan.loopstart + 0);
-			case 0xB: return *(u8*)(thischan.loopstart + 1);
+			case 0x8: return channel_timer[0];
+			case 0x9: return channel_timer[1];
+			case 0xA: return channel_loopstart[0];
+			case 0xB: return channel_loopstart[1];
 		}
 		return 0;
 	}
@@ -487,8 +499,8 @@ u8 SPU_struct::ReadByte(u32 addr)
 							);
 
 		//SOUNDBIAS
-		case 0x504: return *(u8*)(regs.soundbias + 0);
-		case 0x505: return *(u8*)(regs.soundbias + 1);
+		case 0x504: return sound_bias[0];
+		case 0x505: return sound_bias[1];
 	
 		//SNDCAP0CNT/SNDCAP1CNT
 		case 0x508:
@@ -503,24 +515,24 @@ u8 SPU_struct::ReadByte(u32 addr)
 		}	
 
 		//SNDCAP0DAD
-		case 0x510: return *(u8*)(regs.cap[0].dad + 0);
-		case 0x511: return *(u8*)(regs.cap[0].dad + 1);
-		case 0x512: return *(u8*)(regs.cap[0].dad + 2);
-		case 0x513: return *(u8*)(regs.cap[0].dad + 3);
+		case 0x510: return cap0_dad[0];
+		case 0x511: return cap0_dad[1];
+		case 0x512: return cap0_dad[2];
+		case 0x513: return cap0_dad[3];
 
 		//SNDCAP0LEN
-		case 0x514: return *(u8*)(regs.cap[0].len + 0);
-		case 0x515: return *(u8*)(regs.cap[0].len + 1);
+		case 0x514: return cap0_len[0];
+		case 0x515: return cap0_len[1];
 
 		//SNDCAP1DAD
-		case 0x518: return *(u8*)(regs.cap[1].dad + 0);
-		case 0x519: return *(u8*)(regs.cap[1].dad + 1);
-		case 0x51A: return *(u8*)(regs.cap[1].dad + 2);
-		case 0x51B: return *(u8*)(regs.cap[1].dad + 3);
+		case 0x518: return cap1_dad[0];
+		case 0x519: return cap1_dad[1];
+		case 0x51A: return cap1_dad[2];
+		case 0x51B: return cap1_dad[3];
 
 		//SNDCAP1LEN
-		case 0x51C: return *(u8*)(regs.cap[1].len + 0);
-		case 0x51D: return *(u8*)(regs.cap[1].len + 1);
+		case 0x51C: return cap1_len[0];
+		case 0x51D: return cap1_len[1];
 	} //switch on address
 
 	return 0;
@@ -528,6 +540,9 @@ u8 SPU_struct::ReadByte(u32 addr)
 
 u16 SPU_struct::ReadWord(u32 addr)
 {
+	u16 * cap0_dad = (u16 *)regs.cap[0].dad;
+	u16 * cap1_dad = (u16 *)regs.cap[1].dad;
+
 	//individual channel regs
 	if ((addr & 0x0F00) == 0x0400)
 	{
@@ -580,18 +595,18 @@ u16 SPU_struct::ReadWord(u32 addr)
 						| (regs.cap[1].bits8 << 3)
 						| (regs.cap[1].runtime.running << 7);
 			return (u16)(val0 | (val1 << 8));
-		}	
+		}
 
 		//SNDCAP0DAD
-		case 0x510: return *(u16*)(regs.cap[0].dad + 0);
-		case 0x512: return *(u16*)(regs.cap[0].dad + 1);
+		case 0x510: return cap0_dad[0];
+		case 0x512: return cap0_dad[1];
 
 		//SNDCAP0LEN
 		case 0x514: return regs.cap[0].len;
 
 		//SNDCAP1DAD
-		case 0x518: return *(u16*)(regs.cap[1].dad + 0);
-		case 0x51A: return *(u16*)(regs.cap[1].dad + 1);
+		case 0x518: return cap1_dad[0];
+		case 0x51A: return cap1_dad[1];
 
 		//SNDCAP1LEN
 		case 0x51C: return regs.cap[1].len;
@@ -744,11 +759,28 @@ void SPU_struct::ProbeCapture(int which)
 
 void SPU_struct::WriteByte(u32 addr, u8 val)
 {
+	u8 * channel_address;
+	u8 * channel_timer;
+	u8 * channel_loopstart;
+	u8 * channel_length;
+
+	u8 * sound_bias = (u8 *)regs.soundbias;
+
+	u8 * cap0_dad = (u8 *)regs.cap[0].dad;
+	u8 * cap1_dad = (u8 *)regs.cap[1].dad;
+	u8 * cap0_len = (u8 *)regs.cap[0].len;
+	u8 * cap1_len = (u8 *)regs.cap[1].len;
+
 	//individual channel regs
 	if ((addr & 0x0F00) == 0x0400)
 	{
 		u8 chan_num = (addr >> 4) & 0xF;
-		channel_struct &thischan=channels[chan_num];
+		channel_struct &thischan = channels[chan_num];
+
+		channel_address = (u8 *)thischan.addr;
+		channel_timer = (u8 *)thischan.timer;
+		channel_loopstart = (u8 *)thischan.loopstart;
+		channel_length = (u8 *)thischan.length;
 
 		//printf("SPU write08 channel%d, reg %04X, val %02X\n", chan_num, addr, val);
 
@@ -767,19 +799,19 @@ void SPU_struct::WriteByte(u32 addr, u8 val)
 				thischan.keyon = (val >> 7) & 0x01;
 				KeyProbe(chan_num);
 				break;
-			case 0x4: *(u8*)(thischan.addr + 0) = (val & 0xFC); break;
-			case 0x5: *(u8*)(thischan.addr + 1) = val; break;
-			case 0x6: *(u8*)(thischan.addr + 2) = val; break;
-			case 0x7: *(u8*)(thischan.addr + 3) = (val & 0x07); break; //only 27 bits of this register are used
-			case 0x8: *(u8*)(thischan.timer + 0) = val; adjust_channel_timer(&thischan); break;
-			case 0x9: *(u8*)(thischan.timer + 1) = val; adjust_channel_timer(&thischan); break;
+			case 0x4: channel_address[0] = (val & 0xFC); break;
+			case 0x5: channel_address[1] = val; break;
+			case 0x6: channel_address[2] = val; break;
+			case 0x7: channel_address[3] = (val & 0x07); break; //only 27 bits of this register are used
+			case 0x8: channel_timer[0] = val; adjust_channel_timer(&thischan); break;
+			case 0x9: channel_timer[1] = val; adjust_channel_timer(&thischan); break;
 
-			case 0xA: *(u8*)(thischan.loopstart + 0) = val; break;
-			case 0xB: *(u8*)(thischan.loopstart + 1) = val; break;
-			case 0xC: *(u8*)(thischan.length + 0) = val; break;
-			case 0xD: *(u8*)(thischan.length + 1) = val; break;
-			case 0xE: *(u8*)(thischan.length + 2) = (val & 0x3F); break; //only 22 bits of this register are used
-			case 0xF: *(u8*)(thischan.length + 3) = 0; break;
+			case 0xA: channel_loopstart[0] = val; break;
+			case 0xB: channel_loopstart[1] = val; break;
+			case 0xC: channel_length[0] = val; break;
+			case 0xD: channel_length[1] = val; break;
+			case 0xE: channel_length[2] = (val & 0x3F); break; //only 22 bits of this register are used
+			case 0xF: channel_length[3] = 0; break;
 		} //switch on individual channel regs
 		return;
 	}
@@ -799,8 +831,8 @@ void SPU_struct::WriteByte(u32 addr, u8 val)
 		break;
 		
 		//SOUNDBIAS
-		case 0x504: *(u8*)(regs.soundbias + 0) = val; break;
-		case 0x505: *(u8*)(regs.soundbias + 1) = (val & 0x03); break;
+		case 0x504: sound_bias[0] = val; break;
+		case 0x505: sound_bias[1] = (val & 0x03); break;
 
 		//SNDCAP0CNT/SNDCAP1CNT
 		case 0x508:
@@ -817,34 +849,43 @@ void SPU_struct::WriteByte(u32 addr, u8 val)
 		}
 
 		//SNDCAP0DAD
-		case 0x510: *(u8*)(regs.cap[0].dad + 0) = (val & 0xFC); break;
-		case 0x511: *(u8*)(regs.cap[0].dad + 1) = val; break;
-		case 0x512: *(u8*)(regs.cap[0].dad + 2) = val; break;
-		case 0x513: *(u8*)(regs.cap[0].dad + 3) = (val & 0x07); break;
+		case 0x510: cap0_dad[0] = (val & 0xFC); break;
+		case 0x511: cap0_dad[1] = val; break;
+		case 0x512: cap0_dad[2] = val; break;
+		case 0x513: cap0_dad[3] = (val & 0x07); break;
 
 		//SNDCAP0LEN
-		case 0x514: *(u8*)(regs.cap[0].len + 0) = val; break;
-		case 0x515: *(u8*)(regs.cap[0].len + 1) = val; break;
+		case 0x514: cap0_len[0] = val; break;
+		case 0x515: cap0_len[1] = val; break;
 
 		//SNDCAP1DAD
-		case 0x518: *(u8*)(regs.cap[1].dad + 0) = (val & 0xFC); break;
-		case 0x519: *(u8*)(regs.cap[1].dad + 1) = val; break;
-		case 0x51A: *(u8*)(regs.cap[1].dad + 2) = val; break;
-		case 0x51B: *(u8*)(regs.cap[1].dad + 3) = (val & 0x07); break;
+		case 0x518: cap1_dad[0] = (val & 0xFC); break;
+		case 0x519: cap1_dad[1] = val; break;
+		case 0x51A: cap1_dad[2] = val; break;
+		case 0x51B: cap1_dad[3] = (val & 0x07); break;
 
 		//SNDCAP1LEN
-		case 0x51C: *(u8*)(regs.cap[1].len + 0) = val; break;
-		case 0x51D: *(u8*)(regs.cap[1].len + 1) = val; break;
+		case 0x51C: cap1_len[0] = val; break;
+		case 0x51D: cap1_len[1] = val; break;
 	} //switch on address
 }
 
 void SPU_struct::WriteWord(u32 addr, u16 val)
 {
+	u16 * channel_address;
+	u16 * channel_length;
+
+	u16 * cap0_dad = (u16 *)regs.cap[0].dad;
+	u16 * cap1_dad = (u16 *)regs.cap[1].dad;
+
 	//individual channel regs
 	if ((addr & 0x0F00) == 0x0400)
 	{
 		u32 chan_num = (addr >> 4) & 0xF;
-		channel_struct &thischan=channels[chan_num];
+		channel_struct &thischan = channels[chan_num];
+
+		channel_address = (u16 *)thischan.addr;
+		channel_length = (u16 *)thischan.length;
 
 		//printf("SPU write16 channel%d, reg %04X, val %04X\n", chan_num, addr, val);
 
@@ -863,12 +904,12 @@ void SPU_struct::WriteWord(u32 addr, u16 val)
 				thischan.keyon = (val >> 15) & 0x1;
 				KeyProbe(chan_num);
 				break;
-			case 0x4: *(u16*)(thischan.addr + 0) = (val & 0xFFFC); break;
-			case 0x6: *(u16*)(thischan.addr + 1) = (val & 0x07FF); break;
+			case 0x4: channel_address[0] = (val & 0xFFFC); break;
+			case 0x6: channel_address[1] = (val & 0x07FF); break;
 			case 0x8: thischan.timer = val; adjust_channel_timer(&thischan); break;
 			case 0xA: thischan.loopstart = val; break;
-			case 0xC: *(u16*)(thischan.length + 0) = val; break;
-			case 0xE: *(u16*)(thischan.length + 1) = (val & 0x003F); break; //only 22 bits of this register are used
+			case 0xC: channel_length[0] = val; break;
+			case 0xE: channel_length[1] = (val & 0x003F); break; //only 22 bits of this register are used
 		} //switch on individual channel regs
 		return;
 	}
@@ -910,15 +951,15 @@ void SPU_struct::WriteWord(u32 addr, u16 val)
 		}
 
 		//SNDCAP0DAD
-		case 0x510: *(u16*)(regs.cap[0].dad + 0) = (val & 0xFFFC); break;
-		case 0x512: *(u16*)(regs.cap[0].dad + 1) = (val & 0x7FFF); break;
+		case 0x510: cap0_dad[0] = (val & 0xFFFC); break;
+		case 0x512: cap0_dad[1] = (val & 0x7FFF); break;
 
 		//SNDCAP0LEN
 		case 0x514: regs.cap[0].len = val; break;
 
 		//SNDCAP1DAD
-		case 0x518: *(u16*)(regs.cap[1].dad + 0) = (val & 0xFFFC); break;
-		case 0x51A: *(u16*)(regs.cap[1].dad + 1) = (val & 0x7FFF); break;
+		case 0x518: cap1_dad[0] = (val & 0xFFFC); break;
+		case 0x51A: cap1_dad[1] = (val & 0x7FFF); break;
 
 		//SNDCAP1LEN
 		case 0x51C: regs.cap[1].len = val; break;
