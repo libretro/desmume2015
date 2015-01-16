@@ -1844,6 +1844,18 @@ static void check_variables(void)
    }
    else
       CommonSettings.spuInterpolationMode = SPUInterpolation_Linear;
+
+   var.key = "desmeme_spu_sync_mode";
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "DualSPU"))
+         CommonSettings.SPU_sync_mode = 0;
+      else if (!strcmp(var.value, "Synchronous"))
+         CommonSettings.SPU_sync_mode = 1;
+   }
+   else
+      CommonSettings.SPU_sync_mode = 0;
 }
 
 void frontend_process_samples(u32 frames, const s16* data)
@@ -1949,7 +1961,8 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
       { "desmume_load_to_memory", "Load Game into Memory (restart); disable|enable" },
       { "desmume_advanced_timing", "Enable Advanced Bus-Level Timing; enable|disable" },
-      { "desmeme_spu_interpolation", "SPU Interpolation Mode; Linear|Cosine|None"},
+      { "desmeme_spu_interpolation", "SPU Interpolation Mode; Linear|Cosine|None" },
+      { "desmume_spu_sync_mode", "SPU Synchronization Mode; DualSPU|Synchronous" },
       { 0, 0 }
    };
 
