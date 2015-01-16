@@ -831,7 +831,8 @@ public:
 			width = engine->width - x;
 		}
 
-		while(width-- > 0)
+      // 01-15-2015 Jackos: Draw from 256 to 0. Later omit one pixel in the viewport transformation
+		while(width-- >= 0)
 		{
 			pixel(adr,color[0],color[1],color[2],u,v,1.0f/invw,z);
 			adr++;
@@ -1568,7 +1569,8 @@ template<bool CUSTOM> void SoftRasterizerEngine::performViewportTransforms(int w
 			VIEWPORT viewport;
 			viewport.decode(poly.poly->viewport);
 			vert.coord[0] *= viewport.width * xfactor;
-			vert.coord[0] += viewport.x * xfactor;
+         // 01-15-2015 Jackos: minus 1 pixel which, in simple words, "doesn't fit" the screen
+			vert.coord[0] += (viewport.x - 1)* xfactor;
 			vert.coord[1] *= viewport.height * yfactor;
 			vert.coord[1] += viewport.y * yfactor;
 			vert.coord[1] = ymax - vert.coord[1];
