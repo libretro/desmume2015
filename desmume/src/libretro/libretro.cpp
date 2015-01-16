@@ -1750,6 +1750,19 @@ static void check_variables(void)
    else
       CommonSettings.GFX3D_EdgeMark = true;
 
+   var.key = "desmume_gfx_linehack";
+   
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+		if (!strcmp(var.value, "enable"))
+         CommonSettings.GFX3D_LineHack = true;
+      else if (!strcmp(var.value, "disable"))
+         CommonSettings.GFX3D_LineHack = false;
+   }
+   else
+      CommonSettings.GFX3D_LineHack = true;
+
+
    var.key = "desmume_gfx_depth_comparison_threshold";
    
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1904,6 +1917,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
       { "desmume_gfx_edgemark", "Enable Edgemark; enable|disable" },
+      { "desmume_gfx_linehack", "Enable Line Hack; enable|disable"},
       { "desmume_gfx_depth_comparison_threshold", "Depth Comparison Threshold; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
       { "desmume_mic_force_enable", "Force Microphone Enable; yes|no" },
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
