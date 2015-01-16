@@ -42,9 +42,11 @@ namespace X432R
 	#endif
 	
 	CRITICAL_SECTION customFrontBufferSync;
+#ifdef HAVE_OPENGL
 //	static GLuint screenTexture[2] = {0};
 	static GLuint screenTexture = 0;
 	static GLuint hudTexture = 0;
+#endif
 	static u32 lastRenderMagnification = 1;
 	
 	HighResolutionFramebuffers backBuffer;
@@ -1280,7 +1282,9 @@ namespace X432R
 		
 		// `æJn
 		const RGBA8888 clearcolor = (u32)ScreenGapColor;
+#ifdef HAVE_OPENGL
 		const GLuint texture_filter = ( GetStyle() & DWS_FILTER ) ? GL_LINEAR : GL_NEAREST;
+#endif
 		
 		glDisable(GL_LIGHTING);
 		glDisable(GL_DEPTH_TEST);
@@ -1395,8 +1399,11 @@ namespace X432R
 	}
 	
 #ifdef HAVE_OPENGL
-//	inline GLuint GetScreenTexture()
+#if 0
+	inline GLuint GetScreenTexture()
+#else
 	inline u32 GetScreenTexture()
+#endif
 	{
 		if(screenTexture == 0)
 			glGenTextures(1, &screenTexture);
