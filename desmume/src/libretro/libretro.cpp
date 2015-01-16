@@ -1830,6 +1830,20 @@ static void check_variables(void)
    }
    else
       CommonSettings.advanced_timing = true;
+
+   var.key = "desmeme_spu_interpolation";
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "Linear"))
+         CommonSettings.spuInterpolationMode = SPUInterpolation_Linear;
+      else if (!strcmp(var.value, "Cosine"))
+         CommonSettings.spuInterpolationMode = SPUInterpolation_Cosine;
+      else if (!strcmp(var.value, "None"))
+         CommonSettings.spuInterpolationMode = SPUInterpolation_None;
+   }
+   else
+      CommonSettings.spuInterpolationMode = SPUInterpolation_Linear;
 }
 
 void frontend_process_samples(u32 frames, const s16* data)
@@ -1935,6 +1949,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
       { "desmume_load_to_memory", "Load Game into Memory (restart); disable|enable" },
       { "desmume_advanced_timing", "Enable Advanced Bus-Level Timing; enable|disable" },
+      { "desmeme_spu_interpolation", "SPU Interpolation Mode; Linear|Cosine|None"},
       { 0, 0 }
    };
 
