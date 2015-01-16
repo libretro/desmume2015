@@ -75,7 +75,7 @@ static void list_files(const char *filepath, ListCallback list_callback)
 	if (dwError != FS_ERR_NO_MORE_FILES) return;
 }
 
-static u64 dataSectors = 0;
+static unsigned long dataSectors = 0;
 void count_ListCallback(FsEntry* fs, EListCallbackArg arg)
 {
 	if(arg == EListCallbackArg_Pop) return;
@@ -180,7 +180,10 @@ bool VFAT::build(const char* path, int extra_MB)
 
 	if(dataSectors>=(0x80000000>>9))
 	{
-		printf("error allocating memory for fat (%d KBytes)\n",(dataSectors*512)/1024);
+		printf(
+			"error allocating memory for fat (%lu KBytes)\n",
+			(dataSectors*512) / 1024
+		);
 		printf("total fat sizes > 2GB are never going to work\n");
 	}
 	
@@ -191,7 +194,10 @@ bool VFAT::build(const char* path, int extra_MB)
 	}
 	catch(std::bad_alloc)
 	{
-		printf("error allocating memory for fat (%d KBytes)\n",(dataSectors*512)/1024);
+		printf(
+			"error allocating memory for fat (%lu KBytes)\n",
+			(dataSectors*512) / 1024
+		);
 		printf("(out of memory)\n");
 		return false;
 	}
