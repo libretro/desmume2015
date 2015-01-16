@@ -1831,7 +1831,7 @@ static void check_variables(void)
    else
       CommonSettings.advanced_timing = true;
 
-   var.key = "desmeme_spu_interpolation";
+   var.key = "desmume_spu_interpolation";
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
@@ -1845,7 +1845,7 @@ static void check_variables(void)
    else
       CommonSettings.spuInterpolationMode = SPUInterpolation_Linear;
 
-   var.key = "desmeme_spu_sync_mode";
+   var.key = "desmume_spu_sync_mode";
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
@@ -1856,6 +1856,20 @@ static void check_variables(void)
    }
    else
       CommonSettings.SPU_sync_mode = 0;
+
+   var.key = "desmume_spu_sync_method";
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "N"))
+         CommonSettings.SPU_sync_method = 0;
+      else if (!strcmp(var.value, "Z"))
+         CommonSettings.SPU_sync_method = 1;
+      else if (!strcmp(var.value, "P"))
+         CommonSettings.SPU_sync_method = 2;
+   }
+   else
+      CommonSettings.SPU_sync_method = 0;
 }
 
 void frontend_process_samples(u32 frames, const s16* data)
@@ -1961,8 +1975,9 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
       { "desmume_load_to_memory", "Load Game into Memory (restart); disable|enable" },
       { "desmume_advanced_timing", "Enable Advanced Bus-Level Timing; enable|disable" },
-      { "desmeme_spu_interpolation", "SPU Interpolation Mode; Linear|Cosine|None" },
+      { "desmume_spu_interpolation", "SPU Interpolation Mode; Linear|Cosine|None" },
       { "desmume_spu_sync_mode", "SPU Synchronization Mode; DualSPU|Synchronous" },
+      { "desmume_spu_sync_method", "SPU Synchronization Method; N|Z|P" },
       { 0, 0 }
    };
 
