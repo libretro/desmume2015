@@ -1752,9 +1752,9 @@ static void check_variables(void)
 
    var.key = "desmume_gfx_linehack";
    
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-		if (!strcmp(var.value, "enable"))
+      if (!strcmp(var.value, "enable"))
          CommonSettings.GFX3D_LineHack = true;
       else if (!strcmp(var.value, "disable"))
          CommonSettings.GFX3D_LineHack = false;
