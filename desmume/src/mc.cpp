@@ -116,13 +116,21 @@ void backup_setManualBackupType(int type)
 
 bool BackupDevice::save_state(EMUFILE* os)
 {
+	size_t elements_read;
+	u32 version = 5;
 	u32 savePos = fpMC->ftell();
 	std::vector<u8> data(fsize);
-	fpMC->fseek(0, SEEK_SET);
-	if(data.size()!=0)
-		fread((char*)&data[0], 1, fsize, fpMC->get_fp());
 
-	u32 version = 5;
+	fpMC->fseek(0, SEEK_SET);
+	if (data.size() != 0)
+		elements_read = fread(&data[0], 1, fsize, fpMC->get_fp());
+	if (elements_read != fsize)
+		printf(
+			"Expected %u bytes from saved state but read %lu.\n",
+			fsize,
+			elements_read
+		);
+
 	//v0
 	write32le(version,os);
 	write32le(write_enable,os);
@@ -209,6 +217,7 @@ bool BackupDevice::load_state(EMUFILE* is)
 
 BackupDevice::BackupDevice()
 {
+	size_t elements_read, elements_written;
 	fpMC = NULL;
 	fsize = 0;
 	addr_size = 0;
@@ -246,8 +255,10 @@ BackupDevice::BackupDevice()
 				if (!out->fail())
 				{
 					u8 *data = new u8[sz];
-					fread(data, 1, sz, in->get_fp());
-					fwrite(data, 1, sz, out->get_fp());
+					elements_read = fread(data, 1, sz, in->get_fp());
+					elements_written = fwrite(data, 1, sz, out->get_fp());
+					if (elements_read != sz || elements_written != sz)
+						printf("Possibly incomplete data read/write.\n");
 					delete [] data;
 				}
 				delete out;
@@ -1281,10 +1292,18 @@ bool BackupDevice::no_gba_unpack(u8 *&buf, u32 &size)
 
 bool BackupDevice::export_no_gba(const char* fname)
 {
+	size_t elements_read;
 	std::vector<u8> data(fsize);
 	u32 pos = fpMC->ftell();
+
 	fpMC->fseek(0, SEEK_SET);
-	fread((char*)&data[0], 1, fsize, fpMC->get_fp());
+	elements_read = fread(&data[0], 1, fsize, fpMC->get_fp());
+	if (elements_read != fsize)
+		printf(
+			"Expected %u bytes from saved state but read %lu.\n",
+			fsize,
+			elements_read
+		);
 	fpMC->fseek(pos, SEEK_SET);
 
 	FILE* outf = fopen(fname,"wb");
@@ -1310,10 +1329,18 @@ bool BackupDevice::export_no_gba(const char* fname)
 //======================================================================= no$GBA
 bool BackupDevice::export_raw(const char* filename)
 {
+	size_t elements_read;
 	std::vector<u8> data(fsize);
 	u32 pos = fpMC->ftell();
+
 	fpMC->fseek(0, SEEK_SET);
-	fread((char*)&data[0], 1, fsize, fpMC->get_fp());
+	elements_read = fread(&data[0], 1, fsize, fpMC->get_fp());
+	if (elements_read != fsize)
+		printf(
+			"Expected %u bytes from saved state but read %lu.\n",
+			fsize,
+			elements_read
+		);
 	fpMC->fseek(pos, SEEK_SET);
 
 	FILE* outf = fopen(filename,"wb");
@@ -1435,6 +1462,7 @@ u32 BackupDevice::get_save_duc_size(const char* fname)
 
 bool BackupDevice::import_duc(const char* filename, u32 force_size)
 {
+	size_t elements_read;
 	u32 size;
 	char id[16];
 	FILE* file = fopen(filename, "rb");
@@ -1446,7 +1474,9 @@ bool BackupDevice::import_duc(const char* filename, u32 force_size)
 	fseek(file, 0, SEEK_SET);
 
 	// Make sure we really have the right file
-	fread((void *)id, sizeof(char), 16, file);
+	elements_read = fread((void *)id, sizeof(char), 16, file);
+	if (elements_read != 16)
+		printf("DUC file should be 16 bytes, not %lu bytes.\n", elements_read);
 
 	if (memcmp(id, "ARDS000000000001", 16) != 0)
 	{

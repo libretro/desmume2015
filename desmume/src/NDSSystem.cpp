@@ -460,8 +460,12 @@ bool GameInfo::loadROM(std::string fname, u32 type)
 
 		if (type == ROM_NDS)
 		{
+			size_t elements_read;
+
 			fseek(fROM, 0x4000 + headerOffset, SEEK_SET);
-			fread(&secureArea[0], 1, 0x4000, fROM);
+			elements_read = fread(&secureArea[0], 1, 0x4000, fROM);
+			if (elements_read != 0x4000)
+				printf("Unexpectedly short post-header bit.\n");
 		}
 
 		if (CommonSettings.loadToMemory)
@@ -497,8 +501,13 @@ bool GameInfo::loadROM(std::string fname, u32 type)
 		_isDSiEnhanced = ((readROM(0x180) == 0x8D898581U) && (readROM(0x184) == 0x8C888480U));
 		if (hasRomBanner())
 		{
+			size_t elements_read;
+			const size_t elements_to_read = sizeof(RomBanner);
+
 			fseek(fROM, header.IconOff + headerOffset, SEEK_SET);
-			fread(&banner, 1, sizeof(RomBanner), fROM);
+			elements_read = fread(&banner, 1, elements_to_read, fROM);
+			if (elements_read != elements_to_read)
+				printf("Unexpectedly short post-header bit.\n");
 			
 			banner.version = LE_TO_LOCAL_16(banner.version);
 			banner.crc16 = LE_TO_LOCAL_16(banner.crc16);
