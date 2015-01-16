@@ -1199,6 +1199,7 @@ void CHEATSEXPORT::R4decrypt(u8 *buf, u32 len, u32 n)
 
 bool CHEATSEXPORT::load(char *path)
 {
+	size_t elements_read;
 	error = 0;
 
 	fp = fopen(path, "rb");
@@ -1211,7 +1212,10 @@ bool CHEATSEXPORT::load(char *path)
 
 	const char *headerID = "R4 CheatCode";
 	char buf[255] = {0};
-	fread(buf, 1, strlen(headerID), fp);
+
+	elements_read = fread(buf, 1, strlen(headerID), fp);
+	if (elements_read != strlen(headerID))
+		printf("Unexpectedly short cheat code?\n");
 	if (strncmp(buf, headerID, strlen(headerID)) != 0)
 	{
 		// check encrypted
@@ -1257,6 +1261,8 @@ void CHEATSEXPORT::close()
 
 bool CHEATSEXPORT::search()
 {
+	size_t elements_read;
+
 	if (!fp) return false;
 
 	u32		pos = 0x0100;
@@ -1270,16 +1276,22 @@ bool CHEATSEXPORT::search()
 	if (encrypted)
 	{
 		fseek(fp, 0, SEEK_SET);
-		fread(&buf[0], 1, 512, fp);
+		elements_read = fread(&buf[0], 1, 512, fp);
+		if (elements_read != 512)
+			printf("%s:\nDid not read 512 elements.\n\n", "CHEATSEXPORT");
 		R4decrypt((u8 *)&buf[0], 512, 0);
 		memcpy(&date[0], &buf[0x10], 16);
 	}
 	else
 	{
 		fseek(fp, 0x10, SEEK_SET);
-		fread(&date, 16, 1, fp);
+		elements_read = fread(&date, 16, 1, fp);
+		if (elements_read != 512)
+			printf("%s:\nDid not read 16 bytes.\n\n", "CHEATSEXPORT");
 		fseek(fp, pos, SEEK_SET);
-		fread(&fat_tmp, sizeof(fat), 1, fp);
+		elements_read = fread(&fat_tmp, sizeof(fat), 1, fp);
+		if (elements_read != 1)
+			printf("%s:\nDid not read sizeof(fat) bytes.\n\n", "CHEATSEXPORT");
 	}
 
 	while (1)
@@ -1291,7 +1303,9 @@ bool CHEATSEXPORT::search()
 			if ((pos>>9) > t)
 			{
 				t++;
-				fread(&buf[0], 1, 512, fp);
+				elements_read = fread(&buf[0], 1, 512, fp);
+				if (elements_read != 512)
+					printf("%s:\nDid not read 512 bytes.\n\n", "CHEATSEXPORT");
 				R4decrypt((u8 *)&buf[0], 512, t);
 			}
 			memcpy(&fat_tmp, &buf[pos % 512], sizeof(fat_tmp));	// next
@@ -1299,8 +1313,9 @@ bool CHEATSEXPORT::search()
 		else
 		{
 			memcpy(&fat, &fat_tmp, sizeof(fat));
-			fread(&fat_tmp, sizeof(fat_tmp), 1, fp);
-			
+			elements_read = fread(&fat_tmp, sizeof(fat_tmp), 1, fp);
+			if (elements_read != 512)
+				printf("%s:\nDid not read 512 bytes.\n\n", "CHEATSEXPORT");
 		}
 		//printf("serial: %s, offset %08X\n", fat.serial, fat.addr);
 		if (memcmp(gameInfo.header.gameCode, &fat.serial[0], 4) == 0)

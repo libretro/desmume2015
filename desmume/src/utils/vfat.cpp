@@ -132,11 +132,21 @@ void build_ListCallback(FsEntry* fs, EListCallbackArg arg)
 		FILE* inf = fopen(path.c_str(),"rb");
 		if(inf)
 		{
-			fseek(inf,0,SEEK_END);
-			long len = ftell(inf);
-			fseek(inf,0,SEEK_SET);
-			u8 *buf = new u8[len];
-			fread(buf,1,len,inf);
+			u8 * buf;
+			size_t elements_read;
+			long len;
+
+			fseek(inf, 0, SEEK_END);
+			len = ftell(inf);
+			fseek(inf, 0, SEEK_SET);
+			buf = new u8[len];
+			elements_read = fread(buf, 1, len, inf);
+			if (elements_read != len)
+				printf(
+					"libfat:  %lu bytes read instead of %l.\n",
+					elements_read,
+					len
+				);
 			fclose(inf);
 
 			std::string path = currVirtPath + "/" + fname;
@@ -147,7 +157,6 @@ void build_ListCallback(FsEntry* fs, EListCallbackArg arg)
 			delete[] buf;
 		} else printf("ERROR opening file for fat\n");
 	}
-		
 }
 
 
