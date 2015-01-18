@@ -1862,7 +1862,7 @@ static void check_variables(void)
          CommonSettings.SPU_sync_mode = 1;
    }
    else
-      CommonSettings.SPU_sync_mode = 0;
+      CommonSettings.SPU_sync_mode = 1;
 
    var.key = "desmume_spu_sync_method";
 
@@ -1876,7 +1876,7 @@ static void check_variables(void)
          CommonSettings.SPU_sync_method = 2;
    }
    else
-      CommonSettings.SPU_sync_method = 0;
+      CommonSettings.SPU_sync_method = 1;
 }
 
 void frontend_process_samples(u32 frames, const s16* data)
@@ -1973,18 +1973,18 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
       { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },	  
       { "desmume_pointer_device_acceleration_mod", "Emulated pointer acceleration modifier percent; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },	
+      { "desmume_load_to_memory", "Load Game into Memory (restart); disable|enable" },
+      { "desmume_advanced_timing", "Enable Advanced Bus-Level Timing; enable|disable" },
       { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
       { "desmume_gfx_edgemark", "Enable Edgemark; enable|disable" },
       { "desmume_gfx_linehack", "Enable Line Hack; enable|disable" },
       { "desmume_gfx_depth_comparison_threshold", "Depth Comparison Threshold; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
-      { "desmume_mic_force_enable", "Force Microphone Enable; yes|no" },
+      { "desmume_mic_force_enable", "Force Microphone Enable; no|yes" },
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
-      { "desmume_load_to_memory", "Load Game into Memory (restart); disable|enable" },
-      { "desmume_advanced_timing", "Enable Advanced Bus-Level Timing; enable|disable" },
+      { "desmume_spu_sync_mode", "SPU Synchronization Mode; Synchronous|DualSPU" },
+      { "desmume_spu_sync_method", "SPU Synchronization Method; Z|P|N" },
       { "desmume_spu_interpolation", "SPU Interpolation Mode; Linear|Cosine|None" },
-      { "desmume_spu_sync_mode", "SPU Synchronization Mode; DualSPU|Synchronous" },
-      { "desmume_spu_sync_method", "SPU Synchronization Method; N|Z|P" },
       { 0, 0 }
    };
 
