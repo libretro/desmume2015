@@ -1,5 +1,4 @@
 #include <stdarg.h>
-#include <vector>
 #include "libretro.h"
 
 #include "cheatSystem.h"
@@ -1475,7 +1474,9 @@ namespace /* INPUT */
 
 namespace /* VIDEO */
 {
-    static uint16_t * screenSwap = new uint16_t[GFX3D_FRAMEBUFFER_WIDTH * (GFX3D_FRAMEBUFFER_HEIGHT + 100) * 2];
+    const int nds_max_screen_gap = 100;
+
+    static uint16_t screenSwap[GFX3D_FRAMEBUFFER_WIDTH * (GFX3D_FRAMEBUFFER_HEIGHT + nds_max_screen_gap) * 2];
     static retro_pixel_format colorMode;
     static uint32_t frameSkip;
     static uint32_t frameIndex;
@@ -1540,6 +1541,9 @@ namespace /* VIDEO */
     
    void UpdateScreenLayout()
    {
+      if (nds_screen_gap > 100)
+         nds_screen_gap = 100;
+
       if (screenLayout->name == "top/bottom") {
          screenLayout->screens[1] = &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * (GFX3D_FRAMEBUFFER_HEIGHT + nds_screen_gap)];
          screenLayout->height = GFX3D_FRAMEBUFFER_HEIGHT * 2 + nds_screen_gap;
