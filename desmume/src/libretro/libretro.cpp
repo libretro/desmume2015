@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <vector>
 #include "libretro.h"
 
 #include "cheatSystem.h"
@@ -30,6 +31,7 @@ static int analog_stick_deadzone;
 static int analog_stick_acceleration = 2048;
 static int analog_stick_acceleration_modifier = 0;
 static int microphone_force_enable = 0;
+static int nds_screen_gap = 0;
 
 #ifdef X432R_CUSTOMRENDERER_ENABLED
 static bool highres_enabled = false;
@@ -1473,7 +1475,7 @@ namespace /* INPUT */
 
 namespace /* VIDEO */
 {
-    static uint16_t screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT * 2];
+    static uint16_t * screenSwap = new uint16_t[GFX3D_FRAMEBUFFER_WIDTH * (GFX3D_FRAMEBUFFER_HEIGHT + 100) * 2];
     static retro_pixel_format colorMode;
     static uint32_t frameSkip;
     static uint32_t frameIndex;
@@ -1489,19 +1491,19 @@ namespace /* VIDEO */
         uint32_t pitchInPix;
     };
 
-    static const LayoutData layouts[] =
+    static LayoutData layouts[] =
     {
-        { "top/bottom", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, (GFX3D_FRAMEBUFFER_HEIGHT * 2), GFX3D_FRAMEBUFFER_WIDTH },
+        { "top/bottom", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT * 2, GFX3D_FRAMEBUFFER_WIDTH},
         { "bottom/top", { &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT], &screenSwap[0] }, 0, 0, GFX3D_FRAMEBUFFER_WIDTH, (GFX3D_FRAMEBUFFER_HEIGHT * 2), GFX3D_FRAMEBUFFER_WIDTH },
         { "left/right", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH] }, GFX3D_FRAMEBUFFER_WIDTH, 0, (GFX3D_FRAMEBUFFER_WIDTH * 2), GFX3D_FRAMEBUFFER_HEIGHT, (GFX3D_FRAMEBUFFER_WIDTH * 2) },
         { "right/left", { &screenSwap[GFX3D_FRAMEBUFFER_WIDTH], &screenSwap[0] }, 0, 0, (GFX3D_FRAMEBUFFER_WIDTH * 2), GFX3D_FRAMEBUFFER_HEIGHT, (GFX3D_FRAMEBUFFER_WIDTH * 2) },
-		{ "top only", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH },
-		{ "bottom only", { &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT], &screenSwap[0] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH },
-		{ "quick switch", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH },
+        { "top only", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH },
+        { "bottom only", { &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT], &screenSwap[0] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH },
+        { "quick switch", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH },
         { 0, 0, 0, 0 }
     };
 
-    static const LayoutData* screenLayout = &layouts[0];
+    static LayoutData* screenLayout = &layouts[0];
 
     static void SwapScreen(void *dst, const void *src, uint32_t pitch, bool render_fullscreen)
     {
@@ -1535,6 +1537,26 @@ namespace /* VIDEO */
        SwapScreen(screenLayout->screens[1], (uint16_t*)&GPU_screen[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT * (render_fullscreen ? 1 : 2)], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
        DrawPointer(screenLayout->screens[1], screenLayout->pitchInPix);
     }
+    
+   void UpdateScreenLayout()
+   {
+      if (screenLayout->name == "top/bottom") {
+         screenLayout->screens[1] = &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * (GFX3D_FRAMEBUFFER_HEIGHT + nds_screen_gap)];
+         screenLayout->height = GFX3D_FRAMEBUFFER_HEIGHT * 2 + nds_screen_gap;
+      } else if (screenLayout->name == "bottom/top") {
+         screenLayout->screens[0] = &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * (GFX3D_FRAMEBUFFER_HEIGHT + nds_screen_gap)];
+         screenLayout->height = GFX3D_FRAMEBUFFER_HEIGHT * 2 + nds_screen_gap;
+      } else if (screenLayout->name == "left/right") {
+         screenLayout->screens[0] = &screenSwap[0];
+         screenLayout->screens[1] = &screenSwap[GFX3D_FRAMEBUFFER_WIDTH + nds_screen_gap];
+         screenLayout->width = GFX3D_FRAMEBUFFER_WIDTH * 2 + nds_screen_gap;
+         screenLayout->pitchInPix = GFX3D_FRAMEBUFFER_WIDTH * 2 + nds_screen_gap;
+      } else if (screenLayout->name == "right/left") {
+         screenLayout->screens[0] = &screenSwap[GFX3D_FRAMEBUFFER_WIDTH + nds_screen_gap];
+         screenLayout->width = GFX3D_FRAMEBUFFER_WIDTH * 2 + nds_screen_gap;
+         screenLayout->pitchInPix = GFX3D_FRAMEBUFFER_WIDTH * 2 + nds_screen_gap;
+      }
+   }
 	
 }
 
@@ -1877,6 +1899,14 @@ static void check_variables(void)
    }
    else
       CommonSettings.SPU_sync_method = 1;
+      
+   var.key = "desmume_screens_gap";
+   
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      nds_screen_gap = atoi(var.value);
+      UpdateScreenLayout();
+   }
 }
 
 void frontend_process_samples(u32 frames, const s16* data)
@@ -1977,6 +2007,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_advanced_timing", "Enable Advanced Bus-Level Timing; enable|disable" },
       { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
+      { "desmume_screens_gap", "Screen Gap; 0|5|64|90|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },	
       { "desmume_gfx_edgemark", "Enable Edgemark; enable|disable" },
       { "desmume_gfx_linehack", "Enable Line Hack; enable|disable" },
       { "desmume_gfx_depth_comparison_threshold", "Depth Comparison Threshold; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
