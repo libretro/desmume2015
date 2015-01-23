@@ -60,7 +60,7 @@ std::string Path::GetFileDirectoryPath(std::string filePath)
 {
 	if( filePath.empty() ) return "";
 	
-	#if !defined(X432R_FILEPATHMOD_ENABLED) || !defined(HOST_WINDOWS)
+	#if !defined(HOST_WINDOWS)
 	size_t i = filePath.find_last_of(ALL_DIRECTORY_DELIMITER_STRING);
 	if(i == std::string::npos) return filePath;
 	
@@ -82,7 +82,7 @@ std::string Path::GetFileNameFromPath(std::string filePath)
 {
 	if( filePath.empty() ) return "";
 	
-	#if !defined(X432R_FILEPATHMOD_ENABLED) || !defined(HOST_WINDOWS)
+	#if !defined(HOST_WINDOWS)
 	size_t i = filePath.find_last_of(ALL_DIRECTORY_DELIMITER_STRING);
 	if(i == std::string::npos) return filePath;
 	
@@ -106,7 +106,7 @@ std::string Path::GetFileNameWithoutExt(std::string fileName)
 		return "";
 	}
 	
-	#if !defined(X432R_FILEPATHMOD_ENABLED) || !defined(HOST_WINDOWS)
+	#if !defined(HOST_WINDOWS)
 	size_t i = fileName.find_last_of(FILE_EXT_DELIMITER_CHAR);
 	if (i == std::string::npos) {
 		return fileName;
@@ -128,7 +128,7 @@ std::string Path::GetFileNameWithoutExt(std::string fileName)
 
 std::string Path::ScrubInvalid(std::string str)
 {
-	#if !defined(X432R_FILEPATHMOD_ENABLED) || !defined(HOST_WINDOWS)
+	#if !defined(HOST_WINDOWS)
 	for (std::string::iterator it(str.begin()); it != str.end(); ++it)
 	{
 		bool ok = true;
@@ -199,7 +199,7 @@ std::string Path::GetFileExt(std::string fileName)
 		return "";
 	}
 	
-	#if !defined(X432R_FILEPATHMOD_ENABLED) || !defined(HOST_WINDOWS)
+	#if !defined(HOST_WINDOWS)
 	size_t i = fileName.find_last_of(FILE_EXT_DELIMITER_CHAR);
 	if (i == std::string::npos) {
 		return fileName;
