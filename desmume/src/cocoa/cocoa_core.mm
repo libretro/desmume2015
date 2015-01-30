@@ -1,6 +1,6 @@
 /*
 	Copyright (C) 2011 Roger Manuel
-	Copyright (C) 2011-2014 DeSmuME team
+	Copyright (C) 2011-2015 DeSmuME team
 
 	This file is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -30,10 +30,45 @@
 
 #include "../movie.h"
 #include "../NDSSystem.h"
+#include "../armcpu.h"
+#include "../driver.h"
+#include "../gdbstub.h"
 #include "../slot1.h"
 #include "../slot2.h"
-#include "../movie.h"
 #undef BOOL
+
+// Need to include assert.h this way so that GDB stub will work
+// with an optimized build.
+#if defined(GDB_STUB) && defined(NDEBUG)
+	#define TEMP_NDEBUG
+	#undef NDEBUG
+#endif
+
+#include <assert.h>
+
+#if defined(TEMP_NDEBUG)
+	#undef TEMP_NDEBUG
+	#define NDEBUG
+#endif
+
+class OSXDriver : public BaseDriver
+{
+private:
+	pthread_mutex_t *mutexThreadExecute;
+	pthread_rwlock_t *rwlockCoreExecute;
+	CocoaDSCore *cdsCore;
+	
+public:
+	pthread_mutex_t* GetCoreThreadMutexLock();
+	void SetCoreThreadMutexLock(pthread_mutex_t *theMutex);
+	pthread_rwlock_t* GetCoreExecuteRWLock();
+	void SetCoreExecuteRWLock(pthread_rwlock_t *theRwLock);
+	void SetCore(CocoaDSCore *theCore);
+	
+	virtual void EMU_DebugIdleEnter();
+	virtual void EMU_DebugIdleUpdate();
+	virtual void EMU_DebugIdleWakeUp();
+};
 
 
 //accessed from other files
@@ -52,6 +87,13 @@ volatile bool execute = true;
 @dynamic isSpeedLimitEnabled;
 @dynamic isCheatingEnabled;
 @dynamic speedScalar;
+
+@dynamic isGdbStubStarted;
+@dynamic isInDebugTrap;
+@synthesize enableGdbStubARM9;
+@synthesize enableGdbStubARM7;
+@synthesize gdbStubPortARM9;
+@synthesize gdbStubPortARM7;
 
 @dynamic emulationFlags;
 @synthesize emuFlagAdvancedBusLevelTiming;
@@ -75,8 +117,7 @@ volatile bool execute = true;
 @dynamic firmwareImageURL;
 @synthesize slot1R4URL;
 
-@dynamic mutexCoreExecute;
-@dynamic rwCoreExecute;
+@dynamic rwlockCoreExecute;
 
 - (id)init
 {
@@ -85,6 +126,15 @@ volatile bool execute = true;
 	{
 		return self;
 	}
+	
+	isGdbStubStarted = NO;
+	isInDebugTrap = NO;
+	enableGdbStubARM9 = NO;
+	enableGdbStubARM7 = NO;
+	gdbStubPortARM9 = 0;
+	gdbStubPortARM7 = 0;
+	gdbStubHandleARM9 = NULL;
+	gdbStubHandleARM7 = NULL;
 	
 	int initResult = NDS_Init();
 	if (initResult == -1)
@@ -140,14 +190,19 @@ volatile bool execute = true;
 	threadParam.timeBudgetMachAbsTime = *(uint64_t *)&timeBudgetAbsTime;
 	
 	threadParam.exitThread = false;
-	pthread_mutex_init(&threadParam.mutexCoreExecute, NULL);
 	pthread_mutex_init(&threadParam.mutexOutputList, NULL);
 	pthread_mutex_init(&threadParam.mutexThreadExecute, NULL);
 	pthread_cond_init(&threadParam.condThreadExecute, NULL);
-	pthread_rwlock_init(&threadParam.rwCoreExecute, NULL);
+	pthread_rwlock_init(&threadParam.rwlockCoreExecute, NULL);
 	pthread_create(&coreThread, NULL, &RunCoreThread, &threadParam);
 	
-	[cdsGPU setMutexProducer:self.mutexCoreExecute];
+	[cdsGPU setRwlockProducer:self.rwlockCoreExecute];
+	
+	OSXDriver *newDriver = new OSXDriver;
+	newDriver->SetCoreThreadMutexLock(&threadParam.mutexThreadExecute);
+	newDriver->SetCoreExecuteRWLock(self.rwlockCoreExecute);
+	newDriver->SetCore(self);
+	driver = newDriver;
 	
 	frameStatus = @"---";
 	executionSpeedStatus = @"1.00x";
@@ -177,8 +232,9 @@ volatile bool execute = true;
 	pthread_mutex_destroy(&threadParam.mutexThreadExecute);
 	pthread_cond_destroy(&threadParam.condThreadExecute);
 	pthread_mutex_destroy(&threadParam.mutexOutputList);
-	pthread_mutex_destroy(&threadParam.mutexCoreExecute);
-	pthread_rwlock_destroy(&threadParam.rwCoreExecute);
+	pthread_rwlock_destroy(&threadParam.rwlockCoreExecute);
+	
+	[self setIsGdbStubStarted:NO];
 	
 	NDS_DeInit();
 	
@@ -310,13 +366,105 @@ volatile bool execute = true;
 	return theState;
 }
 
+- (void) setIsGdbStubStarted:(BOOL)theState
+{
+#ifdef GDB_STUB
+	if (theState)
+	{
+        gdbstub_mutex_init();
+        
+		if ([self enableGdbStubARM9])
+		{
+			const uint16_t arm9Port = (uint16_t)[self gdbStubPortARM9];
+			if(arm9Port > 0)
+			{
+				gdbStubHandleARM9 = createStub_gdb(arm9Port, &NDS_ARM9, &arm9_direct_memory_iface);
+				if (gdbStubHandleARM9 == NULL)
+				{
+					NSLog(@"Failed to create ARM9 gdbstub on port %d\n", arm9Port);
+				}
+				else
+				{
+					activateStub_gdb(gdbStubHandleARM9);
+				}
+			}
+		}
+		else
+		{
+			destroyStub_gdb(gdbStubHandleARM9);
+			gdbStubHandleARM9 = NULL;
+		}
+		
+		if ([self enableGdbStubARM7])
+		{
+			const uint16_t arm7Port = (uint16_t)[self gdbStubPortARM7];
+			if (arm7Port > 0)
+			{
+				gdbStubHandleARM7 = createStub_gdb(arm7Port, &NDS_ARM7, &arm7_base_memory_iface);
+				if (gdbStubHandleARM7 == NULL)
+				{
+					NSLog(@"Failed to create ARM7 gdbstub on port %d\n", arm7Port);
+				}
+				else
+				{
+					activateStub_gdb(gdbStubHandleARM7);
+				}
+			}
+		}
+		else
+		{
+			destroyStub_gdb(gdbStubHandleARM7);
+			gdbStubHandleARM7 = NULL;
+		}
+	}
+	else
+	{
+		destroyStub_gdb(gdbStubHandleARM9);
+		gdbStubHandleARM9 = NULL;
+		
+		destroyStub_gdb(gdbStubHandleARM7);
+		gdbStubHandleARM7 = NULL;
+
+        gdbstub_mutex_destroy();
+	}
+#endif
+	if (gdbStubHandleARM9 == NULL && gdbStubHandleARM7 == NULL)
+	{
+		theState = NO;
+	}
+	
+	isGdbStubStarted = theState;
+}
+
+- (BOOL) isGdbStubStarted
+{
+	return isGdbStubStarted;
+}
+
+- (void) setIsInDebugTrap:(BOOL)theState
+{
+	// If we're transitioning out of the debug trap, then ignore
+	// frame skipping this time.
+	if (isInDebugTrap && !theState)
+	{
+		threadParam.framesToSkip = 0;
+	}
+	
+	isInDebugTrap = theState;
+}
+
+- (BOOL) isInDebugTrap
+{
+	return isInDebugTrap;
+}
+
 - (void) setEmulationFlags:(NSUInteger)theFlags
 {
 	OSSpinLockLock(&spinlockEmulationFlags);
 	emulationFlags = theFlags;
 	OSSpinLockUnlock(&spinlockEmulationFlags);
 	
-	pthread_mutex_lock(&threadParam.mutexCoreExecute);
+	pthread_rwlock_wrlock(&threadParam.rwlockCoreExecute);
 	
 	if (theFlags & EMULATION_ADVANCED_BUS_LEVEL_TIMING_MASK)
 	{
@@ -417,7 +565,7 @@ volatile bool execute = true;
 		CommonSettings.DebugConsole = false;
 	}
 	
-	pthread_mutex_unlock(&threadParam.mutexCoreExecute);
+	pthread_rwlock_unlock(&threadParam.rwlockCoreExecute);
 }
 
 - (NSUInteger) emulationFlags
@@ -451,16 +599,16 @@ volatile bool execute = true;
 
 - (void) setMaxJITBlockSize:(NSInteger)blockSize
 {
-	pthread_mutex_lock(&threadParam.mutexCoreExecute);
+	pthread_rwlock_wrlock(&threadParam.rwlockCoreExecute);
 	CommonSettings.jit_max_block_size = (blockSize > 0) ? blockSize : 1;
-	pthread_mutex_unlock(&threadParam.mutexCoreExecute);
+	pthread_rwlock_unlock(&threadParam.rwlockCoreExecute);
 }
 
 - (NSInteger) maxJITBlockSize
 {
-	pthread_mutex_lock(&threadParam.mutexCoreExecute);
+	pthread_rwlock_rdlock(&threadParam.rwlockCoreExecute);
 	const NSInteger blockSize = CommonSettings.jit_max_block_size;
-	pthread_mutex_unlock(&threadParam.mutexCoreExecute);
+	pthread_rwlock_unlock(&threadParam.rwlockCoreExecute);
 	
 	return blockSize;
 }
@@ -594,14 +742,9 @@ volatile bool execute = true;
 	return [NSURL fileURLWithPath:[NSString stringWithCString:CommonSettings.Firmware encoding:NSUTF8StringEncoding]];
 }
 
-- (pthread_mutex_t *) mutexCoreExecute
+- (pthread_rwlock_t *) rwlockCoreExecute
 {
-	return &threadParam.mutexCoreExecute;
-}
-
-- (pthread_rwlock_t *) rwCoreExecute
-{
-	return &threadParam.rwCoreExecute;
+	return &threadParam.rwlockCoreExecute;
 }
 
 - (void) setEjectCardFlag
@@ -628,18 +771,18 @@ volatile bool execute = true;
 
 - (void) slot1Eject
 {
-	pthread_mutex_lock(&threadParam.mutexCoreExecute);
+	pthread_rwlock_wrlock(&threadParam.rwlockCoreExecute);
 	NDS_TriggerCardEjectIRQ();
-	pthread_mutex_unlock(&threadParam.mutexCoreExecute);
+	pthread_rwlock_unlock(&threadParam.rwlockCoreExecute);
 	
 	[self setSlot1StatusText:NSSTRING_STATUS_SLOT1_NO_DEVICE];
 }
 
 - (void) changeRomSaveType:(NSInteger)saveTypeID
 {
-	pthread_mutex_lock(&threadParam.mutexCoreExecute);
+	pthread_rwlock_wrlock(&threadParam.rwlockCoreExecute);
 	[CocoaDSRom changeRomSaveType:saveTypeID];
-	pthread_mutex_unlock(&threadParam.mutexCoreExecute);
+	pthread_rwlock_unlock(&threadParam.rwlockCoreExecute);
 }
 
 - (void) changeExecutionSpeed
@@ -747,6 +890,7 @@ volatile bool execute = true;
 	
 	pthread_mutex_lock(&threadParam.mutexThreadExecute);
 	NDS_Reset();
+	GPU_FillScreenWithBGRA5551(0xFFFF);
 	pthread_mutex_unlock(&threadParam.mutexThreadExecute);
 	
 	[self restoreCoreState];
@@ -755,9 +899,9 @@ volatile bool execute = true;
 
 - (NSUInteger) frameNumber
 {
-	pthread_mutex_lock(&threadParam.mutexCoreExecute);
+	pthread_rwlock_rdlock(&threadParam.rwlockCoreExecute);
 	const NSUInteger currFrameNum = currFrameCounter;
-	pthread_mutex_unlock(&threadParam.mutexCoreExecute);
+	pthread_rwlock_unlock(&threadParam.rwlockCoreExecute);
 	
 	return currFrameNum;
 }
@@ -786,8 +930,7 @@ volatile bool execute = true;
 - (void) addOutput:(CocoaDSOutput *)theOutput
 {
 	pthread_mutex_lock(&threadParam.mutexOutputList);
-	[theOutput setMutexProducer:[self mutexCoreExecute]];
-	[theOutput setRwProducer:[self rwCoreExecute]];
+	[theOutput setRwlockProducer:[self rwlockCoreExecute]];
 	[[self cdsOutputList] addObject:theOutput];
 	pthread_mutex_unlock(&threadParam.mutexOutputList);
 }
@@ -955,14 +1098,10 @@ static void* RunCoreThread(void *arg)
 		FCEUMOV_HandleRecording();
 		
 		// Execute the frame and increment the frame counter.
-		pthread_mutex_lock(&param->mutexCoreExecute);
-		
-		pthread_rwlock_wrlock(&param->rwCoreExecute);
+		pthread_rwlock_wrlock(&param->rwlockCoreExecute);
 		NDS_exec<false>();
-		pthread_rwlock_unlock(&param->rwCoreExecute);
-		
 		frameNum = currFrameCounter;
-		pthread_mutex_unlock(&param->mutexCoreExecute);
+		pthread_rwlock_unlock(&param->rwlockCoreExecute);
 		
 		// Check if an internal execution error occurred that halted the emulation.
 		if (!execute)
@@ -1160,4 +1299,82 @@ uint64_t GetFrameAbsoluteTime(const double frameTimeScalar)
 	const AbsoluteTime frameTimeAbsTime = NanosecondsToAbsolute(*(Nanoseconds *)&frameTimeNanoseconds);
 	
 	return *(uint64_t *)&frameTimeAbsTime;
+}
+
+#pragma mark - OSXDriver
+
+pthread_mutex_t* OSXDriver::GetCoreThreadMutexLock()
+{
+	return this->mutexThreadExecute;
+}
+
+void OSXDriver::SetCoreThreadMutexLock(pthread_mutex_t *theMutex)
+{
+	this->mutexThreadExecute = theMutex;
+}
+
+pthread_rwlock_t* OSXDriver::GetCoreExecuteRWLock()
+{
+	return this->rwlockCoreExecute;
+}
+
+void OSXDriver::SetCoreExecuteRWLock(pthread_rwlock_t *theRwLock)
+{
+	this->rwlockCoreExecute = theRwLock;
+}
+
+void OSXDriver::SetCore(CocoaDSCore *theCore)
+{
+	this->cdsCore = theCore;
+}
+
+void OSXDriver::EMU_DebugIdleEnter()
+{
+	[this->cdsCore setIsInDebugTrap:YES];
+	pthread_rwlock_unlock(this->rwlockCoreExecute);
+	pthread_mutex_unlock(this->mutexThreadExecute);
+}
+
+void OSXDriver::EMU_DebugIdleUpdate()
+{
+	usleep(50);
+}
+
+void OSXDriver::EMU_DebugIdleWakeUp()
+{
+	pthread_mutex_lock(this->mutexThreadExecute);
+	pthread_rwlock_wrlock(this->rwlockCoreExecute);
+	[this->cdsCore setIsInDebugTrap:NO];
+}
+
+#pragma mark - GDB Stub implementation
+
+void* createThread_gdb(void (*thread_function)( void *data),void *thread_data)
+{
+	// Create the thread using POSIX routines.
+	pthread_attr_t  attr;
+	pthread_t*      posixThreadID = (pthread_t*)malloc(sizeof(pthread_t));
+	
+	assert(!pthread_attr_init(&attr));
+	assert(!pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE));
+	
+	int threadError = pthread_create(posixThreadID, &attr, (void* (*)(void *))thread_function, thread_data);
+	
+	assert(!pthread_attr_destroy(&attr));
+	
+	if (threadError != 0)
+	{
+		// Report an error.
+		return NULL;
+	}
+	else
+	{
+		return posixThreadID;
+	}
+}
+
+void joinThread_gdb(void *thread_handle)
+{
+	pthread_join(*((pthread_t*)thread_handle), NULL);
+	free(thread_handle);
 }

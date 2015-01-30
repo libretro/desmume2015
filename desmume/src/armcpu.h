@@ -1,6 +1,6 @@
 /*
 	Copyright (C) 2006 yopyop
-	Copyright (C) 2006-2012 DeSmuME team
+	Copyright (C) 2006-2015 DeSmuME team
 
 	This file is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -22,9 +22,6 @@
 #include "types.h"
 #include "bits.h"
 #include "MMU.h"
-#include "common.h"
-#include "instructions.h"
-#include "cp15.h"
 
 #define CODE(i)     (((i)>>25)&0x7)
 #define OPCODE(i)   (((i)>>21)&0xF)
@@ -223,7 +220,8 @@ typedef union
 /**
  * The control interface to a CPU
  */
-struct armcpu_ctrl_iface {
+struct armcpu_ctrl_iface
+{
   /** stall the processor */
   void (*stall)( void *instance);
 
@@ -261,7 +259,24 @@ struct armcpu_t
 	u32 R[16]; //16
 	Status_Reg CPSR;  //80
 	Status_Reg SPSR;
-
+	
+	void SetControlInterface(const armcpu_ctrl_iface *theCtrlInterface);
+	armcpu_ctrl_iface* GetControlInterface();
+	void SetControlInterfaceData(void *theData);
+	void* GetControlInterfaceData();
+	
+	void SetCurrentMemoryInterface(armcpu_memory_iface *theMemInterface);
+	armcpu_memory_iface* GetCurrentMemoryInterface();
+	void SetCurrentMemoryInterfaceData(void *theData);
+	void* GetCurrentMemoryInterfaceData();
+	
+	void SetBaseMemoryInterface(const armcpu_memory_iface *theMemInterface);
+	armcpu_memory_iface* GetBaseMemoryInterface();
+	void SetBaseMemoryInterfaceData(void *theData);
+	void* GetBaseMemoryInterfaceData();
+	
+	void ResetMemoryInterfaceToBase();
+	
 	void changeCPSR();
 
 	u32 R13_usr, R14_usr;
@@ -288,33 +303,25 @@ struct armcpu_t
 #if defined(_M_X64) || defined(__x86_64__)
 	u8 cond_table[16*16];
 #endif
-
-#ifdef GDB_STUB
-  /** there is a pending irq for the cpu */
-  int irq_flag;
-
-  /** the post executed function (if installed) */
-  void (*post_ex_fn)( void *, u32 adr, int thumb);
-
-  /** data for the post executed function */
-  void *post_ex_fn_data;
-
-
-
-  /** the memory interface */
-  struct armcpu_memory_iface *mem_if;
-
-  /** the ctrl interface */
-  struct armcpu_ctrl_iface ctrl_iface;
-#endif
+	
+	/** there is a pending irq for the cpu */
+	int irq_flag;
+	
+	/** the post executed function (if installed) */
+	void (*post_ex_fn)( void *, u32 adr, int thumb);
+	
+	/** data for the post executed function */
+	void *post_ex_fn_data;
+	
+	/** the memory interface */
+	armcpu_memory_iface *mem_if;		// This is the memory interface currently in use.
+	armcpu_memory_iface base_mem_if;	// This is the CPU's base memory interface.
+	
+	/** the ctrl interface */
+	armcpu_ctrl_iface ctrl_iface;
 };
 
-#ifdef GDB_STUB
-int armcpu_new( armcpu_t *armcpu, u32 id, struct armcpu_memory_iface *mem_if,
-                struct armcpu_ctrl_iface **ctrl_iface_ret);
-#else
 int armcpu_new( armcpu_t *armcpu, u32 id);
-#endif
 void armcpu_init(armcpu_t *armcpu, u32 adr);
 u32 armcpu_switchMode(armcpu_t *armcpu, u8 mode);
 
@@ -327,43 +334,19 @@ u32 armcpu_Wait4IRQ(armcpu_t *cpu);
 
 extern armcpu_t NDS_ARM7;
 extern armcpu_t NDS_ARM9;
+extern const armcpu_ctrl_iface arm_default_ctrl_iface;
 
 template<int PROCNUM> u32 armcpu_exec();
 #ifdef HAVE_JIT
 template<int PROCNUM, bool jit> u32 armcpu_exec();
 #endif
 
-static INLINE void setIF(int PROCNUM, u32 flag)
-{
-	//don't set generated bits!!!
-	assert(!(flag&0x00200000));
-
-	MMU.reg_IF_bits[PROCNUM] |= flag;
-
-	extern void NDS_Reschedule();
-	NDS_Reschedule();
-}
+void setIF(int PROCNUM, u32 flag);
+char* decodeIntruction(bool thumb_mode, u32 instr);
 
 static INLINE void NDS_makeIrq(int PROCNUM, u32 num)
 {
 	setIF(PROCNUM,1<<num);
-}
-
-static INLINE char *decodeIntruction(bool thumb_mode, u32 instr)
-{
-	char txt[20] = {0};
-	u32 tmp = 0;
-	if (thumb_mode == true)
-	{
-		tmp = (instr >> 6);
-		strcpy(txt, intToBin((u16)tmp)+6);
-	}
-	else
-	{
-		tmp = ((instr >> 16) & 0x0FF0) | ((instr >> 4) & 0x0F);
-		strcpy(txt, intToBin((u32)tmp)+20);
-	}
-	return strdup(txt);
 }
 
 #endif

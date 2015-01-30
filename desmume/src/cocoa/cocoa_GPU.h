@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2013-2014 DeSmuME team
+	Copyright (C) 2013-2015 DeSmuME team
 
 	This file is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -26,11 +26,11 @@
 	BOOL isCPUCoreCountAuto;
 	
 	OSSpinLock spinlockGpuState;
-	pthread_mutex_t *mutexProducer;
+	pthread_rwlock_t *rwlockProducer;
 }
 
 @property (assign) UInt32 gpuStateFlags;
-@property (assign) pthread_mutex_t *mutexProducer;
+@property (assign) pthread_rwlock_t *rwlockProducer;
 
 @property (assign) BOOL layerMainGPU;
 @property (assign) BOOL layerMainBG0;
@@ -70,6 +70,7 @@ extern "C"
 {
 #endif
 
+void GPU_FillScreenWithBGRA5551(const uint16_t colorValue);
 void SetGPULayerState(const int gpuType, const unsigned int i, const bool state);
 bool GetGPULayerState(const int gpuType, const unsigned int i);
 void SetGPUDisplayState(const int gpuType, const bool state);

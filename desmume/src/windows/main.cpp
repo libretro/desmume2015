@@ -1,6 +1,6 @@
 /*
 	Copyright (C) 2006 Theo Berkau
-	Copyright (C) 2006-2013 DeSmuME team
+	Copyright (C) 2006-2015 DeSmuME team
 
 	This file is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 // icon gradient: #f6f6fb to #8080c0
 // RGB(246, 246, 251) to RGB(128, 128, 192)
 
+#include "main.h"
 #include "windriver.h"
 
 #include <algorithm>
@@ -42,17 +43,21 @@
 #include "../MMU.h"
 #include "../armcpu.h"
 #include "../NDSSystem.h"
+#include "../driver.h"
 #include "../debug.h"
 #include "../saves.h"
 #include "../slot1.h"
 #include "../slot2.h"
+#include "../GPU.h"
 #include "../GPU_osd.h"
+#include "../SPU.h"
 #include "../OGLRender.h"
 #include "../OGLRender_3_2.h"
 #include "../rasterize.h"
 #include "../gfx3d.h"
 #include "../render3D.h"
 #include "../gdbstub.h"
+#include "../wifi.h"
 #include "../cheatSystem.h"
 #include "../mic.h"
 #include "../movie.h"
@@ -63,7 +68,6 @@
 
 //other random stuff
 #include "recentroms.h"
-#include "main.h"
 #include "resource.h"
 #include "CWindow.h"
 #include "gthread.h"
@@ -2639,11 +2643,7 @@ static void ExitRunLoop()
 	emu_halt();
 }
 
-//-----------------------------------------------------------------------------
-//   Platform driver for Win32
-//-----------------------------------------------------------------------------
-
-class WinDriver : public BaseDriver
+class WinWifiHandler : public WifiHandler
 {
 #ifdef EXPERIMENTAL_WIFI_COMM
 	virtual bool WIFI_SocketsAvailable() { return bSocketsAvailable; }
@@ -2680,55 +2680,69 @@ class WinDriver : public BaseDriver
 
 	virtual bool WIFI_WFCWarning()
 	{
-		return MessageBox(NULL,	"You are trying to connect to the Nintendo WFC servers.\n"
-								"\n"
-								"Please don't do this."
-								"\n"
-								"DeSmuME is not perfect yet, and connecting to WFC will cause unexpected problems\n"
-								"for Nintendo, and for DeSmuME, which neither of us want.\n"
-								"\n"
-								"And you don't want that either, right?\n"
-								"\n"
-								"You may get your IP blocked and then you won't even be able to use your real DS.\n"
-								"You may cause DeSmuME to get blocked, which would be a shame since we wouldn't even\n"
-								"be able to work on it any more.\n"
-								"\n"
-								"By the time you read this, it may have already happened due to irresponsible individuals\n"
-								"ignoring this message.\n"
-								"\n"
-								"So please don't do it.\n"
-								"\n"
-								"We aren't going to try to stop you, since someone will just make a hacked build and you\n"
-								"won't get a chance to read this. So please, stop yourself.\n"
-								"\n"
-								"Do you still want to connect?",
-								"DeSmuME - WFC warning",
-								MB_YESNO | MB_DEFBUTTON2 | MB_ICONWARNING
-								) == IDYES;
+		return MessageBox(NULL, "You are trying to connect to the Nintendo WFC servers.\n"
+			"\n"
+			"Please don't do this."
+			"\n"
+			"DeSmuME is not perfect yet, and connecting to WFC will cause unexpected problems\n"
+			"for Nintendo, and for DeSmuME, which neither of us want.\n"
+			"\n"
+			"And you don't want that either, right?\n"
+			"\n"
+			"You may get your IP blocked and then you won't even be able to use your real DS.\n"
+			"You may cause DeSmuME to get blocked, which would be a shame since we wouldn't even\n"
+			"be able to work on it any more.\n"
+			"\n"
+			"By the time you read this, it may have already happened due to irresponsible individuals\n"
+			"ignoring this message.\n"
+			"\n"
+			"So please don't do it.\n"
+			"\n"
+			"We aren't going to try to stop you, since someone will just make a hacked build and you\n"
+			"won't get a chance to read this. So please, stop yourself.\n"
+			"\n"
+			"Do you still want to connect?",
+			"DeSmuME - WFC warning",
+			MB_YESNO | MB_DEFBUTTON2 | MB_ICONWARNING
+			) == IDYES;
 	}
 
 	virtual int PCAP_findalldevs(pcap_if_t** alldevs, char* errbuf) {
-		return _pcap_findalldevs(alldevs, errbuf); }
+		return _pcap_findalldevs(alldevs, errbuf);
+	}
 
 	virtual void PCAP_freealldevs(pcap_if_t* alldevs) {
-		_pcap_freealldevs(alldevs); }
+		_pcap_freealldevs(alldevs);
+	}
 
 	virtual pcap_t* PCAP_open(const char* source, int snaplen, int flags, int readtimeout, char* errbuf) {
-		return _pcap_open_live(source, snaplen, flags, readtimeout, errbuf); }
+		return _pcap_open_live(source, snaplen, flags, readtimeout, errbuf);
+	}
 
 	virtual void PCAP_close(pcap_t* dev) {
-		_pcap_close(dev); }
+		_pcap_close(dev);
+	}
 
 	virtual int PCAP_setnonblock(pcap_t* dev, int nonblock, char* errbuf) {
-		return _pcap_setnonblock(dev, nonblock, errbuf); }
+		return _pcap_setnonblock(dev, nonblock, errbuf);
+	}
 
 	virtual int PCAP_sendpacket(pcap_t* dev, const u_char* data, int len) {
-		return _pcap_sendpacket(dev, data, len); }
+		return _pcap_sendpacket(dev, data, len);
+	}
 
 	virtual int PCAP_dispatch(pcap_t* dev, int num, pcap_handler callback, u_char* userdata) {
-		return _pcap_dispatch(dev, num, callback, userdata); }
+		return _pcap_dispatch(dev, num, callback, userdata);
+	}
 #endif
+};
 
+//-----------------------------------------------------------------------------
+//   Platform driver for Win32
+//-----------------------------------------------------------------------------
+
+class WinDriver : public BaseDriver
+{
 	virtual bool AVI_IsRecording()
 	{
 		return ::AVI_IsRecording();
@@ -2909,6 +2923,7 @@ int _main()
 #endif
 
 	driver = new WinDriver();
+	CurrentWifiHandler = new WinWifiHandler();
 
 	InitializeCriticalSection(&win_execute_sync);
 	InitializeCriticalSection(&win_backbuffer_sync);
@@ -2917,14 +2932,6 @@ int _main()
 	display_invoke_done_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 	display_wakeup_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 
-#ifdef GDB_STUB
-	gdbstub_handle_t arm9_gdb_stub;
-	gdbstub_handle_t arm7_gdb_stub;
-	struct armcpu_memory_iface *arm9_memio = &arm9_base_memory_iface;
-	struct armcpu_memory_iface *arm7_memio = &arm7_base_memory_iface;
-	struct armcpu_ctrl_iface *arm9_ctrl_iface;
-	struct armcpu_ctrl_iface *arm7_ctrl_iface;
-#endif
 //	struct configured_features my_config;
 
 	oglrender_init = windows_opengl_init;
@@ -3246,48 +3253,46 @@ int _main()
 
 	CommonSettings.wifi.mode = GetPrivateProfileInt("Wifi", "Mode", 0, IniName);
 	CommonSettings.wifi.infraBridgeAdapter = GetPrivateProfileInt("Wifi", "BridgeAdapter", 0, IniName);
-
+	
+	NDS_Init();
+	
 #ifdef GDB_STUB
-	if ( cmdline.arm9_gdb_port != 0) {
-		arm9_gdb_stub = createStub_gdb( cmdline.arm9_gdb_port,
-			&arm9_memio, &arm9_direct_memory_iface);
+    gdbstub_mutex_init();
 
-		if ( arm9_gdb_stub == NULL) {
-			MessageBox(MainWindow->getHWnd(),"Failed to create ARM9 gdbstub","Error",MB_OK);
+	// Activate the GDB stubs. This has to come after the NDS_Init() where the CPUs are set up.
+	gdbstub_handle_t arm9_gdb_stub = NULL;
+	gdbstub_handle_t arm7_gdb_stub = NULL;
+	
+	if (cmdline.arm9_gdb_port > 0)
+	{
+		arm9_gdb_stub = createStub_gdb(cmdline.arm9_gdb_port, &NDS_ARM9, &arm9_direct_memory_iface);
+		if (arm9_gdb_stub == NULL)
+		{
+			MessageBox(MainWindow->getHWnd(), "Failed to create ARM9 gdbstub", "Error", MB_OK);
 			return -1;
 		}
-	}
-	if ( cmdline.arm7_gdb_port != 0) {
-		arm7_gdb_stub = createStub_gdb( cmdline.arm7_gdb_port,
-			&arm7_memio,
-			&arm7_base_memory_iface);
-
-		if ( arm7_gdb_stub == NULL) {
-			MessageBox(MainWindow->getHWnd(),"Failed to create ARM7 gdbstub","Error",MB_OK);
-			return -1;
+		else
+		{
+			activateStub_gdb(arm9_gdb_stub);
 		}
 	}
-
-	NDS_Init( arm9_memio, &arm9_ctrl_iface,
-		arm7_memio, &arm7_ctrl_iface);
-#else
-	NDS_Init ();
+	
+	if (cmdline.arm7_gdb_port > 0)
+	{
+		arm7_gdb_stub = createStub_gdb(cmdline.arm7_gdb_port, &NDS_ARM7, &arm7_base_memory_iface);
+		if (arm7_gdb_stub == NULL)
+		{
+			MessageBox(MainWindow->getHWnd(), "Failed to create ARM7 gdbstub", "Error", MB_OK);
+			return -1;
+		}
+		else
+		{
+			activateStub_gdb(arm7_gdb_stub);
+		}
+	}
 #endif
 
 	osd->singleScreen = (video.layout == 2);
-
-	/*
-	* Activate the GDB stubs
-	* This has to come after the NDS_Init where the cpus are set up.
-	*/
-#ifdef GDB_STUB
-	if ( cmdline.arm9_gdb_port != 0) {
-		activateStub_gdb( arm9_gdb_stub, arm9_ctrl_iface);
-	}
-	if ( cmdline.arm7_gdb_port != 0) {
-		activateStub_gdb( arm7_gdb_stub, arm7_ctrl_iface);
-	}
-#endif
 	
 	GetPrivateProfileString("General", "Language", "0", text, 80, IniName);	
 
@@ -3451,6 +3456,16 @@ int _main()
 	DRV_AviEnd();
 	WAV_End();
 
+#ifdef GDB_STUB
+	destroyStub_gdb(arm9_gdb_stub);
+	arm9_gdb_stub = NULL;
+	
+	destroyStub_gdb(arm7_gdb_stub);
+	arm7_gdb_stub = NULL;
+
+    gdbstub_mutex_destroy();
+#endif
+	
 	NDS_DeInit();
 
 #ifdef DEBUG
@@ -6760,7 +6775,7 @@ LRESULT CALLBACK WifiSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM
 
 			if (bWinPCapAvailable)
 			{
-				if(driver->PCAP_findalldevs(&alldevs, errbuf) == -1)
+				if(CurrentWifiHandler->PCAP_findalldevs(&alldevs, errbuf) == -1)
 				{
 					// TODO: fail more gracefully!
 					EndDialog(hDlg, TRUE);

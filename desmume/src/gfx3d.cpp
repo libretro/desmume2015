@@ -1,6 +1,6 @@
 /*	
 	Copyright (C) 2006 yopyop
-	Copyright (C) 2008-2013 DeSmuME team
+	Copyright (C) 2008-2015 DeSmuME team
 
 	This file is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -28,13 +28,18 @@
 //if they do, then we need to copy them out in doFlush!!!
 //---------------
 
-#include <algorithm>
+#include "gfx3d.h"
+
 #include <assert.h>
 #include <math.h>
 #include <string.h>
+#include <algorithm>
+#include <queue>
+
 #include "armcpu.h"
 #include "debug.h"
-#include "gfx3d.h"
+#include "driver.h"
+#include "emufile.h"
 #include "matrix.h"
 #include "bits.h"
 #include "MMU.h"
@@ -46,7 +51,6 @@
 #include "readwrite.h"
 #include "FIFO.h"
 #include "movie.h" //only for currframecounter which really ought to be moved into the core emu....
-#include <queue>
 
 //#define _SHOW_VTX_COUNTERS	// show polygon/vertex counters on screen
 #ifdef _SHOW_VTX_COUNTERS
@@ -457,6 +461,44 @@ static void makeTables() {
 				int temp = (r*a + oldr*(31-a)) / 31;
 				mixTable555[a][r][oldr] = temp;
 			}
+}
+
+#define OSWRITE(x) os->fwrite((char*)&(x),sizeof((x)));
+#define OSREAD(x) is->fread((char*)&(x),sizeof((x)));
+
+void POLY::save(EMUFILE* os)
+{
+	OSWRITE(type);
+	OSWRITE(vertIndexes[0]); OSWRITE(vertIndexes[1]); OSWRITE(vertIndexes[2]); OSWRITE(vertIndexes[3]);
+	OSWRITE(polyAttr); OSWRITE(texParam); OSWRITE(texPalette);
+	OSWRITE(viewport);
+	OSWRITE(miny);
+	OSWRITE(maxy);
+}
+
+void POLY::load(EMUFILE* is)
+{
+	OSREAD(type);
+	OSREAD(vertIndexes[0]); OSREAD(vertIndexes[1]); OSREAD(vertIndexes[2]); OSREAD(vertIndexes[3]);
+	OSREAD(polyAttr); OSREAD(texParam); OSREAD(texPalette);
+	OSREAD(viewport);
+	OSREAD(miny);
+	OSREAD(maxy);
+}
+
+void VERT::save(EMUFILE* os)
+{
+	OSWRITE(x); OSWRITE(y); OSWRITE(z); OSWRITE(w);
+	OSWRITE(u); OSWRITE(v);
+	OSWRITE(color[0]); OSWRITE(color[1]); OSWRITE(color[2]);
+	OSWRITE(fcolor[0]); OSWRITE(fcolor[1]); OSWRITE(fcolor[2]);
+}
+void VERT::load(EMUFILE* is)
+{
+	OSREAD(x); OSREAD(y); OSREAD(z); OSREAD(w);
+	OSREAD(u); OSREAD(v);
+	OSREAD(color[0]); OSREAD(color[1]); OSREAD(color[2]);
+	OSREAD(fcolor[0]); OSREAD(fcolor[1]); OSREAD(fcolor[2]);
 }
 
 void gfx3d_init()
@@ -2053,8 +2095,7 @@ static bool gfx3d_ysort_compare(int num1, int num2)
 	//make sure we respect the game's ordering in cases of complete ties
 	//this makes it a stable sort.
 	//this must be a stable sort or else advance wars DOR will flicker in the main map mode
-	if (num1 < num2) return true;
-	else return false;
+	return (num1 < num2);
 }
 
 static void gfx3d_doFlush()
@@ -2145,13 +2186,13 @@ static void gfx3d_doFlush()
 	//now we have to sort the opaque polys by y-value.
 	//(test case: harvest moon island of happiness character cretor UI)
 	//should this be done after clipping??
-	std::sort(gfx3d.indexlist.list, gfx3d.indexlist.list + opaqueCount, gfx3d_ysort_compare);
+	std::stable_sort(gfx3d.indexlist.list, gfx3d.indexlist.list + opaqueCount, gfx3d_ysort_compare);
 	
 	if(!gfx3d.state.sortmode)
 	{
 		//if we are autosorting translucent polys, we need to do this also
 		//TODO - this is unverified behavior. need a test case
-		std::sort(gfx3d.indexlist.list + opaqueCount, gfx3d.indexlist.list + polycount, gfx3d_ysort_compare);
+		std::stable_sort(gfx3d.indexlist.list + opaqueCount, gfx3d.indexlist.list + polycount, gfx3d_ysort_compare);
 	}
 
 	//switch to the new lists
@@ -2318,7 +2359,7 @@ void gfx3d_GetLineData15bpp(int line, u16** dst)
 
 	u8* lineData;
 	gfx3d_GetLineData(line, &lineData);
-	for(int i=0;i< GFX3D_FRAMEBUFFER_WIDTH;i++)
+	for(int i=0; i<GFX3D_FRAMEBUFFER_WIDTH; i++)
 	{
 		const u8 r = lineData[i*4+0];
 		const u8 g = lineData[i*4+1];

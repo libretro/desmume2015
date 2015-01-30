@@ -1,6 +1,6 @@
 /*
 	Copyright (C) 2011 Roger Manuel
-	Copyright (C) 2012 DeSmuME team
+	Copyright (C) 2012-2015 DeSmuME team
 
 	This file is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -20,7 +20,9 @@
 #import "cocoa_globals.h"
 #import "cocoa_util.h"
 
+#include "../cheatSystem.h"
 #include "../MMU.h"
+#undef BOOL
 
 @implementation CocoaDSCheatItem
 
@@ -660,7 +662,7 @@ static NSImage *iconCodeBreaker = nil;
 
 @synthesize listData;
 @synthesize list;
-@dynamic mutexCoreExecute;
+@dynamic rwlockCoreExecute;
 @synthesize untitledCount;
 @synthesize dbTitle;
 @synthesize dbDate;
@@ -720,9 +722,9 @@ static NSImage *iconCodeBreaker = nil;
 		}
 	}
 	
-	mutexCoreExecute = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
-	pthread_mutex_init(mutexCoreExecute, NULL);
-	isUsingDummyMutex = YES;
+	rwlockCoreExecute = (pthread_rwlock_t *)malloc(sizeof(pthread_rwlock_t));
+	pthread_rwlock_init(rwlockCoreExecute, NULL);
+	isUsingDummyRWlock = YES;
 	
 	untitledCount = 0;
 	dbTitle = nil;
@@ -738,45 +740,45 @@ static NSImage *iconCodeBreaker = nil;
 	[list release];
 	delete (CHEATS *)self.listData;
 	
-	if (isUsingDummyMutex)
+	if (isUsingDummyRWlock)
 	{
-		pthread_mutex_destroy(mutexCoreExecute);
-		free(mutexCoreExecute);
-		mutexCoreExecute = NULL;
+		pthread_rwlock_destroy(rwlockCoreExecute);
+		free(rwlockCoreExecute);
+		rwlockCoreExecute = NULL;
 	}
 	
 	[super dealloc];
 }
 
-- (void) setMutexCoreExecute:(pthread_mutex_t *)theMutex
+- (void) setRwlockCoreExecute:(pthread_rwlock_t *)theRwlock
 {
-	if (theMutex == NULL && isUsingDummyMutex)
+	if (theRwlock == NULL && isUsingDummyRWlock)
 	{
 		return;
 	}
-	else if (theMutex == NULL && !isUsingDummyMutex)
+	else if (theRwlock == NULL && !isUsingDummyRWlock)
 	{
-		mutexCoreExecute = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
-		pthread_mutex_init(mutexCoreExecute, NULL);
-		isUsingDummyMutex = YES;
+		rwlockCoreExecute = (pthread_rwlock_t *)malloc(sizeof(pthread_rwlock_t));
+		pthread_rwlock_init(rwlockCoreExecute, NULL);
+		isUsingDummyRWlock = YES;
 		return;
 	}
-	else if (theMutex != NULL && isUsingDummyMutex)
+	else if (theRwlock != NULL && isUsingDummyRWlock)
 	{
-		pthread_mutex_destroy(mutexCoreExecute);
-		free(mutexCoreExecute);
-		isUsingDummyMutex = NO;
-		mutexCoreExecute = theMutex;
+		pthread_rwlock_destroy(rwlockCoreExecute);
+		free(rwlockCoreExecute);
+		isUsingDummyRWlock = NO;
+		rwlockCoreExecute = theRwlock;
 	}
-	else if (theMutex != NULL && !isUsingDummyMutex)
+	else if (theRwlock != NULL && !isUsingDummyRWlock)
 	{
-		mutexCoreExecute = theMutex;
+		rwlockCoreExecute = theRwlock;
 	}
 }
 
-- (pthread_mutex_t *) mutexCoreExecute
+- (pthread_rwlock_t *) rwlockCoreExecute
 {
-	return mutexCoreExecute;
+	return rwlockCoreExecute;
 }
 
 - (BOOL) add:(CocoaDSCheatItem *)cheatItem
@@ -792,7 +794,7 @@ static NSImage *iconCodeBreaker = nil;
 	// to check if the list got reallocated.
 	CHEATS_LIST *cheatListData = self.listData->getListPtr();
 	
-	pthread_mutex_lock([self mutexCoreExecute]);
+	pthread_rwlock_wrlock(self.rwlockCoreExecute);
 	
 	switch (cheatItem.cheatType)
 	{
@@ -824,7 +826,7 @@ static NSImage *iconCodeBreaker = nil;
 			break;
 	}
 	
-	pthread_mutex_unlock([self mutexCoreExecute]);
+	pthread_rwlock_unlock(self.rwlockCoreExecute);
 	
 	if (![self.list containsObject:cheatItem])
 	{
@@ -864,9 +866,9 @@ static NSImage *iconCodeBreaker = nil;
 		return;
 	}
 	
-	pthread_mutex_lock([self mutexCoreExecute]);
+	pthread_rwlock_wrlock(self.rwlockCoreExecute);
 	self.listData->remove(selectionIndex);
-	pthread_mutex_unlock([self mutexCoreExecute]);
+	pthread_rwlock_unlock(self.rwlockCoreExecute);
 	
 	// Removing an item from the raw cheat list data shifts all higher elements
 	// by one, so we need to do the same.
@@ -895,7 +897,7 @@ static NSImage *iconCodeBreaker = nil;
 		return result;
 	}
 	
-	pthread_mutex_lock([self mutexCoreExecute]);
+	pthread_rwlock_wrlock(self.rwlockCoreExecute);
 	
 	switch (cheatItem.cheatType)
 	{
@@ -927,7 +929,7 @@ static NSImage *iconCodeBreaker = nil;
 			break;
 	}
 		
-	pthread_mutex_unlock([self mutexCoreExecute]);
+	pthread_rwlock_unlock(self.rwlockCoreExecute);
 	
 	[cheatItem update];
 		
@@ -936,18 +938,18 @@ static NSImage *iconCodeBreaker = nil;
 
 - (BOOL) save
 {
-	pthread_mutex_lock([self mutexCoreExecute]);
+	pthread_rwlock_wrlock(self.rwlockCoreExecute);
 	BOOL result = self.listData->save();
-	pthread_mutex_unlock([self mutexCoreExecute]);
+	pthread_rwlock_unlock(self.rwlockCoreExecute);
 	
 	return result;
 }
 
 - (NSUInteger) activeCount
 {
-	pthread_mutex_lock([self mutexCoreExecute]);
+	pthread_rwlock_rdlock(self.rwlockCoreExecute);
 	NSUInteger activeCheatsCount = self.listData->getActiveCount();
-	pthread_mutex_unlock([self mutexCoreExecute]);
+	pthread_rwlock_unlock(self.rwlockCoreExecute);
 	
 	return activeCheatsCount;
 }
@@ -999,9 +1001,9 @@ static NSImage *iconCodeBreaker = nil;
 		return;
 	}
 	
-	pthread_mutex_lock([self mutexCoreExecute]);
+	pthread_rwlock_wrlock(self.rwlockCoreExecute);
 	[CocoaDSCheatManager applyInternalCheatWithItem:cheatItem];
-	pthread_mutex_unlock([self mutexCoreExecute]);
+	pthread_rwlock_unlock(self.rwlockCoreExecute);
 }
 
 + (void) setMasterCheatList:(CocoaDSCheatManager *)cheatListManager
@@ -1126,7 +1128,7 @@ static NSImage *iconCodeBreaker = nil;
 
 @synthesize listData;
 @synthesize addressList;
-@dynamic mutexCoreExecute;
+@dynamic rwlockCoreExecute;
 @synthesize searchCount;
 
 - (id)init
@@ -1144,9 +1146,9 @@ static NSImage *iconCodeBreaker = nil;
 		return nil;
 	}
 	
-	mutexCoreExecute = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
-	pthread_mutex_init(mutexCoreExecute, NULL);
-	isUsingDummyMutex = YES;
+	rwlockCoreExecute = (pthread_rwlock_t *)malloc(sizeof(pthread_rwlock_t));
+	pthread_rwlock_init(rwlockCoreExecute, NULL);
+	isUsingDummyRWlock = YES;
 	
 	listData = newListData;
 	addressList = nil;
@@ -1157,52 +1159,52 @@ static NSImage *iconCodeBreaker = nil;
 
 - (void)dealloc
 {
-	pthread_mutex_lock([self mutexCoreExecute]);
+	pthread_rwlock_wrlock(self.rwlockCoreExecute);
 	self.listData->close();
-	pthread_mutex_unlock([self mutexCoreExecute]);
+	pthread_rwlock_unlock(self.rwlockCoreExecute);
 	
 	[addressList release];
 	delete (CHEATSEARCH *)self.listData;
 	
-	if (isUsingDummyMutex)
+	if (isUsingDummyRWlock)
 	{
-		pthread_mutex_destroy(mutexCoreExecute);
-		free(mutexCoreExecute);
-		mutexCoreExecute = NULL;
+		pthread_rwlock_destroy(rwlockCoreExecute);
+		free(rwlockCoreExecute);
+		rwlockCoreExecute = NULL;
 	}
 	
 	[super dealloc];
 }
 
-- (void) setMutexCoreExecute:(pthread_mutex_t *)theMutex
+- (void) setRwlockCoreExecute:(pthread_rwlock_t *)theRwlock
 {
-	if (theMutex == NULL && isUsingDummyMutex)
+	if (theRwlock == NULL && isUsingDummyRWlock)
 	{
 		return;
 	}
-	else if (theMutex == NULL && !isUsingDummyMutex)
+	else if (theRwlock == NULL && !isUsingDummyRWlock)
 	{
-		mutexCoreExecute = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
-		pthread_mutex_init(mutexCoreExecute, NULL);
-		isUsingDummyMutex = YES;
+		rwlockCoreExecute = (pthread_rwlock_t *)malloc(sizeof(pthread_mutex_t));
+		pthread_rwlock_init(rwlockCoreExecute, NULL);
+		isUsingDummyRWlock = YES;
 		return;
 	}
-	else if (theMutex != NULL && isUsingDummyMutex)
+	else if (theRwlock != NULL && isUsingDummyRWlock)
 	{
-		pthread_mutex_destroy(mutexCoreExecute);
-		free(mutexCoreExecute);
-		isUsingDummyMutex = NO;
-		mutexCoreExecute = theMutex;
+		pthread_rwlock_destroy(rwlockCoreExecute);
+		free(rwlockCoreExecute);
+		isUsingDummyRWlock = NO;
+		rwlockCoreExecute = theRwlock;
 	}
-	else if (theMutex != NULL && !isUsingDummyMutex)
+	else if (theRwlock != NULL && !isUsingDummyRWlock)
 	{
-		mutexCoreExecute = theMutex;
+		rwlockCoreExecute = theRwlock;
 	}
 }
 
-- (pthread_mutex_t *) mutexCoreExecute
+- (pthread_rwlock_t *) rwlockCoreExecute
 {
-	return mutexCoreExecute;
+	return rwlockCoreExecute;
 }
 
 - (NSUInteger) runExactValueSearch:(NSInteger)value byteSize:(UInt8)byteSize signType:(NSInteger)signType
@@ -1214,17 +1216,17 @@ static NSImage *iconCodeBreaker = nil;
 	{
 		byteSize--;
 		
-		pthread_mutex_lock([self mutexCoreExecute]);
+		pthread_rwlock_rdlock(self.rwlockCoreExecute);
 		listExists = (NSUInteger)self.listData->start((u8)CHEATSEARCH_SEARCHSTYLE_EXACT_VALUE, (u8)byteSize, (u8)signType);
-		pthread_mutex_unlock([self mutexCoreExecute]);
+		pthread_rwlock_unlock(self.rwlockCoreExecute);
 	}
 	
 	if (listExists)
 	{
-		pthread_mutex_lock([self mutexCoreExecute]);
+		pthread_rwlock_rdlock(self.rwlockCoreExecute);
 		itemCount = (NSUInteger)self.listData->search((u32)value);
 		NSMutableArray *newAddressList = [[CocoaDSCheatSearch addressListWithListObject:self.listData maxItems:100] retain];
-		pthread_mutex_unlock([self mutexCoreExecute]);
+		pthread_rwlock_unlock(self.rwlockCoreExecute);
 		
 		[addressList release];
 		addressList = newAddressList;
@@ -1251,18 +1253,18 @@ static NSImage *iconCodeBreaker = nil;
 	{
 		byteSize--;
 		
-		pthread_mutex_lock([self mutexCoreExecute]);
+		pthread_rwlock_rdlock(self.rwlockCoreExecute);
 		listExists = (NSUInteger)self.listData->start((u8)CHEATSEARCH_SEARCHSTYLE_COMPARATIVE, (u8)byteSize, (u8)signType);
-		pthread_mutex_unlock([self mutexCoreExecute]);
+		pthread_rwlock_unlock(self.rwlockCoreExecute);
 		
 		addressList = nil;
 	}
 	else
 	{
-		pthread_mutex_lock([self mutexCoreExecute]);
+		pthread_rwlock_rdlock(self.rwlockCoreExecute);
 		itemCount = (NSUInteger)self.listData->search((u8)typeID);
 		NSMutableArray *newAddressList = [[CocoaDSCheatSearch addressListWithListObject:self.listData maxItems:100] retain];
-		pthread_mutex_unlock([self mutexCoreExecute]);
+		pthread_rwlock_unlock(self.rwlockCoreExecute);
 		
 		[addressList release];
 		addressList = newAddressList;
@@ -1286,9 +1288,9 @@ static NSImage *iconCodeBreaker = nil;
 
 - (void) reset
 {
-	pthread_mutex_lock([self mutexCoreExecute]);
+	pthread_rwlock_wrlock(self.rwlockCoreExecute);
 	self.listData->close();
-	pthread_mutex_unlock([self mutexCoreExecute]);
+	pthread_rwlock_unlock(self.rwlockCoreExecute);
 	
 	searchCount = 0;
 	[addressList release];

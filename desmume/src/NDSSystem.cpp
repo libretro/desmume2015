@@ -1,6 +1,6 @@
 /*
 	Copyright (C) 2006 yopyop
-	Copyright (C) 2008-2013 DeSmuME team
+	Copyright (C) 2008-2015 DeSmuME team
 
 	This file is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -16,6 +16,8 @@
 	along with the this software.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "NDSSystem.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <algorithm>
@@ -26,28 +28,40 @@
 extern unsigned long crc32(unsigned long, const unsigned char*,unsigned int);
 #endif
 
+#include "utils/decrypt/decrypt.h"
+#include "utils/decrypt/crc.h"
+#include "utils/advanscene.h"
+#include "utils/task.h"
+
 #include "common.h"
-#include "NDSSystem.h"
+#include "armcpu.h"
 #include "render3D.h"
 #include "MMU.h"
 #include "ROMReader.h"
 #include "gfx3d.h"
-#include "utils/decrypt/decrypt.h"
-#include "utils/decrypt/crc.h"
-#include "utils/advanscene.h"
+#include "GPU.h"
 #include "cp15.h"
 #include "bios.h"
 #include "debug.h"
 #include "cheatSystem.h"
 #include "movie.h"
 #include "Disassembler.h"
+#include "FIFO.h"
 #include "readwrite.h"
+#include "registers.h"
 #include "debug.h"
+#include "driver.h"
 #include "firmware.h"
 #include "version.h"
 #include "path.h"
 #include "slot1.h"
 #include "slot2.h"
+#include "SPU.h"
+#include "wifi.h"
+
+#ifdef GDB_STUB
+#include "gdbstub.h"
+#endif
 
 //int xxctr=0;
 //#define LOG_ARM9
@@ -104,6 +118,16 @@ void Desmume_InitOnce()
 #endif
 }
 
+int NDS_GetCPUCoreCount()
+{
+	return getOnlineCores();
+}
+
+void NDS_SetupDefaultFirmware()
+{
+	NDS_FillDefaultFirmwareConfigData(&CommonSettings.fw_config);
+}
+
 void NDS_RunAdvansceneAutoImport()
 {
 	if(CommonSettings.run_advanscene_import != "")
@@ -118,14 +142,7 @@ void NDS_RunAdvansceneAutoImport()
 	}
 }
 
-#ifdef GDB_STUB
-int NDS_Init( struct armcpu_memory_iface *arm9_mem_if,
-struct armcpu_ctrl_iface **arm9_ctrl_iface,
-struct armcpu_memory_iface *arm7_mem_if,
-struct armcpu_ctrl_iface **arm7_ctrl_iface)
-#else
-int NDS_Init( void)
-#endif
+int NDS_Init()
 {
 	nds.idleFrameCounter = 0;
 	memset(nds.runCycleCollector,0,sizeof(nds.runCycleCollector));
@@ -150,14 +167,16 @@ int NDS_Init( void)
 
 	gfx3d_init();
 
-#ifdef GDB_STUB
-	armcpu_new(&NDS_ARM7,1, arm7_mem_if, arm7_ctrl_iface);
-	armcpu_new(&NDS_ARM9,0, arm9_mem_if, arm9_ctrl_iface);
-#else
-	armcpu_new(&NDS_ARM7,1);
 	armcpu_new(&NDS_ARM9,0);
-#endif
-
+	NDS_ARM9.SetBaseMemoryInterface(&arm9_base_memory_iface);
+	NDS_ARM9.SetBaseMemoryInterfaceData(NULL);
+	NDS_ARM9.ResetMemoryInterfaceToBase();
+	
+	armcpu_new(&NDS_ARM7,1);
+	NDS_ARM7.SetBaseMemoryInterface(&arm7_base_memory_iface);
+	NDS_ARM7.SetBaseMemoryInterfaceData(NULL);
+	NDS_ARM7.ResetMemoryInterfaceToBase();
+	
 	if (SPU_Init(SNDCORE_DUMMY, 740) != 0)
 		return -1;
 
@@ -561,6 +580,16 @@ u32 GameInfo::readROM(u32 pos)
 		}
 		return LE_TO_LOCAL_32(*(u32*)(romdata + pos));
 	}
+}
+
+bool GameInfo::isDSiEnhanced()
+{
+	return _isDSiEnhanced;
+}
+
+bool GameInfo::isHomebrew()
+{
+	return ((header.ARM9src < 0x4000) && (T1ReadLong(header.logo, 0) != 0x51AEFF24) && (T1ReadLong(header.logo, 4) != 0x699AA221));
 }
 
 static int rom_init_path(const char *filename, const char *physicalName, const char *logicalFilename)
@@ -1816,6 +1845,10 @@ void NDS_debug_step()
 template<bool FORCE>
 void NDS_exec(s32 nb)
 {
+	#ifdef GDB_STUB
+	gdbstub_mutex_lock();
+	#endif
+
 	LagFrameFlag=1;
 
 	sequencer.nds_vblankEnded = false;
@@ -1842,10 +1875,23 @@ void NDS_exec(s32 nb)
 			#ifdef DEVELOPER
 				singleStep = false;
 				//(gdb stub doesnt yet know how to trigger these immediately by calling reschedule)
-				while((NDS_ARM9.stalled || NDS_ARM7.stalled) && execute)
+				if ((NDS_ARM9.stalled || NDS_ARM7.stalled) && execute)
 				{
-					driver->EMU_DebugIdleUpdate();
-					nds_debug_continuing[0] = nds_debug_continuing[1] = true;
+					driver->EMU_DebugIdleEnter();
+					
+					while((NDS_ARM9.stalled || NDS_ARM7.stalled) && execute)
+					{
+					        #ifdef GDB_STUB
+					        gdbstub_mutex_unlock();
+					        #endif
+						driver->EMU_DebugIdleUpdate();
+					        #ifdef GDB_STUB
+					        gdbstub_mutex_lock();
+					        #endif
+						nds_debug_continuing[0] = nds_debug_continuing[1] = true;
+					}
+					
+					driver->EMU_DebugIdleWakeUp();
 				}
 			#endif
 
@@ -1942,6 +1988,10 @@ void NDS_exec(s32 nb)
 	DEBUG_Notify.NextFrame();
 	if (cheats)
 		cheats->process();
+
+        #ifdef GDB_STUB
+        gdbstub_mutex_unlock();
+        #endif
 }
 
 template<int PROCNUM> static void execHardware_interrupts_core()
@@ -2837,6 +2887,13 @@ void NDS_suspendProcessingInput(bool suspend)
 		// unwound past first time -> not processing
 		validToProcessInput = false;
 	}
+}
+
+void NDS_swapScreen()
+{
+	u16 tmp = MainScreen.offset;
+	MainScreen.offset = SubScreen.offset;
+	SubScreen.offset = tmp;
 }
 
 

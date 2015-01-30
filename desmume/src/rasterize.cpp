@@ -1,5 +1,5 @@
-﻿/*
-	Copyright (C) 2009-2013 DeSmuME team
+/*
+	Copyright (C) 2009-2015 DeSmuME team
 
 	This file is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -33,6 +33,14 @@
 #include <math.h>
 #include <string.h>
 
+#if defined(_MSC_VER) && _MSC_VER == 1600
+#define SLEEP_HACK_2011
+#endif
+
+#ifdef SLEEP_HACK_2011
+#include <Windows.h>
+#endif
+
 #ifndef _MSC_VER 
 #include <stdint.h>
 #endif
@@ -43,6 +51,7 @@
 #include "render3D.h"
 #include "gfx3d.h"
 #include "texcache.h"
+#include "MMU.h"
 #include "NDSSystem.h"
 #include "utils/task.h"
 
@@ -115,8 +124,8 @@ static FORCEINLINE int fastFloor(float f)
 //	verts[vert_index] = &rawvert;
 //}
 
-static Fragment _screen[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT];
-static FragmentColor _screenColor[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT];
+static Fragment _screen[GFX3D_FRAMEBUFFER_WIDTH*GFX3D_FRAMEBUFFER_HEIGHT];
+static FragmentColor _screenColor[GFX3D_FRAMEBUFFER_WIDTH*GFX3D_FRAMEBUFFER_HEIGHT];
 
 static FORCEINLINE int iround(float f) {
 	return (int)f; //lol
@@ -960,7 +969,7 @@ public:
 			// hack for VC++ 2010 (bug in compiler optimization?)
 			// freeze on 3D
 			// TODO: study it
-			#if defined(_MSC_VER) && _MSC_VER == 1600
+			#ifdef SLEEP_HACK_2011
 				Sleep(0); // nop
 			#endif
 		}
@@ -1734,3 +1743,4 @@ GPU3DInterface gpu3DRasterize = {
 	SoftRastRenderFinish,
 	SoftRastVramReconfigureSignal
 };
+

@@ -621,5 +621,4 @@ public:
 	virtual Render3DError RenderFinish();
 };
 
-
 #endif

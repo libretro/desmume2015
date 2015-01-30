@@ -1,6 +1,6 @@
 /*
 	Copyright (C) 2011-2012 Roger Manuel
-	Copyright (C) 2013-2014 DeSmuME team
+	Copyright (C) 2013-2015 DeSmuME team
 
 	This file is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -22,13 +22,14 @@
 #include <stdlib.h>
 #include <string>
 #include <vector>
+
 #include "types.h"
 #include "filter.h"
 #include "../utils/task.h"
 
 #ifdef HOST_WINDOWS
 	typedef unsigned __int32 uint32_t;
-	#include <winsock2.h>
+	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
 	typedef CRITICAL_SECTION ThreadLock;
 	typedef HANDLE ThreadCond;
@@ -154,6 +155,7 @@ private:
 	uint32_t *_vfSrcSurfacePixBuffer;
 	VideoFilterFunc _vfFunc;
 	std::vector<VideoFilterThread> _vfThread;
+	bool _useInternalDstBuffer;
 	
 	bool _isFilterRunning;
 	ThreadLock _lockSrc;
@@ -183,6 +185,7 @@ public:
 	const char* GetTypeString();
 	uint32_t* GetSrcBufferPtr();
 	uint32_t* GetDstBufferPtr();
+	void SetDstBufferPtr(uint32_t *theBuffer);
 	size_t GetSrcWidth();
 	size_t GetSrcHeight();
 	size_t GetDstWidth();

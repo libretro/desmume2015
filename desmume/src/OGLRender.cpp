@@ -1,7 +1,7 @@
 /*
 	Copyright (C) 2006 yopyop
 	Copyright (C) 2006-2007 shash
-	Copyright (C) 2008-2013 DeSmuME team
+	Copyright (C) 2008-2015 DeSmuME team
 
 	This file is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 
 #include "OGLRender.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -2271,6 +2272,7 @@ Render3DError OpenGLRenderer_1_2::SetupTexture(const POLY *thePoly, bool enableT
 			OGLRef.freeTextureIDs.pop();
 			
 			glBindTexture(GL_TEXTURE_2D, (GLuint)this->currTexture->texid);
+			
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (params.enableRepeatS ? (params.enableMirroredRepeatS ? OGLRef.stateTexMirroredRepeat : GL_REPEAT) : GL_CLAMP_TO_EDGE));
@@ -3173,6 +3175,7 @@ Render3DError OpenGLRenderer_2_0::SetupTexture(const POLY *thePoly, bool enableT
 			OGLRef.freeTextureIDs.pop();
 			
 			glBindTexture(GL_TEXTURE_2D, (GLuint)this->currTexture->texid);
+			
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (params.enableRepeatS ? (params.enableMirroredRepeatS ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE));

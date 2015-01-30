@@ -1,6 +1,6 @@
 /*
 	Copyright (C) 2011 Roger Manuel
-	Copyright (C) 2011-2013 DeSmuME team
+	Copyright (C) 2011-2015 DeSmuME team
 
 	This file is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -28,6 +28,8 @@
 @class CocoaDSGPU;
 @class CocoaDSOutput;
 
+typedef void *gdbstub_handle_t;
+
 typedef struct
 {
 	void *cdsCore;
@@ -39,11 +41,10 @@ typedef struct
 	int framesToSkip;
 	uint64_t timeBudgetMachAbsTime;
 	bool exitThread;
-	pthread_mutex_t mutexCoreExecute;
 	pthread_mutex_t mutexOutputList;
 	pthread_mutex_t mutexThreadExecute;
 	pthread_cond_t condThreadExecute;
-	pthread_rwlock_t rwCoreExecute;
+	pthread_rwlock_t rwlockCoreExecute;
 } CoreThreadParam;
 
 @interface CocoaDSCore : NSObject
@@ -60,6 +61,15 @@ typedef struct
 	BOOL isSpeedLimitEnabled;
 	CGFloat speedScalar;
 	std::string _slot1R4Path;
+	
+	BOOL isGdbStubStarted;
+	BOOL isInDebugTrap;
+	BOOL enableGdbStubARM9;
+	BOOL enableGdbStubARM7;
+	NSUInteger gdbStubPortARM9;
+	NSUInteger gdbStubPortARM7;
+	volatile gdbstub_handle_t gdbStubHandleARM9;
+	volatile gdbstub_handle_t gdbStubHandleARM7;
 	
 	NSUInteger emulationFlags;
 	BOOL emuFlagAdvancedBusLevelTiming;
@@ -100,6 +110,13 @@ typedef struct
 @property (assign) BOOL isCheatingEnabled;
 @property (assign) CGFloat speedScalar;
 
+@property (assign) BOOL isGdbStubStarted;
+@property (assign) BOOL isInDebugTrap;
+@property (assign) BOOL enableGdbStubARM9;
+@property (assign) BOOL enableGdbStubARM7;
+@property (assign) NSUInteger gdbStubPortARM9;
+@property (assign) NSUInteger gdbStubPortARM7;
+
 @property (assign) NSUInteger emulationFlags;
 @property (assign) BOOL emuFlagAdvancedBusLevelTiming;
 @property (assign) BOOL emuFlagRigorousTiming;
@@ -122,8 +139,7 @@ typedef struct
 @property (copy) NSURL *firmwareImageURL;
 @property (retain) NSURL *slot1R4URL;
 
-@property (readonly) pthread_mutex_t *mutexCoreExecute;
-@property (readonly) pthread_rwlock_t *rwCoreExecute;
+@property (readonly) pthread_rwlock_t *rwlockCoreExecute;
 
 - (BOOL) ejectCardFlag;
 - (void) setEjectCardFlag;

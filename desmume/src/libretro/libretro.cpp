@@ -10,7 +10,9 @@
 #include "rasterize.h"
 #include "saves.h"
 #include "firmware.h"
-#include "GPU_osd.h"
+#include "GPU.h"
+#include "emufile.h"
+#include "common.h"
 
 retro_log_printf_t log_cb = NULL;
 static retro_video_refresh_t video_cb = NULL;
