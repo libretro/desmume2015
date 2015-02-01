@@ -29,6 +29,11 @@ else ifeq ($(platform), osx)
 	fpic := -fPIC
 	SHARED := -dynamiclib
 	DESMUME_JIT = 1
+ifndef ($(NOUNIVERSAL))
+	CFLAGS += $(ARCHFLAGS)
+	CXXFLAGS += $(ARCHFLAGS)
+	LDFLAGS += $(ARCHFLAGS)
+endif
 
 else ifeq ($(platform), ios)
 	# iOS
