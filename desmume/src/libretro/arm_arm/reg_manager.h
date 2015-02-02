@@ -1,6 +1,7 @@
 #ifndef ARM_JIT_REG_MANAGER_H
 #define ARM_JIT_REG_MANAGER_H
 
+#include <string.h>
 #include "arm_gen.h"
 #include "armcpu.h"
 
