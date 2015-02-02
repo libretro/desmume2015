@@ -37,7 +37,7 @@ SOURCES_CXX += \
 	$(CORE_DIR)/movie.cpp \
 	$(CORE_DIR)/utils/advanscene.cpp \
 	$(CORE_DIR)/utils/datetime.cpp \
-   $(CORE_DIR)/utils/guid.cpp \
+	$(CORE_DIR)/utils/guid.cpp \
 	$(CORE_DIR)/utils/emufat.cpp \
 	$(CORE_DIR)/utils/fsnitro.cpp \
 	$(CORE_DIR)/utils/md5.cpp \
@@ -46,7 +46,7 @@ SOURCES_CXX += \
 	$(CORE_DIR)/utils/decrypt/decrypt.cpp \
 	$(CORE_DIR)/utils/decrypt/header.cpp \
 	$(CORE_DIR)/utils/task.cpp \
-   $(CORE_DIR)/utils/vfat.cpp \
+	$(CORE_DIR)/utils/vfat.cpp \
 	$(CORE_DIR)/utils/dlditool.cpp \
 	$(CORE_DIR)/utils/libfat/cache.cpp \
 	$(CORE_DIR)/utils/libfat/directory.cpp \
@@ -92,48 +92,48 @@ SOURCES_CXX += \
 	$(CORE_DIR)/driver.cpp \
 	$(CORE_DIR)/fs-linux.cpp \
 	$(CORE_DIR)/libretro/libretro.cpp \
-   $(CORE_DIR)/libretro/scrc32.cpp
+	$(CORE_DIR)/libretro/scrc32.cpp
 
 SOURCES_C += $(CORE_DIR)/utils/ConvertUTF.c
 
 ifeq ($(DESMUME_JIT_ARM),1)
 SOURCES_CXX += \
-   $(CORE_DIR)/libretro/arm_arm/arm_gen.cpp \
-   $(CORE_DIR)/libretro/arm_arm/arm_jit.cpp
+	$(CORE_DIR)/libretro/arm_arm/arm_gen.cpp \
+	$(CORE_DIR)/libretro/arm_arm/arm_jit.cpp
 endif
 
 ifeq ($(DESMUME_JIT),1)
 SOURCES_CXX += \
 	$(CORE_DIR)/arm_jit.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/assembler.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/assert.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/buffer.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/compiler.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/compilercontext.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/compilerfunc.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/compileritem.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/context.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/cpuinfo.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/defs.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/func.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/logger.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/memorymanager.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/memorymarker.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/operand.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/stringbuilder.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/stringutil.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/virtualmemory.cpp \
-   $(CORE_DIR)/utils/AsmJit/core/zonememory.cpp \
-   $(CORE_DIR)/utils/AsmJit/x86/x86assembler.cpp \
-   $(CORE_DIR)/utils/AsmJit/x86/x86compiler.cpp \
-   $(CORE_DIR)/utils/AsmJit/x86/x86compilercontext.cpp \
-   $(CORE_DIR)/utils/AsmJit/x86/x86compilerfunc.cpp \
-   $(CORE_DIR)/utils/AsmJit/x86/x86compileritem.cpp \
-   $(CORE_DIR)/utils/AsmJit/x86/x86cpuinfo.cpp \
-   $(CORE_DIR)/utils/AsmJit/x86/x86defs.cpp \
-   $(CORE_DIR)/utils/AsmJit/x86/x86func.cpp \
-   $(CORE_DIR)/utils/AsmJit/x86/x86operand.cpp \
-   $(CORE_DIR)/utils/AsmJit/x86/x86util.cpp
+	$(CORE_DIR)/utils/AsmJit/core/assembler.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/assert.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/buffer.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/compiler.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/compilercontext.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/compilerfunc.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/compileritem.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/context.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/cpuinfo.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/defs.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/func.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/logger.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/memorymanager.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/memorymarker.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/operand.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/stringbuilder.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/stringutil.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/virtualmemory.cpp \
+	$(CORE_DIR)/utils/AsmJit/core/zonememory.cpp \
+	$(CORE_DIR)/utils/AsmJit/x86/x86assembler.cpp \
+	$(CORE_DIR)/utils/AsmJit/x86/x86compiler.cpp \
+	$(CORE_DIR)/utils/AsmJit/x86/x86compilercontext.cpp \
+	$(CORE_DIR)/utils/AsmJit/x86/x86compilerfunc.cpp \
+	$(CORE_DIR)/utils/AsmJit/x86/x86compileritem.cpp \
+	$(CORE_DIR)/utils/AsmJit/x86/x86cpuinfo.cpp \
+	$(CORE_DIR)/utils/AsmJit/x86/x86defs.cpp \
+	$(CORE_DIR)/utils/AsmJit/x86/x86func.cpp \
+	$(CORE_DIR)/utils/AsmJit/x86/x86operand.cpp \
+	$(CORE_DIR)/utils/AsmJit/x86/x86util.cpp
 endif
 
 INCDIR += -iquote $(CORE_DIR) -iquote $(CORE_DIR)/libretro 

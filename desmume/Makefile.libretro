@@ -29,14 +29,14 @@ else ifeq ($(platform), osx)
 	fpic := -fPIC
 	SHARED := -dynamiclib
 	DESMUME_JIT = 1
-ifndef ($(NOUNIVERSAL))
-	CFLAGS += $(ARCHFLAGS)
-	CXXFLAGS += $(ARCHFLAGS)
-	LDFLAGS += $(ARCHFLAGS)
-endif
+	ifndef ($(NOUNIVERSAL))
+		CFLAGS += $(ARCHFLAGS)
+		CXXFLAGS += $(ARCHFLAGS)
+		LDFLAGS += $(ARCHFLAGS)
+	endif
 
+# iOS
 else ifeq ($(platform), ios)
-	# iOS
 	TARGET := $(TARGET_NAME)_libretro_ios.dylib
 
 	ifeq ($(IOSSDK),)
@@ -72,8 +72,8 @@ else ifeq ($(platform), theos_ios)
 	DESMUME_JIT_ARM = 1
 	COMMON_DEFINES = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
 
+# PS3
 else ifeq ($(platform), ps3)
-	# PS3
 	TARGET := $(TARGET_NAME)_libretro_ps3.a
 	CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
 	CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-g++.exe
@@ -142,6 +142,7 @@ else ifeq ($(platform), android)
 
 # ARM
 else ifneq (,$(findstring armv,$(platform)))
+	DESMUME_JIT_ARM = 1
 	CXXFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
 	TARGET := $(TARGET_NAME)_libretro.so
 	SHARED := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
@@ -150,21 +151,17 @@ else ifneq (,$(findstring armv,$(platform)))
 		CC = clang
 		CXX = clang++
 		AR = clang
-	else
-		CC = gcc
-		CXX = g++
-		AR = @ar
 	endif
-	DESMUME_JIT_ARM = 1
-	ifneq (,$(findstring cortexa8,$(platform)))
+	ifneq (,$(findstring cortexa5,$(platform)))
+		CXXFLAGS += -marm -mcpu=cortex-a5
+	else ifneq (,$(findstring cortexa8,$(platform)))
 		CXXFLAGS += -marm -mcpu=cortex-a8
 	else ifneq (,$(findstring cortexa9,$(platform)))
 		CXXFLAGS += -marm -mcpu=cortex-a9
-	endif
-	CXXFLAGS += -marm
-	ifneq (,$(findstring neon,$(platform)))
-		CXXFLAGS += -mfpu=neon
-		HAVE_NEON = 1
+	else ifneq (,$(findstring cortexa15a7,$(platform)))
+		CXXFLAGS += -marm -mcpu=cortex-a15.cortex-a7
+	else
+		CXXFLAGS += -marm
 	endif
 	ifneq (,$(findstring softfloat,$(platform)))
 		CXXFLAGS += -mfloat-abi=softfp
