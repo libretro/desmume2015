@@ -758,7 +758,7 @@ public:
 	FORCEINLINE void drawscanline(edge_fx_fl *pLeft, edge_fx_fl *pRight, bool lineHack)
 	{
 		int XStart = pLeft->X;
-		int width = pRight->X - XStart + 1;
+		int width = pRight->X - XStart;
 
 		// HACK: workaround for vertical/slant line poly
 		if (lineHack && width == 0)
@@ -824,7 +824,7 @@ public:
 			x = 0;
 		}
 		
-		if( (x + width - 1) > engine->width )
+		if( x + width > engine->width )
 		{
 			if(RENDERER && !lineHack)
 			{
@@ -1557,7 +1557,7 @@ template<bool CUSTOM> void SoftRasterizerEngine::performViewportTransforms(int w
 			VIEWPORT viewport;
 			viewport.decode(poly.poly->viewport);
 			vert.coord[0] *= viewport.width * xfactor;
-			vert.coord[0] += (viewport.x - 1) * xfactor;
+			vert.coord[0] += viewport.x * xfactor;
 			vert.coord[1] *= viewport.height * yfactor;
 			vert.coord[1] += viewport.y * yfactor;
 			vert.coord[1] = ymax - vert.coord[1];
