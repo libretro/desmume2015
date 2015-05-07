@@ -82,7 +82,9 @@
 #define strncasecmp(x, y, l) strnicmp(x, y, l)
 #define snprintf _snprintf
 #else
+#ifndef _WIN32
 #define WINAPI
+#endif
 #endif
 
 #if !defined(MAX_PATH)
