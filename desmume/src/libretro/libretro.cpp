@@ -364,6 +364,17 @@ static void check_variables(void)
    else
       CommonSettings.GFX3D_LineHack = true;
 
+   var.key = "desmume_gfx_txthack";
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "enable"))
+         CommonSettings.GFX3D_TXTHack = true;
+      else if (!strcmp(var.value, "disable"))
+         CommonSettings.GFX3D_TXTHack = false;
+   }
+   else
+      CommonSettings.GFX3D_TXTHack = false;
 
    var.key = "desmume_gfx_depth_comparison_threshold";
    
@@ -408,6 +419,25 @@ static void check_variables(void)
       analog_stick_acceleration_modifier = atoi(var.value);
    else
       analog_stick_acceleration_modifier = 0;
+
+   var.key = "desmume_pointer_stylus_pressure";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      CommonSettings.StylusPressure = atoi(var.value);
+   else
+      CommonSettings.StylusPressure = 50;
+
+   var.key = "desmume_pointer_stylus_jitter";
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "enable"))
+         CommonSettings.StylusJitter = true;
+      else if (!strcmp(var.value, "disable"))
+         CommonSettings.StylusJitter = false;
+   }
+   else
+      CommonSettings.StylusJitter = false;
 
    var.key = "desmume_load_to_memory";
 
@@ -543,7 +573,9 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_pointer_type", "Mouse/pointer mode; relative|absolute" },
       { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
       { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },	  
-      { "desmume_pointer_device_acceleration_mod", "Emulated pointer acceleration modifier percent; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },	
+      { "desmume_pointer_device_acceleration_mod", "Emulated pointer acceleration modifier percent; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
+      { "desmume_pointer_stylus_pressure", "Emulated stylus pressure modifier percent; 50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|" },
+      { "desmume_pointer_stylus_jitter", "Enable emulated stylus jitter; disable|enable"},
       { "desmume_load_to_memory", "Load Game into Memory (restart); disable|enable" },
       { "desmume_advanced_timing", "Enable Advanced Bus-Level Timing; enable|disable" },
       { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
@@ -551,6 +583,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_screens_gap", "Screen Gap; 0|5|64|90|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },	
       { "desmume_gfx_edgemark", "Enable Edgemark; enable|disable" },
       { "desmume_gfx_linehack", "Enable Line Hack; enable|disable" },
+      { "desmume_gfx_txthack", "Enable TXT Hack; disable|enable"},
       { "desmume_gfx_depth_comparison_threshold", "Depth Comparison Threshold; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
       { "desmume_mic_force_enable", "Force Microphone Enable; no|yes" },
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
