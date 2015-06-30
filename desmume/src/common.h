@@ -90,4 +90,11 @@ struct MAKER
 
 std::string getDeveloperNameByID(u16 id);
 
+void* malloc_aligned(size_t length, size_t alignment);
+void* malloc_aligned16(size_t length);
+void* malloc_aligned32(size_t length);
+void* malloc_aligned64(size_t length);
+void* malloc_alignedCacheLine(size_t length);
+void free_aligned(void *ptr);
+
 #endif

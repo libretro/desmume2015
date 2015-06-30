@@ -78,7 +78,7 @@ namespace /* VIDEO */
 {
     const int nds_max_screen_gap = 100;
 
-    static uint16_t screenSwap[GFX3D_FRAMEBUFFER_WIDTH * (GFX3D_FRAMEBUFFER_HEIGHT + nds_max_screen_gap) * 2];
+    static uint16_t screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * (GPU_FRAMEBUFFER_NATIVE_HEIGHT + nds_max_screen_gap) * 2];
     static retro_pixel_format colorMode;
     static uint32_t frameSkip;
     static uint32_t frameIndex;
@@ -96,13 +96,13 @@ namespace /* VIDEO */
 
     static LayoutData layouts[] =
     {
-        { "top/bottom", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT * 2, GFX3D_FRAMEBUFFER_WIDTH},
-        { "bottom/top", { &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT], &screenSwap[0] }, 0, 0, GFX3D_FRAMEBUFFER_WIDTH, (GFX3D_FRAMEBUFFER_HEIGHT * 2), GFX3D_FRAMEBUFFER_WIDTH },
-        { "left/right", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH] }, GFX3D_FRAMEBUFFER_WIDTH, 0, (GFX3D_FRAMEBUFFER_WIDTH * 2), GFX3D_FRAMEBUFFER_HEIGHT, (GFX3D_FRAMEBUFFER_WIDTH * 2) },
-        { "right/left", { &screenSwap[GFX3D_FRAMEBUFFER_WIDTH], &screenSwap[0] }, 0, 0, (GFX3D_FRAMEBUFFER_WIDTH * 2), GFX3D_FRAMEBUFFER_HEIGHT, (GFX3D_FRAMEBUFFER_WIDTH * 2) },
-        { "top only", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH },
-        { "bottom only", { &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT], &screenSwap[0] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH },
-        { "quick switch", { &screenSwap[0], &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT] }, 0, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH, GFX3D_FRAMEBUFFER_HEIGHT, GFX3D_FRAMEBUFFER_WIDTH },
+        { "top/bottom", { &screenSwap[0], &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH, GPU_FRAMEBUFFER_NATIVE_HEIGHT * 2, GPU_FRAMEBUFFER_NATIVE_WIDTH},
+        { "bottom/top", { &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT], &screenSwap[0] }, 0, 0, GPU_FRAMEBUFFER_NATIVE_WIDTH, (GPU_FRAMEBUFFER_NATIVE_HEIGHT * 2), GPU_FRAMEBUFFER_NATIVE_WIDTH },
+        { "left/right", { &screenSwap[0], &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH] }, GPU_FRAMEBUFFER_NATIVE_WIDTH, 0, (GPU_FRAMEBUFFER_NATIVE_WIDTH * 2), GPU_FRAMEBUFFER_NATIVE_HEIGHT, (GPU_FRAMEBUFFER_NATIVE_WIDTH * 2) },
+        { "right/left", { &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH], &screenSwap[0] }, 0, 0, (GPU_FRAMEBUFFER_NATIVE_WIDTH * 2), GPU_FRAMEBUFFER_NATIVE_HEIGHT, (GPU_FRAMEBUFFER_NATIVE_WIDTH * 2) },
+        { "top only", { &screenSwap[0], &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH },
+        { "bottom only", { &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT], &screenSwap[0] }, 0, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH },
+        { "quick switch", { &screenSwap[0], &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH },
         { 0, 0, 0, 0 }
     };
 
@@ -111,9 +111,9 @@ namespace /* VIDEO */
     static void SwapScreen(void *dst, const void *src, uint32_t pitch, bool render_fullscreen)
     {
         const uint32_t *_src = (const uint32_t*)src;
-        uint32_t width = render_fullscreen ? GFX3D_FRAMEBUFFER_WIDTH : (GFX3D_FRAMEBUFFER_WIDTH / 2);
+        uint32_t width = render_fullscreen ? GPU_FRAMEBUFFER_NATIVE_WIDTH : (GPU_FRAMEBUFFER_NATIVE_WIDTH / 2);
         
-        for(int i = 0; i < GFX3D_FRAMEBUFFER_HEIGHT; i ++)
+        for(int i = 0; i < GPU_FRAMEBUFFER_NATIVE_HEIGHT; i ++)
         {
             uint32_t *_dst = (uint32_t*)dst + (i * pitch);
 
@@ -137,7 +137,7 @@ namespace /* VIDEO */
     void SwapScreens(bool render_fullscreen)
     {
        SwapScreen(screenLayout->screens[0], &GPU_screen[0], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
-       SwapScreen(screenLayout->screens[1], &GPU_screen[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
+       SwapScreen(screenLayout->screens[1], &GPU_screen[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
        DrawPointer(screenLayout->screens[1], screenLayout->pitchInPix);
     }
     
@@ -147,20 +147,20 @@ namespace /* VIDEO */
          nds_screen_gap = 100;
 
       if (screenLayout->name == "top/bottom") {
-         screenLayout->screens[1] = &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * (GFX3D_FRAMEBUFFER_HEIGHT + nds_screen_gap)];
-         screenLayout->height = GFX3D_FRAMEBUFFER_HEIGHT * 2 + nds_screen_gap;
+         screenLayout->screens[1] = &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * (GPU_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
+         screenLayout->height = GPU_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
       } else if (screenLayout->name == "bottom/top") {
-         screenLayout->screens[0] = &screenSwap[GFX3D_FRAMEBUFFER_WIDTH * (GFX3D_FRAMEBUFFER_HEIGHT + nds_screen_gap)];
-         screenLayout->height = GFX3D_FRAMEBUFFER_HEIGHT * 2 + nds_screen_gap;
+         screenLayout->screens[0] = &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * (GPU_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
+         screenLayout->height = GPU_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
       } else if (screenLayout->name == "left/right") {
          screenLayout->screens[0] = &screenSwap[0];
-         screenLayout->screens[1] = &screenSwap[GFX3D_FRAMEBUFFER_WIDTH + nds_screen_gap];
-         screenLayout->width = GFX3D_FRAMEBUFFER_WIDTH * 2 + nds_screen_gap;
-         screenLayout->pitchInPix = GFX3D_FRAMEBUFFER_WIDTH * 2 + nds_screen_gap;
+         screenLayout->screens[1] = &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
+         screenLayout->width = GPU_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+         screenLayout->pitchInPix = GPU_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
       } else if (screenLayout->name == "right/left") {
-         screenLayout->screens[0] = &screenSwap[GFX3D_FRAMEBUFFER_WIDTH + nds_screen_gap];
-         screenLayout->width = GFX3D_FRAMEBUFFER_WIDTH * 2 + nds_screen_gap;
-         screenLayout->pitchInPix = GFX3D_FRAMEBUFFER_WIDTH * 2 + nds_screen_gap;
+         screenLayout->screens[0] = &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
+         screenLayout->width = GPU_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+         screenLayout->pitchInPix = GPU_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
       }
    }
 	
@@ -841,8 +841,8 @@ void retro_run (void)
 			float x = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X) + 32768.0f) * X_FACTOR;
 			float y = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y) + 32768.0f) * Y_FACTOR;
 
-			if (x >= screenLayout->touchScreenX && x < screenLayout->touchScreenX + GFX3D_FRAMEBUFFER_WIDTH &&
-				y >= screenLayout->touchScreenY && y < screenLayout->touchScreenY + GFX3D_FRAMEBUFFER_HEIGHT)
+			if (x >= screenLayout->touchScreenX && x < screenLayout->touchScreenX + GPU_FRAMEBUFFER_NATIVE_WIDTH &&
+				y >= screenLayout->touchScreenY && y < screenLayout->touchScreenY + GPU_FRAMEBUFFER_NATIVE_HEIGHT)
 			{
 				haveTouch = true;
 
