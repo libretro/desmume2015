@@ -111,11 +111,6 @@ void Desmume_InitOnce()
 	static bool initOnce = false;
 	if(initOnce) return;
 	initOnce = true;
-
-#ifdef HAVE_LIBAGG
-	extern void Agg_init(); //no need to include just for this
-	Agg_init();
-#endif
 }
 
 int NDS_GetCPUCoreCount()

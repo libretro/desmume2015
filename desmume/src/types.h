@@ -51,7 +51,6 @@
 #endif
 
 #ifdef HOST_WINDOWS
-	#define HAVE_LIBAGG
 	#define ENABLE_SSE
 	#define ENABLE_SSE2
 	#ifdef DEVELOPER
