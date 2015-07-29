@@ -1,7 +1,8 @@
 SOURCES_CXX :=
 
 ifeq ($(HAVE_DIRENT_WIN), 1)
-INCDIR += -iquote $(CORE_DIR)/libretro/dirent_win32 -iquote $(CORE_DIR)/windows
+INCDIR += -I$(CORE_DIR)/libretro/dirent_win32 -I$(CORE_DIR)/windows
+
 SOURCES_C += $(CORE_DIR)/libretro/dirent_win32/dirent.c
 endif
 
@@ -136,4 +137,4 @@ SOURCES_CXX += \
 	$(CORE_DIR)/utils/AsmJit/x86/x86util.cpp
 endif
 
-INCDIR += -iquote $(CORE_DIR) -iquote $(CORE_DIR)/libretro 
+INCDIR += -I$(CORE_DIR) -I$(CORE_DIR)/libretro 
