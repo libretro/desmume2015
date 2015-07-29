@@ -33,7 +33,7 @@ THE SOFTWARE.
 #include <vector>
 #include <algorithm>
 #include <string>
-#include <stdarg.h>
+#include <cstdarg>
 
 #include "emufile_types.h"
 
@@ -177,7 +177,7 @@ public:
 	virtual FILE *get_fp() { return NULL; }
 
 	virtual int fprintf(const char *format, ...) {
-		va_list argptr;
+      std::va_list argptr;
 		va_start(argptr, format);
 
 		//we dont generate straight into the buffer because it will null terminate (one more byte than we want)
@@ -318,7 +318,7 @@ public:
 	virtual void truncate(s32 length);
 
 	virtual int fprintf(const char *format, ...) {
-		va_list argptr;
+      std::va_list argptr;
 		va_start(argptr, format);
 		int ret = ::vfprintf(fp, format, argptr);
 		va_end(argptr);

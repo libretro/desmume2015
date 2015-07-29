@@ -263,7 +263,7 @@ Logger::~Logger() {
 		delete channels[i];
 }
 
-void Logger::vprintf(const char * format, va_list l, const char * file, unsigned int line) {
+void Logger::vprintf(const char * format, std::va_list l, const char * file, unsigned int line) {
 	char buffer[1024];
 	char * cur = buffer;
 
@@ -300,7 +300,7 @@ std::ostream& Logger::getOutput() const {
 void Logger::log(unsigned int channel, const char * file, unsigned int line, const char * format, ...) {
 	fixSize(channel);
 
-	va_list l;
+   std::va_list l;
 	va_start(l, format);
 	channels[channel]->vprintf(format, l, file, line);
 	va_end(l);

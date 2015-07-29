@@ -65,7 +65,7 @@ public:
 	Logger();
 	~Logger();
 
-	void vprintf(const char * format, va_list l, const char * filename, unsigned int line);
+	void vprintf(const char * format, std::va_list l, const char * filename, unsigned int line);
 	void setOutput(std::ostream * o);
 	void setCallback(void (*cback)(const Logger& logger, const char * message));
 	void setFlag(unsigned int flag);
