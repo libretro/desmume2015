@@ -19,6 +19,7 @@
 #ifndef NDSSYSTEM_H
 #define NDSSYSTEM_H
 
+#include <stdio.h>
 #include <string.h>
 #include <string>
 

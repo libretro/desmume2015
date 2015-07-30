@@ -18,6 +18,7 @@
 #ifndef _FIRMWARE_H_
 #define _FIRMWARE_H_
 
+#include <stdio.h>
 #include <string>
 #include "types.h"
 

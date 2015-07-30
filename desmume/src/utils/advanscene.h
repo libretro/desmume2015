@@ -15,6 +15,7 @@
 	along with the this software.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <time.h>
 #include <string>
 #include "../types.h"
 
