@@ -29,6 +29,7 @@ else ifeq ($(platform), osx)
 	fpic := -fPIC
 	SHARED := -dynamiclib
 	DESMUME_JIT = 1
+	fpic += -mmacosx-version-min=10.2
 	ifndef ($(NOUNIVERSAL))
 		CFLAGS += $(ARCHFLAGS)
 		CXXFLAGS += $(ARCHFLAGS)
