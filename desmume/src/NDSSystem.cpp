@@ -387,7 +387,7 @@ bool GameInfo::loadROM(std::string fname, u32 type)
 
 	if (res)
 	{
-#ifndef LOCAL_LE
+#ifdef MSB_FIRST
 		//endian swap necessary fields. It would be better if we made accessors for these. I wonder if you could make a macro for a field accessor that would take the bitsize and do the swap on the fly
 		struct FieldSwap {
 			const size_t offset;

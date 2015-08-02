@@ -2255,7 +2255,7 @@ template<bool SKIP> static void GPU_RenderLine_DispCapture(u16 l)
 								{
 									//INFO("Capture screen (BG + OBJ + 3D)\n");
 									u8 *src = (u8*)(gpu->tempScanline);
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 									static u16 swapSrc[256];
 									const size_t swapSrcSize = (gpu->dispCapCnt.capx == DISPCAPCNT::_128) ? 128 : 256;
 									
@@ -2639,11 +2639,10 @@ void GPU_RenderLine(NDS_Screen * screen, u16 l, bool skip)
 			{
 				u8 * dst = GPU_screen + (screen->offset + l) * 512;
 				u8 * src = gpu->VRAMaddr + (l*512);
-#ifdef LOCAL_BE
-				for(size_t i = 0; i < 256; i++)
-				{
+#ifdef MSB_FIRST
+            size_t i;
+				for(i = 0; i < 256; i++)
 					((u16 *)dst)[i] = LE_TO_LOCAL_16(((u16 *)src)[i]);
-				}
 #else
 				memcpy (dst, src, 512);
 #endif

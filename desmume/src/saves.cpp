@@ -780,21 +780,22 @@ static bool ReadStateChunk(EMUFILE* is, const SFORMAT *sf, int size)
 
 		if((tmp=CheckS(guessSF,sf,sz,count,toa)))
 		{
-		#ifdef LOCAL_LE
-			// no need to ever loop one at a time if not flipping byte order
-			is->fread((char *)tmp->v,sz*count);
-		#else
-			if(sz == 1) {
-				//special case: read a huge byte array
-				is->fread((char *)tmp->v,count);
-			} else {
-				for(unsigned int i=0;i<count;i++)
-				{
-					is->fread((char *)tmp->v + i*sz,sz);
-                    FlipByteOrder((u8*)tmp->v + i*sz,sz);
-				}
-			}
-		#endif
+#ifdef MSB_FIRST
+         if(sz == 1)
+         {
+            //special case: read a huge byte array
+            is->fread((char *)tmp->v,count);
+         } else {
+            for(unsigned int i=0;i<count;i++)
+            {
+               is->fread((char *)tmp->v + i*sz,sz);
+               FlipByteOrder((u8*)tmp->v + i*sz,sz);
+            }
+         }
+#else
+         // no need to ever loop one at a time if not flipping byte order
+         is->fread((char *)tmp->v,sz*count);
+#endif
 			guessSF = tmp + 1;
 		}
 		else
@@ -866,22 +867,22 @@ static int SubWrite(EMUFILE* os, const SFORMAT *sf)
 			#endif
 
 
-		#ifdef LOCAL_LE
-			// no need to ever loop one at a time if not flipping byte order
-			os->fwrite((char *)sf->v,size*count);
-		#else
-			if(size == 1) {
-				//special case: write a huge byte array
-				os->fwrite((char *)sf->v,count);
-			} else {
-				for(int i=0;i<count;i++) {
-					FlipByteOrder((u8*)sf->v + i*size, size);
-					os->fwrite((char*)sf->v + i*size,size);
-					//Now restore the original byte order.
-					FlipByteOrder((u8*)sf->v + i*size, size);
-				}
-			}
-		#endif
+#ifdef MSB_FIRST
+         if(size == 1) {
+            //special case: write a huge byte array
+            os->fwrite((char *)sf->v,count);
+         } else {
+            for(int i=0;i<count;i++) {
+               FlipByteOrder((u8*)sf->v + i*size, size);
+               os->fwrite((char*)sf->v + i*size,size);
+               //Now restore the original byte order.
+               FlipByteOrder((u8*)sf->v + i*size, size);
+            }
+         }
+#else
+         // no need to ever loop one at a time if not flipping byte order
+         os->fwrite((char *)sf->v,size*count);
+#endif
 		}
 		sf++;
 	}
