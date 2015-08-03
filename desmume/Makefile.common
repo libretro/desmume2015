@@ -22,6 +22,7 @@ SOURCES_CXX += \
 	$(CORE_DIR)/mc.cpp \
 	$(CORE_DIR)/path.cpp \
 	$(CORE_DIR)/readwrite.cpp \
+	$(CORE_DIR)/wifi.cpp \
 	$(CORE_DIR)/MMU.cpp \
 	$(CORE_DIR)/NDSSystem.cpp \
 	$(CORE_DIR)/ROMReader.cpp \
