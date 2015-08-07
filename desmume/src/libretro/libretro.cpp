@@ -34,6 +34,8 @@ static int analog_stick_acceleration_modifier = 0;
 static int microphone_force_enable = 0;
 static int nds_screen_gap = 0;
 
+int currFrameCounter;
+
 namespace /* INPUT */
 {
     static bool absolutePointer;

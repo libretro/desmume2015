@@ -35,7 +35,6 @@ SOURCES_CXX += \
 	$(CORE_DIR)/matrix.cpp \
 	$(CORE_DIR)/gfx3d.cpp \
 	$(CORE_DIR)/thumb_instructions.cpp \
-	$(CORE_DIR)/movie.cpp \
 	$(CORE_DIR)/utils/advanscene.cpp \
 	$(CORE_DIR)/utils/datetime.cpp \
 	$(CORE_DIR)/utils/guid.cpp \
