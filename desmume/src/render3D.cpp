@@ -126,7 +126,7 @@ Render3DError Render3D::RenderGeometry(const GFX3D_State *renderState, const VER
    return RENDER3DERROR_NOERR;
 }
 
-Render3DError Render3D::RenderEdgeMarking(const u16 *colorTable)
+Render3DError Render3D::RenderEdgeMarking(const u16 *colorTable, const bool useAntialias)
 {
 	return RENDER3DERROR_NOERR;
 }
@@ -268,7 +268,7 @@ Render3DError Render3D::Render(const GFX3D_State *renderState, const VERTLIST *v
    this->RenderGeometry(renderState, vertList, polyList, indexList);
 
    if (renderState->enableEdgeMarking)
-      this->RenderEdgeMarking((const u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0330));
+      this->RenderEdgeMarking((const u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0330), renderState->enableAntialiasing);
 
    if (renderState->enableFog)
       this->RenderFog(MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0360, renderState->fogColor, renderState->fogOffset, renderState->fogShift, renderState->enableFogAlphaOnly);
