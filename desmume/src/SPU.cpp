@@ -1672,7 +1672,7 @@ void SPU_Emulate_core()
 	// However, recording still needs to mix the audio, so make sure we're also
 	// not recording before we disable mixing.
 	if ( synchmode == ESynchMode_DualSynchAsynch &&
-		!(driver->AVI_IsRecording() || driver->WAV_IsRecording()) )
+		!(driver->AVI_IsRecording()) )
 	{
 		needToMix = false;
 	}
@@ -1745,7 +1745,6 @@ void SPU_Emulate_user(bool mix)
 	}
 	
 	soundProcessor->UpdateAudio(postProcessBuffer, processedSampleCount);
-	WAV_WavSoundUpdate(postProcessBuffer, processedSampleCount, WAVMODE_USER);
 }
 
 void SPU_DefaultFetchSamples(s16 *sampleBuffer, size_t sampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer)
@@ -1822,138 +1821,6 @@ void SNDDummySetVolume(int volume) {}
 void SNDDummyClearBuffer() {}
 void SNDDummyFetchSamples(s16 *sampleBuffer, size_t sampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer) {}
 size_t SNDDummyPostProcessSamples(s16 *postProcessBuffer, size_t requestedSampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer) { return 0; }
-
-//---------wav writer------------
-
-typedef struct {
-	char id[4];
-	u32 size;
-} chunk_struct;
-
-typedef struct {
-	chunk_struct riff;
-	char rifftype[4];
-} waveheader_struct;
-
-typedef struct {
-	chunk_struct chunk;
-	u16 compress;
-	u16 numchan;
-	u32 rate;
-	u32 bytespersec;
-	u16 blockalign;
-	u16 bitspersample;
-} fmt_struct;
-
-WavWriter::WavWriter() 
-: spufp(NULL)
-{
-}
-bool WavWriter::open(const std::string & fname)
-{
-	waveheader_struct waveheader;
-	fmt_struct fmt;
-	chunk_struct data;
-	size_t elems_written = 0;
-
-	if ((spufp = fopen(fname.c_str(), "wb")) == NULL)
-		return false;
-
-	// Do wave header
-	memcpy(waveheader.riff.id, "RIFF", 4);
-	waveheader.riff.size = 0; // we'll fix this after the file is closed
-	memcpy(waveheader.rifftype, "WAVE", 4);
-	elems_written += fwrite((void *)&waveheader, 1, sizeof(waveheader_struct), spufp);
-
-	// fmt chunk
-	memcpy(fmt.chunk.id, "fmt ", 4);
-	fmt.chunk.size = 16; // we'll fix this at the end
-	fmt.compress = 1; // PCM
-	fmt.numchan = 2; // Stereo
-	fmt.rate = DESMUME_SAMPLE_RATE;
-	fmt.bitspersample = 16;
-	fmt.blockalign = fmt.bitspersample / 8 * fmt.numchan;
-	fmt.bytespersec = fmt.rate * fmt.blockalign;
-	elems_written += fwrite((void *)&fmt, 1, sizeof(fmt_struct), spufp);
-
-	// data chunk
-	memcpy(data.id, "data", 4);
-	data.size = 0; // we'll fix this at the end
-	elems_written += fwrite((void *)&data, 1, sizeof(chunk_struct), spufp);
-
-	return true;
-}
-
-void WavWriter::close()
-{
-	if(!spufp) return;
-	size_t elems_written = 0;
-	long length = ftell(spufp);
-
-	// Let's fix the riff chunk size and the data chunk size
-	fseek(spufp, sizeof(waveheader_struct)-0x8, SEEK_SET);
-	length -= 0x8;
-	elems_written += fwrite((void *)&length, 1, 4, spufp);
-
-	fseek(spufp, sizeof(waveheader_struct)+sizeof(fmt_struct)+0x4, SEEK_SET);
-	length -= sizeof(waveheader_struct)+sizeof(fmt_struct);
-	elems_written += fwrite((void *)&length, 1, 4, spufp);
-	fclose(spufp);
-	spufp = NULL;
-}
-
-void WavWriter::update(void* soundData, int numSamples)
-{
-	if(!spufp) return;
-	//TODO - big endian for the s16 samples??
-	size_t elems_written = fwrite(soundData, numSamples*2, 2, spufp);
-}
-
-bool WavWriter::isRecording() const
-{
-	return spufp != NULL;
-}
-
-
-static WavWriter wavWriter;
-
-void WAV_End()
-{
-	wavWriter.close();
-}
-
-bool WAV_Begin(const char* fname, WAVMode mode)
-{
-	WAV_End();
-
-	if(!wavWriter.open(fname))
-		return false;
-
-	if(mode == WAVMODE_ANY)
-		mode = WAVMODE_CORE;
-	wavWriter.mode = mode;
-
-	driver->USR_InfoMessage("WAV recording started.");
-
-	return true;
-}
-
-bool WAV_IsRecording(WAVMode mode)
-{
-	if(wavWriter.mode == mode || mode == WAVMODE_ANY)
-		return wavWriter.isRecording();
-	return false;
-}
-
-void WAV_WavSoundUpdate(void* soundData, int numSamples, WAVMode mode)
-{
-	if(wavWriter.mode == mode || mode == WAVMODE_ANY)
-		wavWriter.update(soundData, numSamples);
-}
-
-
-
-//////////////////////////////////////////////////////////////////////////////
 
 void spu_savestate(EMUFILE* os)
 {
