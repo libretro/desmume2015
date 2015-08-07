@@ -20,7 +20,7 @@ CORE_DIR := src
 ifeq ($(platform), unix)
 	TARGET := $(TARGET_NAME)_libretro.so
 	fpic := -fPIC
-	SHARED := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
+	SHARED := -lpthread -shared -Wl,--no-undefined -Wl,--version-script=$(CORE_DIR)/libretro/link.T
 	DESMUME_JIT = 1
 
 # OS X

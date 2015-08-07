@@ -18,7 +18,7 @@ retro_log_printf_t log_cb = NULL;
 static retro_video_refresh_t video_cb = NULL;
 static retro_input_poll_t poll_cb = NULL;
 static retro_input_state_t input_cb = NULL;
-static retro_audio_sample_batch_t audio_batch_cb = NULL;
+retro_audio_sample_batch_t audio_batch_cb = NULL;
 retro_environment_t environ_cb = NULL;
 
 volatile bool execute = false;
@@ -521,7 +521,9 @@ void frontend_process_samples(u32 frames, const s16* data)
 
 SoundInterface_struct* SNDCoreList[] =
 {
-    NULL
+   &SNDDummy,
+   &SNDRetro,
+   NULL
 };
 
 #ifndef GPU3D_NULL
@@ -729,6 +731,7 @@ void retro_init (void)
 
     //addonsChangePak(NDS_ADDON_NONE);
     NDS_Init();
+    SPU_ChangeSoundCore(SNDCORE_RETRO, 735 * 2);
     NDS_CreateDummyFirmware(&fw_config);
 
     Change3DCoreWithFallback(GPU3D_SWRAST);
@@ -916,6 +919,9 @@ void retro_run (void)
 	
     NDS_endProcessingInput();
 
+    extern unsigned retro_audio_frames;
+    retro_audio_frames = 0;
+
     // RUN
     frameIndex ++;
     bool skipped = frameIndex <= frameSkip;
@@ -924,6 +930,7 @@ void retro_run (void)
        NDS_SkipNextFrame();
 
     NDS_exec<false>();
+    SPU_Emulate_user();
     
     // VIDEO: Swap screen colors and pass on
     if (!skipped)

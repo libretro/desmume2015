@@ -28,6 +28,7 @@ SOURCES_CXX += \
 	$(CORE_DIR)/ROMReader.cpp \
 	$(CORE_DIR)/render3D.cpp \
 	$(CORE_DIR)/rtc.cpp \
+	$(CORE_DIR)/sndsdl.cpp \
 	$(CORE_DIR)/saves.cpp \
 	$(CORE_DIR)/slot1.cpp \
 	$(CORE_DIR)/slot2.cpp \

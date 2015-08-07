@@ -1659,28 +1659,20 @@ void SPU_Emulate_core()
 {
 	bool needToMix = true;
 
-#ifndef __LIBRETRO__
 	SoundInterface_struct *soundProcessor = SPU_SoundCore();
-#endif
 
 	samples += samples_per_hline;
 	spu_core_samples = (int)(samples);
 	samples -= spu_core_samples;
-#ifndef __LIBRETRO__
 	// We don't need to mix audio for Dual Synch/Asynch mode since we do this
 	// later in SPU_Emulate_user(). Disable mixing here to speed up processing.
 	// However, recording still needs to mix the audio, so make sure we're also
 	// not recording before we disable mixing.
 	if ( synchmode == ESynchMode_DualSynchAsynch)
 		needToMix = false;
-#endif
 	
 	SPU_MixAudio(needToMix, SPU_core, spu_core_samples);
 	
-#ifdef __LIBRETRO__
-   extern void frontend_process_samples(u32 frames, const s16 *data);
-   frontend_process_samples(spu_core_samples, SPU_core->outbuf);
-#else
 	if (soundProcessor == NULL)
 	{
 		return;
@@ -1694,7 +1686,6 @@ void SPU_Emulate_core()
 	{
 		SPU_DefaultFetchSamples(SPU_core->outbuf, spu_core_samples, synchmode, synchronizer);
 	}
-#endif
 }
 
 void SPU_Emulate_user(bool mix)
@@ -1981,10 +1972,8 @@ bool spu_loadstate(EMUFILE* is, int size)
 		spu->regs.masteren = BIT15(T1ReadWord(MMU.ARM7_REG, 0x500));
 	}
 
-#ifndef __LIBRETRO__
 	//copy the core spu (the more accurate) to the user spu
 	SPU_CloneUser();
-#endif
 
 	return true;
 }
