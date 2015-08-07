@@ -1671,11 +1671,8 @@ void SPU_Emulate_core()
 	// later in SPU_Emulate_user(). Disable mixing here to speed up processing.
 	// However, recording still needs to mix the audio, so make sure we're also
 	// not recording before we disable mixing.
-	if ( synchmode == ESynchMode_DualSynchAsynch &&
-		!(driver->AVI_IsRecording()) )
-	{
+	if ( synchmode == ESynchMode_DualSynchAsynch)
 		needToMix = false;
-	}
 #endif
 	
 	SPU_MixAudio(needToMix, SPU_core, spu_core_samples);

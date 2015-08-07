@@ -840,9 +840,7 @@ static FrameSkipper frameSkipper;
 
 
 void NDS_SkipNextFrame() {
-	if (!driver->AVI_IsRecording()) {
-		frameSkipper.RequestSkip();
-	}
+   frameSkipper.RequestSkip();
 }
 void NDS_OmitFrameSkip(int force) {
 	frameSkipper.OmitSkip(force > 0, force > 1);

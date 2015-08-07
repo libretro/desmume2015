@@ -35,10 +35,6 @@ public:
 	BaseDriver();
 	~BaseDriver();
 
-	virtual void AVI_SoundUpdate(void* soundData, int soundLen) {}
-	virtual bool AVI_IsRecording() { return FALSE; }
-	virtual bool WAV_IsRecording() { return FALSE; }
-
 	virtual void USR_InfoMessage(const char *message);
 	virtual void USR_RefreshScreen() {}
 	virtual void USR_SetDisplayPostpone(int milliseconds, bool drawNextFrame) {} // -1 == indefinitely, 0 == don't pospone, 500 == don't draw for 0.5 seconds
