@@ -2194,7 +2194,7 @@ template<bool SKIP> static void GPU_RenderLine_DispCapture(u16 l)
 							case 0:			// Capture screen (BG + OBJ + 3D)
 								{
 									//INFO("Capture screen (BG + OBJ + 3D)\n");
-									u8 *src = (u8*)(gpu->tempScanline);
+									u8 *src = (u8*)(gpu->currDst);
 #ifdef MSB_FIRST
 									static u16 swapSrc[256];
 									const size_t swapSrcSize = (gpu->dispCapCnt.capx == DISPCAPCNT::_128) ? 128 : 256;
@@ -2248,7 +2248,7 @@ template<bool SKIP> static void GPU_RenderLine_DispCapture(u16 l)
 						if (gpu->dispCapCnt.srcA == 0)
 						{
 							// Capture screen (BG + OBJ + 3D)
-							srcA = (u16*)(gpu->tempScanline);
+							srcA = (u16*)(gpu->currDst);
 						}
 						else
 						{
@@ -2551,13 +2551,7 @@ void GPU_RenderLine(NDS_Screen * screen, u16 l, bool skip)
 	gpu->setup_windows<1>();
 
 	//generate the 2d engine output
-	if(gpu->dispMode == 1) {
-		//optimization: render straight to the output buffer when thats what we are going to end up displaying anyway
-		gpu->tempScanline = screen->gpu->currDst = (u8 *)(GPU_screen) + (screen->offset + l) * 512;
-	} else {
-		//otherwise, we need to go to a temp buffer
-		gpu->tempScanline = screen->gpu->currDst = (u8 *)gpu->tempScanlineBuffer;
-	}
+   gpu->currDst = (gpu->dispMode == 1) ? (u8 *)(GPU_screen) + (screen->offset + l) * 512 : (u8 *)gpu->tempScanlineBuffer;
 
 	GPU_RenderLine_layer(screen, l);
    u8 * dst =  GPU_screen + (screen->offset + l) * 512;
