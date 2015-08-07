@@ -536,6 +536,10 @@ void gfx3d_init()
       vertlists = (VERTLIST *)malloc(sizeof(VERTLIST)*2);
       vertlist = &vertlists[0];
    }
+
+   gfx3d.state.fogDensityTable = MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0360;
+	gfx3d.state.edgeMarkColorTable = (u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0330);
+
 	makeTables();
 	gfx3d_reset();
 }

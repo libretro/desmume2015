@@ -112,18 +112,18 @@ Render3D::Render3D()
 		
 		needTableInit = false;
 	}
-
+	
 	Reset();
 }
 
-Render3DError Render3D::BeginRender(const GFX3D_State *renderState)
+Render3DError Render3D::BeginRender(const GFX3D &engine)
 {
 	return RENDER3DERROR_NOERR;
 }
 
-Render3DError Render3D::RenderGeometry(const GFX3D_State *renderState, const VERTLIST *vertList, const POLYLIST *polyList, const INDEXLIST *indexList)
+Render3DError Render3D::RenderGeometry(const GFX3D_State &renderState, const VERTLIST *vertList, const POLYLIST *polyList, const INDEXLIST *indexList)
 {
-   return RENDER3DERROR_NOERR;
+	return RENDER3DERROR_NOERR;
 }
 
 Render3DError Render3D::RenderEdgeMarking(const u16 *colorTable, const bool useAntialias)
@@ -133,7 +133,7 @@ Render3DError Render3D::RenderEdgeMarking(const u16 *colorTable, const bool useA
 
 Render3DError Render3D::RenderFog(const u8 *densityTable, const u32 color, const u32 offset, const u8 shift, const bool alphaOnly)
 {
-   return RENDER3DERROR_NOERR;
+	return RENDER3DERROR_NOERR;
 }
 
 Render3DError Render3D::EndRender(const u64 frameCount)
@@ -146,36 +146,38 @@ Render3DError Render3D::UpdateToonTable(const u16 *toonTableBuffer)
 	return RENDER3DERROR_NOERR;
 }
 
-Render3DError Render3D::ClearFramebuffer(const GFX3D_State *renderState)
+Render3DError Render3D::ClearFramebuffer(const GFX3D_State &renderState)
 {
 	Render3DError error = RENDER3DERROR_NOERR;
 	
-	struct GFX3D_ClearColor
+	FragmentColor clearColor;
+	clearColor.r =  renderState.clearColor & 0x1F;
+	clearColor.g = (renderState.clearColor >> 5) & 0x1F;
+	clearColor.b = (renderState.clearColor >> 10) & 0x1F;
+	clearColor.a = (renderState.clearColor >> 16) & 0x1F;
+	
+	FragmentAttributes clearFragment;
+	clearFragment.opaquePolyID = (renderState.clearColor >> 24) & 0x3F;
+	//special value for uninitialized translucent polyid. without this, fires in spiderman2 dont display
+	//I am not sure whether it is right, though. previously this was cleared to 0, as a guess,
+	//but in spiderman2 some fires with polyid 0 try to render on top of the background
+	clearFragment.translucentPolyID = kUnsetTranslucentPolyID;
+	clearFragment.depth = renderState.clearDepth;
+	clearFragment.stencil = 0;
+	clearFragment.isTranslucentPoly = false;
+	clearFragment.isFogged = BIT15(renderState.clearColor);
+	
+	if (renderState.enableClearImage)
 	{
-		u8 r;
-		u8 g;
-		u8 b;
-		u8 a;
-	} clearColor;
-	
-	clearColor.r = renderState->clearColor & 0x1F;
-	clearColor.g = (renderState->clearColor >> 5) & 0x1F;
-	clearColor.b = (renderState->clearColor >> 10) & 0x1F;
-	clearColor.a = (renderState->clearColor >> 16) & 0x1F;
-	
-	const u8 polyID = (renderState->clearColor >> 24) & 0x3F;
-   const bool enableFog = BIT15(renderState->clearColor);
-	
-	if (renderState->enableClearImage)
-	{
-      //the lion, the witch, and the wardrobe (thats book 1)
+		//the lion, the witch, and the wardrobe (thats book 1, suck it you new-school numberers)
 		//uses the scroll registers in the main game engine
 		const u16 *__restrict clearColorBuffer = (u16 *__restrict)MMU.texInfo.textureSlotAddr[2];
 		const u16 *__restrict clearDepthBuffer = (u16 *__restrict)MMU.texInfo.textureSlotAddr[3];
 		const u16 scrollBits = T1ReadWord(MMU.ARM9_REG, 0x356); //CLRIMAGE_OFFSET
 		const u8 xScroll = scrollBits & 0xFF;
 		const u8 yScroll = (scrollBits >> 8) & 0xFF;
-      size_t dd = (GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT) - GFX3D_FRAMEBUFFER_WIDTH;
+		
+		size_t dd = (GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT) - GFX3D_FRAMEBUFFER_WIDTH;
 		
 		for (size_t iy = 0; iy < GFX3D_FRAMEBUFFER_HEIGHT; iy++)
 		{
@@ -186,16 +188,17 @@ Render3DError Render3D::ClearFramebuffer(const GFX3D_State *renderState)
 				const size_t x = (ix + xScroll) & 0xFF;
 				const size_t adr = y + x;
 				
-            //this is tested by harry potter and the order of the phoenix.
+				//this is tested by harry potter and the order of the phoenix.
 				//TODO (optimization) dont do this if we are mapped to blank memory (such as in sonic chronicles)
 				//(or use a special zero fill in the bulk clearing above)
 				this->clearImageColor16Buffer[dd] = clearColorBuffer[adr];
-
-            //this is tested quite well in the sonic chronicles main map mode
+				
+				//this is tested quite well in the sonic chronicles main map mode
 				//where depth values are used for trees etc you can walk behind
-            this->clearImageDepthBuffer[dd] = dsDepthToD24S8_LUT[clearDepthBuffer[adr] & 0x7FFF];
-
-            this->clearImageFogBuffer[dd] = BIT15(clearDepthBuffer[adr]);
+				this->clearImageDepthBuffer[dd] = dsDepthToD24S8_LUT[clearDepthBuffer[adr] & 0x7FFF];
+				
+				this->clearImageFogBuffer[dd] = BIT15(clearDepthBuffer[adr]);
+				this->clearImagePolyIDBuffer[dd] = clearFragment.opaquePolyID;
 				
 				dd++;
 			}
@@ -203,15 +206,15 @@ Render3DError Render3D::ClearFramebuffer(const GFX3D_State *renderState)
 			dd -= GFX3D_FRAMEBUFFER_WIDTH * 2;
 		}
 		
-      error = this->ClearUsingImage(this->clearImageColor16Buffer, this->clearImageDepthBuffer, this->clearImageFogBuffer, this->clearImagePolyIDBuffer);
+		error = this->ClearUsingImage(this->clearImageColor16Buffer, this->clearImageDepthBuffer, this->clearImageFogBuffer, this->clearImagePolyIDBuffer);
 		if (error != RENDER3DERROR_NOERR)
 		{
-         error = this->ClearUsingValues(clearColor.r, clearColor.g, clearColor.b, clearColor.a, renderState->clearDepth, polyID, enableFog);
+			error = this->ClearUsingValues(clearColor, clearFragment);
 		}
 	}
 	else
 	{
-      error = this->ClearUsingValues(clearColor.r, clearColor.g, clearColor.b, clearColor.a, renderState->clearDepth, polyID, enableFog);
+		error = this->ClearUsingValues(clearColor, clearFragment);
 	}
 	
 	return error;
@@ -222,7 +225,7 @@ Render3DError Render3D::ClearUsingImage(const u16 *__restrict colorBuffer, const
 	return RENDER3DERROR_NOERR;
 }
 
-Render3DError Render3D::ClearUsingValues(const u8 r, const u8 g, const u8 b, const u8 a, const u32 clearDepth, const u8 clearPolyID, const bool enableFog) const
+Render3DError Render3D::ClearUsingValues(const FragmentColor &clearColor, const FragmentAttributes &clearAttributes) const
 {
 	return RENDER3DERROR_NOERR;
 }
@@ -244,36 +247,40 @@ Render3DError Render3D::SetupViewport(const u32 viewportValue)
 
 Render3DError Render3D::Reset()
 {
-   memset(this->clearImageColor16Buffer, 0, sizeof(this->clearImageColor16Buffer));
-   memset(this->clearImageDepthBuffer, 0, sizeof(this->clearImageDepthBuffer));
+	memset(this->clearImageColor16Buffer, 0, sizeof(this->clearImageColor16Buffer));
+	memset(this->clearImageDepthBuffer, 0, sizeof(this->clearImageDepthBuffer));
 	memset(this->clearImagePolyIDBuffer, 0, sizeof(this->clearImagePolyIDBuffer));
 	memset(this->clearImageFogBuffer, 0, sizeof(this->clearImageFogBuffer));
-
+	
 	return RENDER3DERROR_NOERR;
 }
 
-Render3DError Render3D::Render(const GFX3D_State *renderState, const VERTLIST *vertList, const POLYLIST *polyList, const INDEXLIST *indexList, const u64 frameCount)
+Render3DError Render3D::Render(const GFX3D &engine)
 {
 	Render3DError error = RENDER3DERROR_NOERR;
 	
-	error = this->BeginRender(renderState);
+	error = this->BeginRender(engine);
 	if (error != RENDER3DERROR_NOERR)
 	{
 		return error;
 	}
 	
-	this->UpdateToonTable(renderState->u16ToonTable);
-	this->ClearFramebuffer(renderState);
+	this->UpdateToonTable(engine.renderState.u16ToonTable);
+	this->ClearFramebuffer(engine.renderState);
 	
-   this->RenderGeometry(renderState, vertList, polyList, indexList);
-
-   if (renderState->enableEdgeMarking)
-      this->RenderEdgeMarking((const u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0330), renderState->enableAntialiasing);
-
-   if (renderState->enableFog)
-      this->RenderFog(MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0360, renderState->fogColor, renderState->fogOffset, renderState->fogShift, renderState->enableFogAlphaOnly);
+	this->RenderGeometry(engine.renderState, engine.vertlist, engine.polylist, &engine.indexlist);
 	
-	this->EndRender(frameCount);
+	if (engine.renderState.enableEdgeMarking)
+	{
+		this->RenderEdgeMarking(engine.renderState.edgeMarkColorTable, engine.renderState.enableAntialiasing);
+	}
+	
+	if (engine.renderState.enableFog)
+	{
+		this->RenderFog(engine.renderState.fogDensityTable, engine.renderState.fogColor, engine.renderState.fogOffset, engine.renderState.fogShift, engine.renderState.enableFogAlphaOnly);
+	}
+
+	this->EndRender(engine.frameCtr);
 	
 	return error;
 }
