@@ -21,22 +21,14 @@
 
 //analyze microsoft compilers
 #ifdef _MSC_VER
-	#define HOST_WINDOWS
-	
-	//todo - everyone will want to support this eventually, i suppose
-	#ifndef DESMUME_QT
-		#include "config.h"
-	#endif
-
+#define HOST_WINDOWS
 #endif //_MSC_VER
 
 // Determine CPU architecture for platforms that don't use the autoconf script
-#if defined(__LIBRETRO__) || defined(HOST_WINDOWS) || defined(DESMUME_COCOA)
-	#if defined(__x86_64__) || defined(__LP64) || defined(__IA64__) || defined(_M_X64) || defined(_WIN64)
-		#define HOST_64
-	#else
-		#define HOST_32
-	#endif
+#if defined(__x86_64__) || defined(__LP64) || defined(__IA64__) || defined(_M_X64) || defined(_WIN64)
+#define HOST_64
+#else
+#define HOST_32
 #endif
 
 #ifdef DEVELOPER

@@ -18,23 +18,9 @@
 #include <string>
 #include "types.h"
 
-#if defined(__LIBRETRO__)
-	#include "libretro.h"
-	extern retro_log_printf_t log_cb;
-	extern retro_environment_t environ_cb;
-#elif defined(HOST_WINDOWS)
-	#define WIN32_LEAN_AND_MEAN
-	#include <windows.h>
-	#include <direct.h>
-	#define mkdir _mkdir
-
-	#ifndef DESMUME_QT
-		#include "windows/winutil.h"
-		#include "windows/resource.h"
-	#endif
-#elif !defined(DESMUME_COCOA)
-	#include <glib.h>
-#endif /* HOST_WINDOWS */
+#include "libretro.h"
+extern retro_log_printf_t log_cb;
+extern retro_environment_t environ_cb;
 
 #include "time.h"
 #include "utils/xstring.h"
@@ -137,54 +123,25 @@ public:
 	}
 
 	void LoadModulePath()
-	{
-#if defined(__LIBRETRO__) 
-	
+   {
       const char* saveDir = 0;
       environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &saveDir);
       strncpy(pathToModule, saveDir ? saveDir : ".", MAX_PATH);
 
       if(saveDir == 0 && log_cb)
-	  {
-		log_cb(RETRO_LOG_WARN, "Save directory is not defined. Fallback on using SYSTEM directory ...\n");
-		
-        const char* systemDir = 0;
-        environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &systemDir);
-        strncpy(pathToModule, systemDir ? systemDir : ".", MAX_PATH);
+      {
+         log_cb(RETRO_LOG_WARN, "Save directory is not defined. Fallback on using SYSTEM directory ...\n");
 
-        if(systemDir == 0 && log_cb)
-          log_cb(RETRO_LOG_WARN, "System directory is not defined. Fallback to ROM dir\n");	  
-	  
-	  }
-          
-#elif defined(HOST_WINDOWS)
+         const char* systemDir = 0;
+         environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &systemDir);
+         strncpy(pathToModule, systemDir ? systemDir : ".", MAX_PATH);
 
-		char *p;
-		ZeroMemory(pathToModule, sizeof(pathToModule));
+         if(systemDir == 0 && log_cb)
+            log_cb(RETRO_LOG_WARN, "System directory is not defined. Fallback to ROM dir\n");	  
 
-		GetModuleFileName(NULL, pathToModule, sizeof(pathToModule));
-		p = pathToModule + lstrlen(pathToModule);
-		while (p >= pathToModule && *p != DIRECTORY_DELIMITER_CHAR) p--;
-		if (++p >= pathToModule) *p = 0;
+      }
 
-#ifndef DESMUME_QT
-		extern char* _hack_alternateModulePath;
-		if(_hack_alternateModulePath)
-		{
-			strcpy(pathToModule,_hack_alternateModulePath);
-		}
-#endif
-#elif defined(DESMUME_COCOA)
-		std::string pathStr = Path::GetFileDirectoryPath(path);
-
-		strncpy(pathToModule, pathStr.c_str(), MAX_PATH);
-#else
-		char *cwd = g_build_filename(g_get_user_config_dir(), "desmume", NULL);
-		g_mkdir_with_parents(cwd, 0755);
-		strncpy(pathToModule, cwd, MAX_PATH);
-		g_free(cwd);
-#endif
-	}
+   }
 
 	enum Action
 	{

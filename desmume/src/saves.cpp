@@ -946,22 +946,9 @@ bool savestate_save(EMUFILE* outstream, int compressionLevel)
 	#endif
 
 	EMUFILE_MEMORY ms;
-	EMUFILE* os;
-	
-#ifndef __LIBRETRO__
-	if(compressionLevel != Z_NO_COMPRESSION)
-	{
-		//generate the savestate in memory first
-		os = (EMUFILE*)&ms;
-		writechunks(os);
-	}
-	else
-#endif
-	{
-		os = outstream;
-		os->fseek(32,SEEK_SET); //skip the header
-		writechunks(os);
-	}
+	EMUFILE* os = outstream;
+   os->fseek(32,SEEK_SET); //skip the header
+   writechunks(os);
 
 	//save the length of the file
 	u32 len = os->ftell();
@@ -971,21 +958,6 @@ bool savestate_save(EMUFILE* outstream, int compressionLevel)
 
 	//compress the data
 	int error = Z_OK;
-#ifndef __LIBRETRO__
-	if(compressionLevel != Z_NO_COMPRESSION)
-	{
-		cbuf = ms.buf();
-		uLongf comprlen2;
-		//worst case compression.
-		//zlib says "0.1% larger than sourceLen plus 12 bytes"
-		comprlen = (len>>9)+12 + len;
-		cbuf = new u8[comprlen];
-		// Workaround to make it compile under linux 64bit
-		comprlen2 = comprlen;
-		error = compress2(cbuf,&comprlen2,ms.buf(),len,compressionLevel);
-		comprlen = (u32)comprlen2;
-	}
-#endif
 
 	//dump the header
 	outstream->fseek(0,SEEK_SET);
@@ -994,14 +966,6 @@ bool savestate_save(EMUFILE* outstream, int compressionLevel)
 	write32le(EMU_DESMUME_VERSION_NUMERIC(),outstream); //desmume version
 	write32le(len,outstream); //uncompressed length
 	write32le(comprlen,outstream); //compressed length (-1 if it is not compressed)
-
-#ifndef __LIBRETRO__
-	if(compressionLevel != Z_NO_COMPRESSION)
-	{
-		outstream->fwrite((char*)cbuf,comprlen==(u32)-1?len:comprlen);
-		delete[] cbuf;
-	}
-#endif
 
 	return error == Z_OK;
 }

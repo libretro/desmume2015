@@ -23,11 +23,7 @@
 #include <ctype.h>
 #include <string>
 #include <stdarg.h>
-#if defined(HAVE_LIBZ)
-#include <zlib.h>
-#elif defined(__LIBRETRO__)
 extern unsigned long crc32(unsigned long, const unsigned char*,unsigned int);
-#endif
 #include <stdlib.h>
 
 char *trim(char *s, int len)
