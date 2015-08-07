@@ -153,6 +153,7 @@ int NDS_Init()
 		NDS_RunAdvansceneAutoImport();
 	}
 
+   Render3D_Init();
 	gfx3d_init();
 
 	armcpu_new(&NDS_ARM9,0);
@@ -182,7 +183,7 @@ void NDS_DeInit(void)
 	SPU_DeInit();
 	Screen_DeInit();
 	MMU_DeInit();
-	gpu3D->NDS_3D_Close();
+   Render3D_DeInit();
 
 	WIFI_DeInit();
 	
