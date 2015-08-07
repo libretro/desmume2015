@@ -107,6 +107,16 @@ struct _DISPCNT
 };
 #endif
 
+union FragmentColor
+{
+   u32 color;
+   struct
+   {
+      u8 r,g,b,a;
+   };
+};
+
+
 typedef union
 {
     struct _DISPCNT bits;
@@ -694,7 +704,7 @@ struct GPU
 	bool blend1;
 	u8* currDst;
 
-	u8* _3dColorLine;
+	FragmentColor * _3dColorLine;
 
 
 	static struct MosaicLookup {
@@ -884,6 +894,13 @@ void SetupFinalPixelBlitter (GPU *gpu);
 #define GPU_setBLDY_EVY(gpu, val) {gpu->BLDY_EVY = ((val)&0x1f) > 16 ? 16 : ((val)&0x1f);}
 
 void gpu_SetRotateScreen(u16 angle);
+
+static inline FragmentColor MakeFragmentColor(const u8 r, const u8 g, const u8 b, const u8 a)
+{
+	FragmentColor ret;
+	ret.r = r; ret.g = g; ret.b = b; ret.a = a;
+	return ret;
+}
 
 #include <map>
 #include <utility>
