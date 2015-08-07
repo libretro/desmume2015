@@ -23,31 +23,6 @@
 #include <vector>
 #include <assert.h>
 
-//for pcsx2 method
-#if defined(_MSC_VER) || defined(HAVE_LIBSOUNDTOUCH) || defined(DESMUME_COCOA) || defined(DESMUME_QT)
-#include "SndOut.h"
-#endif
-
-
-template<typename T> inline T _abs(T val)
-{
-	if(val<0) return -val;
-	else return val;
-}
-
-template<typename T> inline T moveValueTowards(T val, T target, T incr)
-{
-	incr = _abs(incr);
-	T delta = _abs(target-val);
-	if(val<target) val += incr;
-	else if(val>target) val -= incr;
-	T newDelta = _abs(target-val);
-	if(newDelta >= delta)
-		val = target;
-	return val;
-}
-
-
 class ZeromusSynchronizer : public ISynchronizingAudioBuffer
 {
 public:
@@ -157,7 +132,6 @@ private:
 						targetRate = 1.0f + (averageSize-targetLatency)/kAverageSize;
 					} else targetRate = 1.0f;
 				
-					//rate = moveValueTowards(rate,targetRate,0.001f);
 					rate = targetRate;
 				}
 
@@ -465,56 +439,12 @@ private:
 }; //NitsujaSynchronizer
 
 
-#if defined(_MSC_VER) || defined(HAVE_LIBSOUNDTOUCH) || defined(DESMUME_COCOA) || defined(DESMUME_QT)
-class PCSX2Synchronizer : public ISynchronizingAudioBuffer
-{
-public:
-	std::queue<s16> readySamples;
-	PCSX2Synchronizer()
-	{
-		SndBuffer::Init();
-	}
-	virtual void enqueue_samples(s16* buf, int samples_provided)
-	{
-		for(int i=0;i<samples_provided;i++)
-		{
-			StereoOut32 so32(buf[0],buf[1]);
-			SndBuffer::Write(so32);
-			buf++;
-			buf++;
-		}
-	}
-
-	virtual int output_samples(s16* buf, int samples_requested)
-	{
-		for(int i=0;i<samples_requested;i++) {
-			if(readySamples.size()==0) {
-				//SndOutPacketSize
-				StereoOut16 temp[SndOutPacketSize*2];
-				SndBuffer::ReadSamples( temp );
-				for(int i=0;i<SndOutPacketSize;i++) {
-					readySamples.push(temp[i].Left);
-					readySamples.push(temp[i].Right);
-				}
-			}
-			*buf++ = readySamples.front(); readySamples.pop();
-			*buf++ = readySamples.front(); readySamples.pop();
-		}
-		return samples_requested;
-	}
-};
-#endif
-
-
 ISynchronizingAudioBuffer* metaspu_construct(ESynchMethod method)
 {
 	switch(method)
 	{
 	case ESynchMethod_N: return new NitsujaSynchronizer();
 	case ESynchMethod_Z: return new ZeromusSynchronizer();
-#if defined(_MSC_VER) || defined(HAVE_LIBSOUNDTOUCH) || defined(DESMUME_COCOA) || defined(DESMUME_QT)
-	case ESynchMethod_P: return new PCSX2Synchronizer();
-#endif
 	default: return NULL;
 	}
 }
