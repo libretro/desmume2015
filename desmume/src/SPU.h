@@ -64,8 +64,6 @@ struct SoundInterface_struct
    void (*UnMuteAudio)();
    void (*SetVolume)(int volume);
    void (*ClearBuffer)();
-	void (*FetchSamples)(s16 *sampleBuffer, size_t sampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer);
-	size_t (*PostProcessSamples)(s16 *postProcessBuffer, size_t requestedSampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer);
 };
 
 extern SoundInterface_struct SNDDummy;

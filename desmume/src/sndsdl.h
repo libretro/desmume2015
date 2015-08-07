@@ -23,7 +23,4 @@
 #define SNDCORE_RETRO 2
 
 extern SoundInterface_struct SNDRetro;
-
-size_t SNDRetroPostProcessSamples(s16 *postProcessBuffer, size_t requestedSampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer);
-void SNDRetroFetchSamples(s16 *sampleBuffer, size_t sampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer);
 #endif

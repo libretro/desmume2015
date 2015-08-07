@@ -1659,8 +1659,6 @@ void SPU_Emulate_core()
 {
 	bool needToMix = true;
 
-	SoundInterface_struct *soundProcessor = SPU_SoundCore();
-
 	samples += samples_per_hline;
 	spu_core_samples = (int)(samples);
 	samples -= spu_core_samples;
@@ -1673,19 +1671,7 @@ void SPU_Emulate_core()
 	
 	SPU_MixAudio(needToMix, SPU_core, spu_core_samples);
 	
-	if (soundProcessor == NULL)
-	{
-		return;
-	}
-	
-	if (soundProcessor->FetchSamples != NULL)
-	{
-		soundProcessor->FetchSamples(SPU_core->outbuf, spu_core_samples, synchmode, synchronizer);
-	}
-	else
-	{
-		SPU_DefaultFetchSamples(SPU_core->outbuf, spu_core_samples, synchmode, synchronizer);
-	}
+   SPU_DefaultFetchSamples(SPU_core->outbuf, spu_core_samples, synchmode, synchronizer);
 }
 
 void SPU_Emulate_user(bool mix)
@@ -1723,14 +1709,7 @@ void SPU_Emulate_user(bool mix)
 		postProcessBuffer = (s16 *)realloc(postProcessBuffer, postProcessBufferSize);
 	}
 	
-	if (soundProcessor->PostProcessSamples != NULL)
-	{
-		processedSampleCount = soundProcessor->PostProcessSamples(postProcessBuffer, freeSampleCount, synchmode, synchronizer);
-	}
-	else
-	{
-		processedSampleCount = SPU_DefaultPostProcessSamples(postProcessBuffer, freeSampleCount, synchmode, synchronizer);
-	}
+   processedSampleCount = SPU_DefaultPostProcessSamples(postProcessBuffer, freeSampleCount, synchmode, synchronizer);
 	
 	soundProcessor->UpdateAudio(postProcessBuffer, processedSampleCount);
 }
@@ -1738,15 +1717,11 @@ void SPU_Emulate_user(bool mix)
 void SPU_DefaultFetchSamples(s16 *sampleBuffer, size_t sampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer)
 {
 	if (synchMode == ESynchMode_Synchronous)
-	{
 		theSynchronizer->enqueue_samples(sampleBuffer, sampleCount);
-	}
 }
 
 size_t SPU_DefaultPostProcessSamples(s16 *postProcessBuffer, size_t requestedSampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer)
 {
-	size_t processedSampleCount = 0;
-	
 	switch (synchMode)
 	{
 		case ESynchMode_DualSynchAsynch:
@@ -1754,19 +1729,16 @@ size_t SPU_DefaultPostProcessSamples(s16 *postProcessBuffer, size_t requestedSam
 			{
 				SPU_MixAudio(true, SPU_user, requestedSampleCount);
 				memcpy(postProcessBuffer, SPU_user->outbuf, requestedSampleCount * 2 * sizeof(s16));
-				processedSampleCount = requestedSampleCount;
+				return requestedSampleCount;
 			}
 			break;
-			
 		case ESynchMode_Synchronous:
-			processedSampleCount = theSynchronizer->output_samples(postProcessBuffer, requestedSampleCount);
-			break;
-			
+			return theSynchronizer->output_samples(postProcessBuffer, requestedSampleCount);
 		default:
 			break;
 	}
 	
-	return processedSampleCount;
+	return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1781,8 +1753,6 @@ void SNDDummyMuteAudio();
 void SNDDummyUnMuteAudio();
 void SNDDummySetVolume(int volume);
 void SNDDummyClearBuffer();
-void SNDDummyFetchSamples(s16 *sampleBuffer, size_t sampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer);
-size_t SNDDummyPostProcessSamples(s16 *postProcessBuffer, size_t requestedSampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer);
 
 SoundInterface_struct SNDDummy = {
 	SNDCORE_DUMMY,
@@ -1795,8 +1765,6 @@ SoundInterface_struct SNDDummy = {
 	SNDDummyUnMuteAudio,
 	SNDDummySetVolume,
 	SNDDummyClearBuffer,
-	SNDDummyFetchSamples,
-	SNDDummyPostProcessSamples
 };
 
 int SNDDummyInit(int buffersize) { return 0; }
@@ -1807,8 +1775,6 @@ void SNDDummyMuteAudio() {}
 void SNDDummyUnMuteAudio() {}
 void SNDDummySetVolume(int volume) {}
 void SNDDummyClearBuffer() {}
-void SNDDummyFetchSamples(s16 *sampleBuffer, size_t sampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer) {}
-size_t SNDDummyPostProcessSamples(s16 *postProcessBuffer, size_t requestedSampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer) { return 0; }
 
 void spu_savestate(EMUFILE* os)
 {
