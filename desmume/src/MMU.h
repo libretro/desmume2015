@@ -641,32 +641,33 @@ FORCEINLINE void CheckMemoryDebugEvent(EDEBUG_EVENT event, const MMU_ACCESS_TYPE
 FORCEINLINE u8 _MMU_read08(const int PROCNUM, const MMU_ACCESS_TYPE AT, const u32 addr)
 {
 #ifdef DEBUG
-	CheckMemoryDebugEvent(DEBUG_EVENT_READ,AT,PROCNUM,addr,8,0);
+   CheckMemoryDebugEvent(DEBUG_EVENT_READ,AT,PROCNUM,addr,8,0);
 #endif
 
-	//special handling to un-protect the ARM7 bios during debug reading
-	if(PROCNUM == ARMCPU_ARM7 && AT == MMU_AT_DEBUG && addr<0x00004000)
-		return T1ReadByte(MMU.ARM7_BIOS, addr);
+   //special handling to un-protect the ARM7 bios during debug reading
+   if(PROCNUM == ARMCPU_ARM7 && AT == MMU_AT_DEBUG && addr<0x00004000)
+      return T1ReadByte(MMU.ARM7_BIOS, addr);
 
-	//special handling for DMA: read 0 from TCM
-	if(PROCNUM==ARMCPU_ARM9 && AT == MMU_AT_DMA)
-	{
-		if(addr<0x02000000) return 0; //itcm
-		if((addr&(~0x3FFF)) == MMU.DTCMRegion) return 0; //dtcm
-	}
+   //special handling for DMA: read 0 from TCM
+   if(PROCNUM==ARMCPU_ARM9 && AT == MMU_AT_DMA)
+   {
+      if(addr<0x02000000) return 0; //itcm
+      if((addr&(~0x3FFF)) == MMU.DTCMRegion) return 0; //dtcm
+   }
 
-	if(PROCNUM==ARMCPU_ARM9)
-		if((addr&(~0x3FFF)) == MMU.DTCMRegion)
-		{
-			//Returns data from DTCM (ARM9 only)
-			return T1ReadByte(MMU.ARM9_DTCM, addr & 0x3FFF);
-		}
+   if(PROCNUM==ARMCPU_ARM9)
+      if((addr&(~0x3FFF)) == MMU.DTCMRegion)
+      {
+         //Returns data from DTCM (ARM9 only)
+         return T1ReadByte(MMU.ARM9_DTCM, addr & 0x3FFF);
+      }
 
-	if ( (addr & 0x0F000000) == 0x02000000)
-		return T1ReadByte( MMU.MAIN_MEM, addr & _MMU_MAIN_MEM_MASK);
+   if ( (addr & 0x0F000000) == 0x02000000)
+      return T1ReadByte( MMU.MAIN_MEM, addr & _MMU_MAIN_MEM_MASK);
 
-	if(PROCNUM==ARMCPU_ARM9) return _MMU_ARM9_read08(addr);
-	else return _MMU_ARM7_read08(addr);
+   if(PROCNUM==ARMCPU_ARM9)
+      return _MMU_ARM9_read08(addr);
+   return _MMU_ARM7_read08(addr);
 }
 
 FORCEINLINE u16 _MMU_read16(const int PROCNUM, const MMU_ACCESS_TYPE AT, const u32 addr) 
@@ -770,8 +771,9 @@ FORCEINLINE u32 _MMU_read32(const int PROCNUM, const MMU_ACCESS_TYPE AT, const u
 	}
 
 dunno:
-	if(PROCNUM==ARMCPU_ARM9) return _MMU_ARM9_read32(addr);
-	else return _MMU_ARM7_read32(addr);
+	if(PROCNUM==ARMCPU_ARM9)
+      return _MMU_ARM9_read32(addr);
+	return _MMU_ARM7_read32(addr);
 }
 
 FORCEINLINE void _MMU_write08(const int PROCNUM, const MMU_ACCESS_TYPE AT, const u32 addr, u8 val)
