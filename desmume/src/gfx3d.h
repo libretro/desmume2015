@@ -89,20 +89,18 @@ class EMUFILE;
 	#define RGB15TO5555(col,alpha5) ( ((alpha5)<<24) | ((((col) & 0x7C00)>>10)<<16) | ((((col) & 0x03E0)>>5)<<8) | ((col) & 0x001F) )
 #endif
 
+#define DS_RGB15_R(col) (((col) & 0x001F) >> 0)
+#define DS_RGB15_G(col) (((col) & 0x03E0) >> 5)
+#define DS_RGB15_B(col) (((col) & 0x7C00) >> 10)
+
 //produce a 6665 32bit color from a ds RGB15 plus an 5bit alpha
-inline u32 RGB15TO6665(u16 col, u8 alpha5)
+static inline u32 RGB15TO6665(u16 col, u8 alpha5)
 {
-	const u16 r = (col&0x001F)>>0;
-	const u16 g = (col&0x03E0)>>5;
-	const u16 b = (col&0x7C00)>>10;
-	
 #ifdef MSB_FIRST
-	const u32 ret = alpha5 | (((b<<1)+1)<<8) | (((g<<1)+1)<<16) | (((r<<1)+1)<<24);
+   return alpha5 | ((((DS_RGB15_B(col)) << 1)+1)<<8) | ((((DS_RGB15_G(col)) <<1)+1)<<16) | ((((DS_RGB15_R(col))<<1)+1)<<24);
 #else
-	const u32 ret = (alpha5<<24) | (((b<<1)+1)<<16) | (((g<<1)+1)<<8) | ((r<<1)+1);
+   return (alpha5<<24) | ((((DS_RGB15_B(col))<<1)+1)<<16) | ((((DS_RGB15_G(col))<<1)+1)<<8) | (((DS_RGB15_R(col))<<1)+1);
 #endif
-	
-	return ret;
 }
 
 //produce a 24bpp color from a ds RGB15, using a table
