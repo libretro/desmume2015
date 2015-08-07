@@ -33,7 +33,6 @@
 #include "registers.h"
 #include "gfx3d.h"
 #include "debug.h"
-#include "GPU_osd.h"
 #include "NDSSystem.h"
 #include "readwrite.h"
 #include "matrix.h"
@@ -1828,9 +1827,6 @@ int Screen_Init()
 		((u16*)GPU_screen)[i] = 0x7FFF;
 	disp_fifo.head = disp_fifo.tail = 0;
 
-	if (osd)  {delete osd; osd =NULL; }
-	osd  = new OSDCLASS(-1);
-
 	return 0;
 }
 
@@ -1846,15 +1842,12 @@ void Screen_Reset(void)
 		((u16*)GPU_screen)[i] = 0x7FFF;
 
 	disp_fifo.head = disp_fifo.tail = 0;
-	osd->clear();
 }
 
 void Screen_DeInit(void)
 {
 	GPU_DeInit(MainScreen.gpu);
 	GPU_DeInit(SubScreen.gpu);
-
-	if (osd)  {delete osd; osd =NULL; }
 }
 
 

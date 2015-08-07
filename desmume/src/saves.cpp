@@ -40,7 +40,6 @@
 #include "render3D.h"
 #include "cp15.h"
 #include "GPU.h"
-#include "GPU_osd.h"
 #include "version.h"
 
 #include "readwrite.h"
@@ -675,18 +674,8 @@ void savestate_slot(int num)
    if (strlen(filename) + strlen(".dsx") + strlen("-2147483648") /* = biggest string for num */ >MAX_PATH) return ;
    sprintf(filename+strlen(filename), ".ds%d", num);
 
-   if (savestate_save(filename))
-   {
-	   osd->setLineColor(255, 255, 255);
-	   osd->addLine("Saved to %i slot", num);
-   }
-   else
-   {
-	   osd->setLineColor(255, 0, 0);
-	   osd->addLine("Error saving %i slot", num);
-		
+   if (!savestate_save(filename))
 	   return;
-   }
 
    if (num >= 0 && num < NB_STATES)
    {
@@ -709,16 +698,7 @@ void loadstate_slot(int num)
 
    if (strlen(filename) + strlen(".dsx") + strlen("-2147483648") /* = biggest string for num */ >MAX_PATH) return ;
    sprintf(filename+strlen(filename), ".ds%d", num);
-   if (savestate_load(filename))
-   {
-	   osd->setLineColor(255, 255, 255);
-	   osd->addLine("Loaded from %i slot", num);
-   }
-   else
-   {
-	   osd->setLineColor(255, 0, 0);
-	   osd->addLine("Error loading %i slot", num);
-   }
+   savestate_load(filename);
 }
 
 
