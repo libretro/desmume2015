@@ -632,8 +632,6 @@ int NDS_LoadROM(const char *filename, const char *physicalName, const char *logi
 
 	if (cheatSearch)
 		cheatSearch->close();
-	FCEUI_StopMovie();
-
 
 	//check whether this rom is any kind of valid
 	if(!CheckValidRom((u8*)&gameInfo.header, gameInfo.secureArea))
@@ -737,7 +735,6 @@ int NDS_LoadROM(const char *filename, const char *physicalName, const char *logi
 
 void NDS_FreeROM(void)
 {
-	FCEUI_StopMovie();
 	gameInfo.closeROM();
 }
 
@@ -2410,16 +2407,11 @@ void NDS_Reset()
 {
 	PrepareLogfiles();
 
-	if(movieMode != MOVIEMODE_INACTIVE && !_HACK_DONT_STOPMOVIE)
-		movie_reset_command = true;
-
-	if(movieMode == MOVIEMODE_INACTIVE) {
-		currFrameCounter = 0;
-		lagframecounter = 0;
-		LagFrameFlag = 0;
-		lastLag = 0;
-		TotalLagFrames = 0;
-	}
+   currFrameCounter = 0;
+   lagframecounter = 0;
+   LagFrameFlag = 0;
+   lastLag = 0;
+   TotalLagFrames = 0;
 
 	resetUserInput();
 
@@ -2661,19 +2653,8 @@ void NDS_setTouchPos(u16 x, u16 y)
 	rawUserInput.touch.touchX = x<<4;
 	rawUserInput.touch.touchY = y<<4;
 	rawUserInput.touch.isTouch = true;
-
-	if(movieMode != MOVIEMODE_INACTIVE && movieMode != MOVIEMODE_FINISHED)
-	{
-		// just in case, since the movie only stores 8 bits per touch coord
-#ifdef WORDS_BIGENDIAN
-		rawUserInput.touch.touchX &= 0xF00F;
-		rawUserInput.touch.touchY &= 0xF00F;
-#else
-		rawUserInput.touch.touchX &= 0x0FF0;
-		rawUserInput.touch.touchY &= 0x0FF0;
-#endif
-	}
 }
+
 void NDS_releaseTouch(void)
 { 
 	gotInputRequest();

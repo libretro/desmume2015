@@ -1066,7 +1066,6 @@ static void writechunks(EMUFILE* os) {
 	savestate_WriteChunk(os,90,SF_GFX3D);
 	savestate_WriteChunk(os,91,gfx3d_savestate);
 	savestate_WriteChunk(os,100,SF_MOVIE);
-	savestate_WriteChunk(os,101,mov_savestate);
 	savestate_WriteChunk(os,110,SF_WIFI);
 	savestate_WriteChunk(os,120,SF_RTC);
 	savestate_WriteChunk(os,130,SF_NDS_INFO);
@@ -1127,10 +1126,10 @@ static bool ReadStateChunks(EMUFILE* is, s32 totalsize)
 			case 90: if(!ReadStateChunk(is,SF_GFX3D,size)) ret=false; break;
 			case 91: if(!gfx3d_loadstate(is,size)) ret=false; break;
 			case 100: if(!ReadStateChunk(is,SF_MOVIE, size)) ret=false; break;
-			case 101: if(!mov_loadstate(is, size)) ret=false; break;
+			case 101: break;
 			case 110: if(!ReadStateChunk(is,SF_WIFI,size)) ret=false; break;
 			case 120: if(!ReadStateChunk(is,SF_RTC,size)) ret=false; break;
-			case 130: if(!ReadStateChunk(is,SF_INFO,size)) ret=false; else haveInfo=true; break;
+			case 130: if(!ReadStateChunk(is,SF_INFO,size)) ret=false; break;
 			case 140: if(!s_slot1_loadstate(is, size)) ret=false; break;
 			case 150: if(!s_slot2_loadstate(is, size)) ret=false; break;
 			// reserved for future versions
@@ -1146,43 +1145,6 @@ static bool ReadStateChunks(EMUFILE* is, s32 totalsize)
 		}
 		if(!ret)
 			return false;
-	}
-
-#ifdef __LIBRETRO__
-   haveInfo = false;
-#endif
-
-	if (haveInfo)
-	{
-		char buf[14] = {0};
-		memset(&buf[0], 0, sizeof(buf));
-		memcpy(buf, header.gameTile, sizeof(header.gameTile));
-		printf("Savestate info:\n");
-		if (version_major | version_minor | version_build)
-		{
-			char buf[32] = {0};
-			if (svn_rev != 0xFFFFFFFF)
-				sprintf(buf, " svn %u", svn_rev);
-			printf("\tDeSmuME version: %u.%u.%u%s\n", version_major, version_minor, version_build, buf);
-		}
-
-		if (save_time)
-		{
-			static const char *wday[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
-			DateTime tm = save_time;
-			printf("\tSave created: %04d-%03s-%02d %s %02d:%02d:%02d\n", tm.get_Year(), DateTime::GetNameOfMonth(tm.get_Month()), tm.get_Day(), wday[tm.get_DayOfWeek()%7], tm.get_Hour(), tm.get_Minute(), tm.get_Second());
-		}
-		printf("\tGame title: %s\n", buf);
-		printf("\tGame code: %c%c%c%c\n", header.gameCode[0], header.gameCode[1], header.gameCode[2], header.gameCode[3]);
-		printf("\tMaker code: %c%c (0x%04X) - %s\n", header.makerCode & 0xFF, header.makerCode >> 8, header.makerCode, getDeveloperNameByID(header.makerCode).c_str());
-		printf("\tDevice capacity: %dMb (real size %dMb)\n", ((128 * 1024) << header.cardSize) / (1024 * 1024), romsize / (1024 * 1024));
-		printf("\tCRC16: %04Xh\n", header.CRC16);
-		printf("\tHeader CRC16: %04Xh\n", header.headerCRC16);
-		printf("\tSlot1: %s\n", slot1_List[slot1Type]->info()->name());
-		printf("\tSlot2: %s\n", slot2_List[slot2Type]->info()->name());
-
-		if (gameInfo.romsize != romsize || memcmp(&gameInfo.header, &header, sizeof(header)) != 0)
-			msgbox->warn("The savestate you are loading does not match the ROM you are running.\nYou should find the correct ROM");
 	}
 
 	return ret;
@@ -1259,13 +1221,7 @@ bool savestate_load(EMUFILE* is)
 	//THERE IS NO GOING BACK NOW
 	//reset the emulator first to clean out the host's state
 
-	//while the series of resets below should work,
-	//we are testing the robustness of the savestate system with this full reset.
-	//the full reset wipes more things, so we can make sure that they are being restored correctly
-	extern bool _HACK_DONT_STOPMOVIE;
-	_HACK_DONT_STOPMOVIE = true;
 	NDS_Reset();
-	_HACK_DONT_STOPMOVIE = false;
 
 	//reset some options to their old defaults which werent saved
 	nds._DebugConsole = FALSE;
