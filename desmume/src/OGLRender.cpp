@@ -816,7 +816,7 @@ void OpenGLRenderer::ConvertFramebuffer(const u32 *__restrict srcBuffer, u32 *ds
 		{
 			// Use the correct endian format since OpenGL uses the native endian of
 			// the architecture it is running on.
-#ifdef WORDS_BIGENDIAN
+#ifdef MSB_FIRST
 			*dst++ = BGRA8888_32_To_RGBA6665_32(srcBuffer[i]);
 #else
 			*dst++ = BGRA8888_32Rev_To_RGBA6665_32Rev(srcBuffer[i]);

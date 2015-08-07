@@ -2,7 +2,7 @@
 ///
 /// Classes for easy reading & writing of WAV sound files. 
 ///
-/// For big-endian CPU, define _BIG_ENDIAN_ during compile-time to correctly
+/// For big-endian CPU, define MSB_FIRST during compile-time to correctly
 /// parse the WAV files with such processors.
 /// 
 /// Admittingly, more complete WAV reader routines may exist in public domain,
@@ -66,21 +66,13 @@ static const char dataStr[] = "data";
 //////////////////////////////////////////////////////////////////////////////
 //
 // Helper functions for swapping byte order to correctly read/write WAV files 
-// with big-endian CPU's: Define compile-time definition _BIG_ENDIAN_ to
+// with big-endian CPU's: Define compile-time definition MSB_FIRST to
 // turn-on the conversion if it appears necessary. 
 //
 // For example, Intel x86 is little-endian and doesn't require conversion,
 // while PowerPC of Mac's and many other RISC cpu's are big-endian.
 
-#ifdef BYTE_ORDER
-    // In gcc compiler detect the byte order automatically
-    #if BYTE_ORDER == BIG_ENDIAN
-        // big-endian platform.
-        #define _BIG_ENDIAN_
-    #endif
-#endif
-    
-#ifdef _BIG_ENDIAN_
+#ifdef MSB_FIRST
     // big-endian CPU, swap bytes in 16 & 32 bit words
 
     // helper-function to swap byte-order of 32bit integer
@@ -112,7 +104,7 @@ static const char dataStr[] = "data";
         }
     }
 
-#else   // BIG_ENDIAN
+#else   // MSB_FIRST 
     // little-endian CPU, WAV file is ok as such
 
     // dummy helper-function
@@ -135,7 +127,7 @@ static const char dataStr[] = "data";
         // do nothing
     }
 
-#endif  // BIG_ENDIAN
+#endif  // MSB_FIRST
 
 
 //////////////////////////////////////////////////////////////////////////////

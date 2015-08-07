@@ -295,7 +295,7 @@ public:
 		//dump the palette to a temp buffer, so that we don't have to worry about memory mapping.
 		//this isnt such a problem with texture memory, because we read sequentially from it.
 		//however, we read randomly from palette memory, so the mapping is more costly.
-		#ifdef WORDS_BIGENDIAN
+		#ifdef MSB_FIRST
 			mspal.dump16(pal);
 		#else
 			mspal.dump(pal);

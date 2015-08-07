@@ -40,7 +40,7 @@ bool gpu_loadstate(EMUFILE* is, int size);
     it holds flags for general display
 *******************************************************************************/
 
-#ifdef WORDS_BIGENDIAN
+#ifdef MSB_FIRST
 struct _DISPCNT
 {
 /* 7*/  u8 ForceBlank:1;      // A+B:
@@ -131,7 +131,7 @@ enum BlendFunc
     some flags indicate special drawing mode, size, FX
 *******************************************************************************/
 
-#ifdef WORDS_BIGENDIAN
+#ifdef MSB_FIRST
 struct _BGxCNT
 {
 /* 7*/ u8 Palette_256:1;         // 0=16x16, 1=1*256 palette
@@ -217,8 +217,9 @@ typedef union {
 	u16 val;
 } WINxDIM;
 
-#ifdef WORDS_BIGENDIAN
-typedef struct {
+typedef struct
+{
+#ifdef MSB_FIRST
 /* 6*/  u8 :2;
 /* 5*/  u8 WINx_Effect_Enable:1;
 /* 4*/  u8 WINx_OBJ_Enable:1;
@@ -226,9 +227,7 @@ typedef struct {
 /* 2*/  u8 WINx_BG2_Enable:1;
 /* 1*/  u8 WINx_BG1_Enable:1;
 /* 0*/  u8 WINx_BG0_Enable:1;
-} WINxBIT;
 #else
-typedef struct {
 /* 0*/  u8 WINx_BG0_Enable:1;
 /* 1*/  u8 WINx_BG1_Enable:1;
 /* 2*/  u8 WINx_BG2_Enable:1;
@@ -236,57 +235,38 @@ typedef struct {
 /* 4*/  u8 WINx_OBJ_Enable:1;
 /* 5*/  u8 WINx_Effect_Enable:1;
 /* 6*/  u8 :2;
+#endif
 } WINxBIT;
-#endif
 
-#ifdef WORDS_BIGENDIAN
-typedef union {
-	struct {
-		WINxBIT win0;
-		WINxBIT win1;
-	} bits;
-	struct {
-		u8 :3;
-		u8 win0_en:5;
-		u8 :3;
-		u8 win1_en:5;
-	} packed_bits;
-	struct {
-		u8 low;
-		u8 high;
-	} bytes;
-	u16 val ;
-} WINxCNT ;
+typedef union
+{
+   struct
+   {
+      WINxBIT win0;
+      WINxBIT win1;
+   } bits;
+
+   u16 val ;
+   struct
+   {
+#ifdef MSB_FIRST
+u8 :3;
+    u8 win0_en:5;
+u8 :3;
+    u8 win1_en:5;
 #else
-typedef union {
-	struct {
-		WINxBIT win0;
-		WINxBIT win1;
-	} bits;
-	struct {
-		u8 win0_en:5;
-		u8 :3;
-		u8 win1_en:5;
-		u8 :3;
-	} packed_bits;
-	struct {
-		u8 low;
-		u8 high;
-	} bytes;
-	u16 val ;
-} WINxCNT ;
+    u8 win0_en:5;
+u8 :3;
+    u8 win1_en:5;
+u8 :3;
 #endif
-
-/*
-typedef struct {
-    WINxDIM WIN0H;
-    WINxDIM WIN1H;
-    WINxDIM WIN0V;
-    WINxDIM WIN1V;
-    WINxCNT WININ;
-    WINxCNT WINOUT;
-} WINCNT;
-*/
+   } packed_bits;
+   struct
+   {
+      u8 low;
+      u8 high;
+   } bytes;
+} WINxCNT;
 
 /*******************************************************************************
     this structure is for miscellanous settings
@@ -407,23 +387,21 @@ void register_gl_fun(fun_gl_Begin beg,fun_gl_End end);
 #define ADDRESS_STEP_512KB	   0x80000
 #define ADDRESS_MASK_256KB	   (ADDRESS_STEP_256KB-1)
 
-#ifdef WORDS_BIGENDIAN
 struct _TILEENTRY
 {
+#ifdef MSB_FIRST
 /*14*/	unsigned Palette:4;
 /*13*/	unsigned VFlip:1;	// VERTICAL FLIP (top<-->bottom)
 /*12*/	unsigned HFlip:1;	// HORIZONTAL FLIP (left<-->right)
 /* 0*/	unsigned TileNum:10;
-};
 #else
-struct _TILEENTRY
-{
 /* 0*/	unsigned TileNum:10;
 /*12*/	unsigned HFlip:1;	// HORIZONTAL FLIP (left<-->right)
 /*13*/	unsigned VFlip:1;	// VERTICAL FLIP (top<-->bottom)
 /*14*/	unsigned Palette:4;
-};
 #endif
+};
+
 typedef union
 {
 	struct _TILEENTRY bits;
@@ -451,16 +429,16 @@ typedef union
 */
 
 struct _COLOR { // abgr x555
-#ifdef WORDS_BIGENDIAN
-	unsigned alpha:1;    // sometimes it is unused (pad)
-	unsigned blue:5;
-	unsigned green:5;
-	unsigned red:5;
+#ifdef MSB_FIRST
+   unsigned alpha:1;    // sometimes it is unused (pad)
+   unsigned blue:5;
+   unsigned green:5;
+   unsigned red:5;
 #else
-     unsigned red:5;
-     unsigned green:5;
-     unsigned blue:5;
-     unsigned alpha:1;    // sometimes it is unused (pad)
+   unsigned red:5;
+   unsigned green:5;
+   unsigned blue:5;
+   unsigned alpha:1;    // sometimes it is unused (pad)
 #endif
 };
 struct _COLORx { // abgr x555

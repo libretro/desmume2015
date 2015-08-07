@@ -86,7 +86,7 @@ static bool softRastHasNewData = false;
 //	const double _double2fixmagic = 68719476736.0*1.5;     //2^36 * 1.5,  (52-_shiftamt=36) uses limited precisicion to floor
 //	const int _shiftamt        = 16;                    //16.16 fixed point representation,
 //
-//	#ifdef WORDS_BIGENDIAN
+//	#ifdef MSB_FIRST
 //		#define iman_				1
 //	#else
 //		#define iman_				0
@@ -1300,7 +1300,7 @@ void SoftRasterizerEngine::updateToonTable()
 {
 	//convert the toon colors
 	for(int i=0;i<32;i++) {
-		#ifdef WORDS_BIGENDIAN
+		#ifdef MSB_FIRST
 			u32 u32temp = RGB15TO32_NOALPHA(gfx3d.renderState.u16ToonTable[i]);
 			toonTable[i].r = (u32temp >> 2) & 0x3F;
 			toonTable[i].g = (u32temp >> 10) & 0x3F;

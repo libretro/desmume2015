@@ -240,12 +240,6 @@ typedef int desmume_BOOL;
 #define FALSE 0
 #endif
 
-#ifdef __BIG_ENDIAN__
-#ifndef WORDS_BIGENDIAN
-#define WORDS_BIGENDIAN
-#endif
-#endif
-
 /* little endian (ds' endianess) to local endianess convert macros */
 #ifdef MSB_FIRST	/* local arch is big endian */
 # define LE_TO_LOCAL_16(x) ((((x)&0xff)<<8)|(((x)>>8)&0xff))

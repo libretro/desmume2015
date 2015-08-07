@@ -179,43 +179,37 @@ enum Mode
 	SYS = 0x1F
 };
 
-#ifdef WORDS_BIGENDIAN
+#ifdef MSB_FIRST
 typedef union
 {
-	struct
-	{
-		u32 N : 1,
-		Z : 1,
-		C : 1,
-		V : 1,
-		Q : 1,
-		RAZ : 19,
-		I : 1,
-		F : 1,
-		T : 1,
-                mode : 5;
-	} bits;
-        u32 val;
-} Status_Reg;
+   struct
+   {
+#ifdef MSB_FIRST
+      u32 N : 1,
+          Z : 1,
+          C : 1,
+          V : 1,
+          Q : 1,
+          RAZ : 19,
+          I : 1,
+          F : 1,
+          T : 1,
+          mode : 5;
 #else
-typedef union
-{
-	struct
-	{
-                u32 mode : 5,
-		T : 1,
-		F : 1,
-		I : 1,
-		RAZ : 19,
-		Q : 1,
-		V : 1,
-		C : 1,
-		Z : 1,
-		N : 1;
-	} bits;
-        u32 val;
-} Status_Reg;
+      u32 mode : 5,
+          T : 1,
+          F : 1,
+          I : 1,
+          RAZ : 19,
+          Q : 1,
+          V : 1,
+          C : 1,
+          Z : 1,
+          N : 1;
 #endif
+   } bits;
+   u32 val;
+} Status_Reg;
 
 /**
  * The control interface to a CPU

@@ -76,14 +76,14 @@ class EMUFILE;
 #define RGB15TO32_NOALPHA(col) ( color_15bit_to_24bit[col&0x7FFF] )
 
 //produce a 32bpp color from a ds RGB15 plus an 8bit alpha, using a table
-#ifdef WORDS_BIGENDIAN
+#ifdef MSB_FIRST
 	#define RGB15TO32(col,alpha8) ( (alpha8) | color_15bit_to_24bit[(col)&0x7FFF] )
 #else
 	#define RGB15TO32(col,alpha8) ( ((alpha8)<<24) | color_15bit_to_24bit[(col)&0x7FFF] )
 #endif
 
 //produce a 5555 32bit color from a ds RGB15 plus an 5bit alpha
-#ifdef WORDS_BIGENDIAN
+#ifdef MSB_FIRST
 	#define RGB15TO5555(col,alpha5) ( (alpha5) | ((((col) & 0x7C00)>>10)<<8) | ((((col) & 0x03E0)>>5)<<16) | (((col) & 0x001F)<<24) )
 #else
 	#define RGB15TO5555(col,alpha5) ( ((alpha5)<<24) | ((((col) & 0x7C00)>>10)<<16) | ((((col) & 0x03E0)>>5)<<8) | ((col) & 0x001F) )
@@ -96,7 +96,7 @@ inline u32 RGB15TO6665(u16 col, u8 alpha5)
 	const u16 g = (col&0x03E0)>>5;
 	const u16 b = (col&0x7C00)>>10;
 	
-#ifdef WORDS_BIGENDIAN
+#ifdef MSB_FIRST
 	const u32 ret = alpha5 | (((b<<1)+1)<<8) | (((g<<1)+1)<<16) | (((r<<1)+1)<<24);
 #else
 	const u32 ret = (alpha5<<24) | (((b<<1)+1)<<16) | (((g<<1)+1)<<8) | ((r<<1)+1);

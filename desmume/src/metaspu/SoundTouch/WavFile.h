@@ -2,7 +2,7 @@
 ///
 /// Classes for easy reading & writing of WAV sound files.
 ///
-/// For big-endian CPU, define BIG_ENDIAN during compile-time to correctly
+/// For big-endian CPU, define MSB_FIRST during compile-time to correctly
 /// parse the WAV files with such processors.
 /// 
 /// Admittingly, more complete WAV reader routines may exist in public domain, but 
