@@ -66,8 +66,6 @@ struct SoundInterface_struct
    void (*ClearBuffer)();
 };
 
-extern SoundInterface_struct SNDDummy;
-extern SoundInterface_struct SNDFile;
 extern int SPU_currentCoreNum;
 
 struct channel_struct

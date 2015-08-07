@@ -521,7 +521,6 @@ void frontend_process_samples(u32 frames, const s16* data)
 
 SoundInterface_struct* SNDCoreList[] =
 {
-   &SNDDummy,
    &SNDRetro,
    NULL
 };

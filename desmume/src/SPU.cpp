@@ -159,10 +159,6 @@ int SPU_ChangeSoundCore(int coreid, int buffersize)
 
 	SNDCoreId = coreid;
 
-	//If the user picked the dummy core, disable the user spu
-	if(SNDCore == &SNDDummy)
-		return 0;
-
 	//If the core wasnt found in the list for some reason, disable the user spu
 	if (SNDCore == NULL)
 		return -1;
@@ -1740,41 +1736,6 @@ size_t SPU_DefaultPostProcessSamples(s16 *postProcessBuffer, size_t requestedSam
 	
 	return 0;
 }
-
-//////////////////////////////////////////////////////////////////////////////
-// Dummy Sound Interface
-//////////////////////////////////////////////////////////////////////////////
-
-int SNDDummyInit(int buffersize);
-void SNDDummyDeInit();
-void SNDDummyUpdateAudio(s16 *buffer, u32 num_samples);
-u32 SNDDummyGetAudioSpace();
-void SNDDummyMuteAudio();
-void SNDDummyUnMuteAudio();
-void SNDDummySetVolume(int volume);
-void SNDDummyClearBuffer();
-
-SoundInterface_struct SNDDummy = {
-	SNDCORE_DUMMY,
-	"Dummy Sound Interface",
-	SNDDummyInit,
-	SNDDummyDeInit,
-	SNDDummyUpdateAudio,
-	SNDDummyGetAudioSpace,
-	SNDDummyMuteAudio,
-	SNDDummyUnMuteAudio,
-	SNDDummySetVolume,
-	SNDDummyClearBuffer,
-};
-
-int SNDDummyInit(int buffersize) { return 0; }
-void SNDDummyDeInit() {}
-void SNDDummyUpdateAudio(s16 *buffer, u32 num_samples) { }
-u32 SNDDummyGetAudioSpace() { return DESMUME_SAMPLE_RATE/60 + 5; }
-void SNDDummyMuteAudio() {}
-void SNDDummyUnMuteAudio() {}
-void SNDDummySetVolume(int volume) {}
-void SNDDummyClearBuffer() {}
 
 void spu_savestate(EMUFILE* os)
 {
