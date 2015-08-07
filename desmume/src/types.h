@@ -48,9 +48,6 @@
 #ifdef HOST_WINDOWS
 	#define ENABLE_SSE
 	#define ENABLE_SSE2
-	#ifdef DEVELOPER
-		#define HAVE_LUA
-	#endif
 	#define HAVE_JIT
 #endif
 

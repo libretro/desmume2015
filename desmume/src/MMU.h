@@ -25,10 +25,6 @@
 #include "mc.h"
 #include "mem.h"
 
-#ifdef HAVE_LUA
-#include "lua-engine.h"
-#endif
-
 #ifdef HAVE_JIT
 #include "arm_jit.h"
 #endif
@@ -657,10 +653,6 @@ FORCEINLINE u8 _MMU_read08(const int PROCNUM, const MMU_ACCESS_TYPE AT, const u3
 		if((addr&(~0x3FFF)) == MMU.DTCMRegion) return 0; //dtcm
 	}
 
-#ifdef HAVE_LUA
-	CallRegisteredLuaMemHook(addr, 1, /*FIXME*/ 0, LUAMEMHOOK_READ);
-#endif
-
 	if(PROCNUM==ARMCPU_ARM9)
 		if((addr&(~0x3FFF)) == MMU.DTCMRegion)
 		{
@@ -691,10 +683,6 @@ FORCEINLINE u16 _MMU_read16(const int PROCNUM, const MMU_ACCESS_TYPE AT, const u
 		if(addr<0x02000000) return 0; //itcm
 		if((addr&(~0x3FFF)) == MMU.DTCMRegion) return 0; //dtcm
 	}
-
-#ifdef HAVE_LUA
-	CallRegisteredLuaMemHook(addr, 2, /*FIXME*/ 0, LUAMEMHOOK_READ);
-#endif
 
 	//special handling for execution from arm9, since we spend so much time in there
 	if(PROCNUM==ARMCPU_ARM9 && AT == MMU_AT_CODE)
@@ -739,10 +727,6 @@ FORCEINLINE u32 _MMU_read32(const int PROCNUM, const MMU_ACCESS_TYPE AT, const u
 		if(addr<0x02000000) return 0; //itcm
 		if((addr&(~0x3FFF)) == MMU.DTCMRegion) return 0; //dtcm
 	}
-
-#ifdef HAVE_LUA
-	CallRegisteredLuaMemHook(addr, 4, /*FIXME*/ 0, LUAMEMHOOK_READ);
-#endif
 
 	//special handling for execution from arm9, since we spend so much time in there
 	if(PROCNUM==ARMCPU_ARM9 && AT == MMU_AT_CODE)
@@ -803,9 +787,6 @@ FORCEINLINE void _MMU_write08(const int PROCNUM, const MMU_ACCESS_TYPE AT, const
 		if((addr&(~0x3FFF)) == MMU.DTCMRegion)
 		{
 			T1WriteByte(MMU.ARM9_DTCM, addr & 0x3FFF, val);
-#ifdef HAVE_LUA
-			CallRegisteredLuaMemHook(addr, 1, val, LUAMEMHOOK_WRITE);
-#endif
 			return;
 		}
 
@@ -814,17 +795,11 @@ FORCEINLINE void _MMU_write08(const int PROCNUM, const MMU_ACCESS_TYPE AT, const
 		JIT_COMPILED_FUNC_KNOWNBANK(addr, MAIN_MEM, _MMU_MAIN_MEM_MASK, 0) = 0;
 #endif
 		T1WriteByte( MMU.MAIN_MEM, addr & _MMU_MAIN_MEM_MASK, val);
-#ifdef HAVE_LUA
-		CallRegisteredLuaMemHook(addr, 1, val, LUAMEMHOOK_WRITE);
-#endif
 		return;
 	}
 
 	if(PROCNUM==ARMCPU_ARM9) _MMU_ARM9_write08(addr,val);
 	else _MMU_ARM7_write08(addr,val);
-#ifdef HAVE_LUA
-	CallRegisteredLuaMemHook(addr, 1, val, LUAMEMHOOK_WRITE);
-#endif
 }
 
 FORCEINLINE void _MMU_write16(const int PROCNUM, const MMU_ACCESS_TYPE AT, const u32 addr, u16 val)
@@ -842,9 +817,6 @@ FORCEINLINE void _MMU_write16(const int PROCNUM, const MMU_ACCESS_TYPE AT, const
 		if((addr&(~0x3FFF)) == MMU.DTCMRegion)
 		{
 			T1WriteWord(MMU.ARM9_DTCM, addr & 0x3FFE, val);
-#ifdef HAVE_LUA
-			CallRegisteredLuaMemHook(addr, 2, val, LUAMEMHOOK_WRITE);
-#endif
 			return;
 		}
 
@@ -853,17 +825,11 @@ FORCEINLINE void _MMU_write16(const int PROCNUM, const MMU_ACCESS_TYPE AT, const
 		JIT_COMPILED_FUNC_KNOWNBANK(addr, MAIN_MEM, _MMU_MAIN_MEM_MASK16, 0) = 0;
 #endif
 		T1WriteWord( MMU.MAIN_MEM, addr & _MMU_MAIN_MEM_MASK16, val);
-#ifdef HAVE_LUA
-		CallRegisteredLuaMemHook(addr, 2, val, LUAMEMHOOK_WRITE);
-#endif
 		return;
 	}
 
 	if(PROCNUM==ARMCPU_ARM9) _MMU_ARM9_write16(addr,val);
 	else _MMU_ARM7_write16(addr,val);
-#ifdef HAVE_LUA
-	CallRegisteredLuaMemHook(addr, 2, val, LUAMEMHOOK_WRITE);
-#endif
 }
 
 FORCEINLINE void _MMU_write32(const int PROCNUM, const MMU_ACCESS_TYPE AT, const u32 addr, u32 val)
@@ -881,9 +847,6 @@ FORCEINLINE void _MMU_write32(const int PROCNUM, const MMU_ACCESS_TYPE AT, const
 		if((addr&(~0x3FFF)) == MMU.DTCMRegion)
 		{
 			T1WriteLong(MMU.ARM9_DTCM, addr & 0x3FFC, val);
-#ifdef HAVE_LUA
-			CallRegisteredLuaMemHook(addr, 4, val, LUAMEMHOOK_WRITE);
-#endif
 			return;
 		}
 
@@ -893,17 +856,11 @@ FORCEINLINE void _MMU_write32(const int PROCNUM, const MMU_ACCESS_TYPE AT, const
 		JIT_COMPILED_FUNC_KNOWNBANK(addr, MAIN_MEM, _MMU_MAIN_MEM_MASK32, 1) = 0;
 #endif
 		T1WriteLong( MMU.MAIN_MEM, addr & _MMU_MAIN_MEM_MASK32, val);
-#ifdef HAVE_LUA
-		CallRegisteredLuaMemHook(addr, 4, val, LUAMEMHOOK_WRITE);
-#endif
 		return;
 	}
 
 	if(PROCNUM==ARMCPU_ARM9) _MMU_ARM9_write32(addr,val);
 	else _MMU_ARM7_write32(addr,val);
-#ifdef HAVE_LUA
-	CallRegisteredLuaMemHook(addr, 4, val, LUAMEMHOOK_WRITE);
-#endif
 }
 
 

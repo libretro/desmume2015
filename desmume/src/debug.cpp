@@ -29,10 +29,6 @@
 #include "utils/xstring.h"
 #include "movie.h"
 
-#ifdef HAVE_LUA
-#include "lua-engine.h"
-#endif
-
 armcpu_t* TDebugEventData::cpu() { return procnum==0?&NDS_ARM9:&NDS_ARM7; }
 
 TDebugEventData DebugEventData;
