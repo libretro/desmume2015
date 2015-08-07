@@ -854,10 +854,6 @@ void GPU_setBLDCNT(GPU *gpu, u16 v) ;
 void GPU_setBLDY(GPU *gpu, u16 v) ;
 void GPU_setMOSAIC(GPU *gpu, u16 v) ;
 
-
-void GPU_remove(GPU *, u8 num);
-void GPU_addBack(GPU *, u8 num);
-
 int GPU_ChangeGraphicsCore(int coreid);
 
 void GPU_set_DISPCAPCNT(u32 val) ;

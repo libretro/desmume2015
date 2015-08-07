@@ -397,8 +397,6 @@ void GPU_setVideoProp(GPU * gpu, u32 p)
 	GPU_setBGProp(gpu, 2, T1ReadWord(MMU.ARM9_REG, gpu->core * ADDRESS_STEP_4KB + 12));
 	GPU_setBGProp(gpu, 1, T1ReadWord(MMU.ARM9_REG, gpu->core * ADDRESS_STEP_4KB + 10));
 	GPU_setBGProp(gpu, 0, T1ReadWord(MMU.ARM9_REG, gpu->core * ADDRESS_STEP_4KB + 8));
-	
-	//GPU_resortBGs(gpu);
 }
 
 //this handles writing in BGxCNT
@@ -471,22 +469,6 @@ void GPU_setBGProp(GPU * gpu, u16 num, u16 p)
 	
 	gpu->bgPrio[num] = (p & 0x3);
 }
-
-/*****************************************************************************/
-//			ENABLING / DISABLING LAYERS
-/*****************************************************************************/
-
-void GPU_remove(GPU * gpu, u8 num)
-{
-	CommonSettings.dispLayers[gpu->core][num] = false;
-	GPU_resortBGs(gpu);
-}
-void GPU_addBack(GPU * gpu, u8 num)
-{
-	CommonSettings.dispLayers[gpu->core][num] = true;
-	GPU_resortBGs(gpu);
-}
-
 
 /*****************************************************************************/
 //		ROUTINES FOR INSIDE / OUTSIDE WINDOW CHECKS
