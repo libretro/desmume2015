@@ -179,7 +179,6 @@ enum Mode
 	SYS = 0x1F
 };
 
-#ifdef MSB_FIRST
 typedef union
 {
    struct
