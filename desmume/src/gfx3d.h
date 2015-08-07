@@ -71,36 +71,38 @@ class EMUFILE;
 #define GFX3D_POS_TEST 0x71
 #define GFX3D_VEC_TEST 0x72
 #define GFX3D_NOP_NOARG_HACK 0xDD
-		
+
 //produce a 32bpp color from a ds RGB15, using a table
 #define RGB15TO32_NOALPHA(col) ( color_15bit_to_24bit[col&0x7FFF] )
 
 //produce a 32bpp color from a ds RGB15 plus an 8bit alpha, using a table
-#ifdef MSB_FIRST
+#ifdef WORDS_BIGENDIAN
 	#define RGB15TO32(col,alpha8) ( (alpha8) | color_15bit_to_24bit[(col)&0x7FFF] )
 #else
 	#define RGB15TO32(col,alpha8) ( ((alpha8)<<24) | color_15bit_to_24bit[(col)&0x7FFF] )
 #endif
 
 //produce a 5555 32bit color from a ds RGB15 plus an 5bit alpha
-#ifdef MSB_FIRST
+#ifdef WORDS_BIGENDIAN
 	#define RGB15TO5555(col,alpha5) ( (alpha5) | ((((col) & 0x7C00)>>10)<<8) | ((((col) & 0x03E0)>>5)<<16) | (((col) & 0x001F)<<24) )
 #else
 	#define RGB15TO5555(col,alpha5) ( ((alpha5)<<24) | ((((col) & 0x7C00)>>10)<<16) | ((((col) & 0x03E0)>>5)<<8) | ((col) & 0x001F) )
 #endif
 
-#define DS_RGB15_R(col) (((col) & 0x001F) >> 0)
-#define DS_RGB15_G(col) (((col) & 0x03E0) >> 5)
-#define DS_RGB15_B(col) (((col) & 0x7C00) >> 10)
-
 //produce a 6665 32bit color from a ds RGB15 plus an 5bit alpha
-static inline u32 RGB15TO6665(u16 col, u8 alpha5)
+inline u32 RGB15TO6665(u16 col, u8 alpha5)
 {
-#ifdef MSB_FIRST
-   return alpha5 | ((((DS_RGB15_B(col)) << 1)+1)<<8) | ((((DS_RGB15_G(col)) <<1)+1)<<16) | ((((DS_RGB15_R(col))<<1)+1)<<24);
+	const u16 r = (col&0x001F)>>0;
+	const u16 g = (col&0x03E0)>>5;
+	const u16 b = (col&0x7C00)>>10;
+	
+#ifdef WORDS_BIGENDIAN
+	const u32 ret = alpha5 | (((b<<1)+1)<<8) | (((g<<1)+1)<<16) | (((r<<1)+1)<<24);
 #else
-   return (alpha5<<24) | ((((DS_RGB15_B(col))<<1)+1)<<16) | ((((DS_RGB15_G(col))<<1)+1)<<8) | (((DS_RGB15_R(col))<<1)+1);
+	const u32 ret = (alpha5<<24) | (((b<<1)+1)<<16) | (((g<<1)+1)<<8) | ((r<<1)+1);
 #endif
+	
+	return ret;
 }
 
 //produce a 24bpp color from a ds RGB15, using a table
@@ -132,14 +134,14 @@ enum MatrixMode
 // POLYGON PRIMITIVE TYPES
 enum PolygonPrimitiveType
 {
-   GFX3D_TRIANGLES				= 0,
-   GFX3D_QUADS					= 1,
-   GFX3D_TRIANGLE_STRIP		= 2,
-   GFX3D_QUAD_STRIP			= 3,
-   GFX3D_TRIANGLES_LINE		= 4,
-   GFX3D_QUADS_LINE			= 5,
-   GFX3D_TRIANGLE_STRIP_LINE	= 6,
-   GFX3D_QUAD_STRIP_LINE		= 7
+	GFX3D_TRIANGLES				= 0,
+	GFX3D_QUADS					= 1,
+	GFX3D_TRIANGLE_STRIP		= 2,
+	GFX3D_QUAD_STRIP			= 3,
+	GFX3D_TRIANGLES_LINE		= 4,
+	GFX3D_QUADS_LINE			= 5,
+	GFX3D_TRIANGLE_STRIP_LINE	= 6,
+	GFX3D_QUAD_STRIP_LINE		= 7
 };
 
 // POLYGON MODES
@@ -172,7 +174,7 @@ enum
 	POLYGON_ATTR_ENABLE_ALPHA_DEPTH_WRITE_BIT	= 11,
 	POLYGON_ATTR_ENABLE_RENDER_ON_FAR_PLANE_INTERSECT_BIT	= 12,
 	POLYGON_ATTR_ENABLE_ONE_DOT_RENDER_BIT		= 13,
-   POLYGON_ATTR_ENABLE_DEPTH_EQUAL_TEST_BIT	= 14,
+	POLYGON_ATTR_ENABLE_DEPTH_EQUAL_TEST_BIT	= 14,
 	POLYGON_ATTR_ENABLE_FOG_BIT					= 15,
 	POLYGON_ATTR_ALPHA_BIT						= 16, // Bits 16 - 20
 	// Bits 21 - 23 unused
@@ -193,7 +195,7 @@ enum
 	POLYGON_ATTR_ENABLE_ALPHA_DEPTH_WRITE_MASK	= 0x01 << POLYGON_ATTR_ENABLE_ALPHA_DEPTH_WRITE_BIT,
 	POLYGON_ATTR_ENABLE_RENDER_ON_FAR_PLANE_INTERSECT_MASK = 0x01 << POLYGON_ATTR_ENABLE_RENDER_ON_FAR_PLANE_INTERSECT_BIT,
 	POLYGON_ATTR_ENABLE_ONE_DOT_RENDER_MASK		= 0x01 << POLYGON_ATTR_ENABLE_ONE_DOT_RENDER_BIT,
-   POLYGON_ATTR_ENABLE_DEPTH_EQUAL_TEST_MASK	= 0x01 << POLYGON_ATTR_ENABLE_DEPTH_EQUAL_TEST_BIT,
+	POLYGON_ATTR_ENABLE_DEPTH_EQUAL_TEST_MASK	= 0x01 << POLYGON_ATTR_ENABLE_DEPTH_EQUAL_TEST_BIT,
 	POLYGON_ATTR_ENABLE_FOG_MASK				= 0x01 << POLYGON_ATTR_ENABLE_FOG_BIT,
 	POLYGON_ATTR_ALPHA_MASK						= 0x1F << POLYGON_ATTR_ALPHA_BIT,
 	POLYGON_ATTR_POLYGON_ID_MASK				= 0x3F << POLYGON_ATTR_POLYGON_ID_BIT
@@ -252,7 +254,7 @@ void gfx3d_setFramebufferSize(size_t w, size_t h);
 
 typedef struct
 {
-   u8				enableLightFlags;
+	u8				enableLightFlags;
 	bool			enableLight0;
 	bool			enableLight1;
 	bool			enableLight2;
@@ -288,7 +290,7 @@ typedef struct
 } PolygonTexParams;
 
 struct POLY {
-   PolygonType type; //tri or quad
+	PolygonType type; //tri or quad
 	PolygonPrimitiveType vtxFormat;
 	u16 vertIndexes[4]; //up to four verts can be referenced by this poly
 	u32 polyAttr, texParam, texPalette; //the hardware rendering params
@@ -300,8 +302,8 @@ struct POLY {
 		vertIndexes[0] = a;
 		vertIndexes[1] = b;
 		vertIndexes[2] = c;
-      if(d != -1) { vertIndexes[3] = d; type = POLYGON_TYPE_QUAD; }
-      else type = POLYGON_TYPE_TRIANGLE;
+		if(d != -1) { vertIndexes[3] = d; type = POLYGON_TYPE_QUAD; }
+		else type = POLYGON_TYPE_TRIANGLE;
 	}
 	
 	u8 getAttributeEnableLightFlags() const
@@ -332,9 +334,9 @@ struct POLY {
 		return ((polyAttr & POLYGON_ATTR_ENABLE_LIGHT3_MASK) > 0);
 	}
 	
-   PolygonMode getAttributePolygonMode() const
+	PolygonMode getAttributePolygonMode() const
 	{
-      return (PolygonMode)((polyAttr & POLYGON_ATTR_MODE_MASK) >> POLYGON_ATTR_MODE_BIT);
+		return (PolygonMode)((polyAttr & POLYGON_ATTR_MODE_MASK) >> POLYGON_ATTR_MODE_BIT);
 	}
 	
 	u8 getAttributeEnableFaceCullingFlags() const
@@ -368,9 +370,9 @@ struct POLY {
 		return ((polyAttr & POLYGON_ATTR_ENABLE_ONE_DOT_RENDER_MASK) > 0);
 	}
 	
-   bool getAttributeEnableDepthEqualTest() const
+	bool getAttributeEnableDepthEqualTest() const
 	{
-      return ((polyAttr & POLYGON_ATTR_ENABLE_DEPTH_EQUAL_TEST_MASK) > 0);
+		return ((polyAttr & POLYGON_ATTR_ENABLE_DEPTH_EQUAL_TEST_MASK) > 0);
 	}
 	
 	bool getAttributeEnableFog() const
@@ -404,7 +406,7 @@ struct POLY {
 		theAttr.enableAlphaDepthWrite			= this->getAttributeEnableAlphaDepthWrite();
 		theAttr.enableRenderOnFarPlaneIntersect	= this->getAttributeEnableRenderOnFarPlaneIntersect();
 		theAttr.enableRenderOneDot				= this->getAttributeEnableOneDotRender();
-      theAttr.enableDepthEqualTest			= this->getAttributeEnableDepthEqualTest();
+		theAttr.enableDepthEqualTest			= this->getAttributeEnableDepthEqualTest();
 		theAttr.enableRenderFog					= this->getAttributeEnableFog();
 		theAttr.alpha							= this->getAttributeAlpha();
 		theAttr.isWireframe						= this->isWireframe();
@@ -598,7 +600,7 @@ struct INDEXLIST {
 
 struct VIEWPORT {
 	u8 x, y;
-   u16 width, height;
+	u16 width, height;
 	void decode(u32 v);
 };
 
@@ -619,12 +621,12 @@ public:
 	};
 
 	//the entry point for poly clipping
-   template<bool hirez> void clipPoly(const POLY &poly, const VERT **verts);
+	template<bool hirez> void clipPoly(const POLY &poly, const VERT **verts);
 
 	//the output of clipping operations goes into here.
 	//be sure you init it before clipping!
 	TClippedPoly *clippedPolys;
-   size_t clippedPolyCounter;
+	size_t clippedPolyCounter;
 	void reset() { clippedPolyCounter=0; }
 
 private:
@@ -690,7 +692,7 @@ struct GFX3D_State
 	bool invalidateToon;
 	u16 u16ToonTable[32];
 	u8 shininessTable[128];
-   u8 *fogDensityTable;		// Alias to MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0360
+	u8 *fogDensityTable;		// Alias to MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0360
 	u16 *edgeMarkColorTable;	// Alias to MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0330
 };
 
@@ -747,7 +749,6 @@ extern CACHE_ALIGN const u8 material_3bit_to_8bit[8];
 
 //these contain the 3d framebuffer converted into the most useful format
 //they are stored here instead of in the renderers in order to consolidate the buffers
-
 extern u8 *gfx3d_convertedScreen;
 extern BOOL isSwapBuffers;
 
@@ -765,7 +766,7 @@ int gfx3d_GetNumVertex();
 void gfx3d_UpdateToonTable(u8 offset, u16 val);
 void gfx3d_UpdateToonTable(u8 offset, u32 val);
 s32 gfx3d_GetClipMatrix (const u32 index);
-s32 gfx3d_GetDirectionalMatrix (const u32 index);
+s32 gfx3d_GetDirectionalMatrix(const u32 index);
 void gfx3d_glAlphaFunc(u32 v);
 u32 gfx3d_glGetPosRes(const size_t index);
 u16 gfx3d_glGetVecRes(const size_t index);
@@ -777,9 +778,9 @@ void gfx3d_sendCommandToFIFO(u32 val);
 void gfx3d_sendCommand(u32 cmd, u32 param);
 
 //other misc stuff
-void gfx3d_glGetMatrix(u32 mode, int index, float* dest);
-void gfx3d_glGetLightDirection(u32 index, u32* dest);
-void gfx3d_glGetLightColor(u32 index, u32* dest);
+void gfx3d_glGetMatrix(const MatrixMode mode, int index, float *dst);
+void gfx3d_glGetLightDirection(const size_t index, u32 &dst);
+void gfx3d_glGetLightColor(const size_t index, u32 &dst);
 
 void gfx3d_GetLineData(int line, u8** dst);
 void gfx3d_GetLineData15bpp(int line, u16** dst);
