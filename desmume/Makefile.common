@@ -41,7 +41,6 @@ SOURCES_CXX += \
 	$(CORE_DIR)/utils/guid.cpp \
 	$(CORE_DIR)/utils/emufat.cpp \
 	$(CORE_DIR)/utils/fsnitro.cpp \
-	$(CORE_DIR)/utils/md5.cpp \
 	$(CORE_DIR)/utils/xstring.cpp \
 	$(CORE_DIR)/utils/decrypt/crc.cpp \
 	$(CORE_DIR)/utils/decrypt/decrypt.cpp \
