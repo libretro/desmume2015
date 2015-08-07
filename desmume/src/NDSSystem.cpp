@@ -184,6 +184,7 @@ void NDS_DeInit(void)
 	Screen_DeInit();
 	MMU_DeInit();
    Render3D_DeInit();
+   gfx3d_deinit();
 
 	WIFI_DeInit();
 	
