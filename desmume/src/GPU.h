@@ -29,9 +29,6 @@
 class EMUFILE;
 struct MMU_struct;
 
-//#undef FORCEINLINE
-//#define FORCEINLINE
-
 void gpu_savestate(EMUFILE* os);
 bool gpu_loadstate(EMUFILE* is, int size);
 
@@ -887,10 +884,6 @@ void SetupFinalPixelBlitter (GPU *gpu);
 #define GPU_setBLDY_EVY(gpu, val) {gpu->BLDY_EVY = ((val)&0x1f) > 16 ? 16 : ((val)&0x1f);}
 
 void gpu_SetRotateScreen(u16 angle);
-
-//#undef FORCEINLINE
-//#define FORCEINLINE __forceinline
-
 
 #include <map>
 #include <utility>
