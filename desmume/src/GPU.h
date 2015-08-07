@@ -804,25 +804,6 @@ struct GPU
 	}
 	
 };
-#if 0
-// normally should have same addresses
-static void REG_DISPx_pack_test(GPU * gpu)
-{
-	REG_DISPx * r = gpu->dispx_st;
-	printf ("%08x %02x\n",  (u32)r, (u32)(&r->dispx_DISPCNT) - (u32)r);
-	printf ("\t%02x\n", (u32)(&r->dispA_DISPSTAT) - (u32)r);
-	printf ("\t%02x\n", (u32)(&r->dispx_VCOUNT) - (u32)r);
-	printf ("\t%02x\n", (u32)(&r->dispx_BGxCNT[0]) - (u32)r);
-	printf ("\t%02x\n", (u32)(&r->dispx_BGxOFS[0]) - (u32)r);
-	printf ("\t%02x\n", (u32)(&r->dispx_BG2PARMS) - (u32)r);
-	printf ("\t%02x\n", (u32)(&r->dispx_BG3PARMS) - (u32)r);
-//	printf ("\t%02x\n", (u32)(&r->dispx_WINCNT) - (u32)r);
-	printf ("\t%02x\n", (u32)(&r->dispx_MISC) - (u32)r);
-	printf ("\t%02x\n", (u32)(&r->dispA_DISP3DCNT) - (u32)r);
-	printf ("\t%02x\n", (u32)(&r->dispA_DISPCAPCNT) - (u32)r);
-	printf ("\t%02x\n", (u32)(&r->dispA_DISPMMEMFIFO) - (u32)r);
-}
-#endif
 
 CACHE_ALIGN extern u8 GPU_screen[4*256*192];
 

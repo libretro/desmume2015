@@ -281,21 +281,6 @@ static void GPU_resortBGs(GPU *gpu)
 			}
 		}
 	}
-	
-#if 0
-//debug
-	for (i=0;i<NB_PRIORITIES;i++) {
-		item = &(gpu->itemsForPriority[i]);
-		printf("%d : ", i);
-		for (j=0; j<NB_PRIORITIES; j++) {
-			if (j<item->nbBGs) 
-				printf("BG%d ", item->BGs[j]);
-			else
-				printf("... ", item->BGs[j]);
-		}
-	}
-	printf("\n");
-#endif
 }
 
 static FORCEINLINE u16 _blend(u16 colA, u16 colB, GPU::TBlendTable* blendTable)
@@ -1296,16 +1281,6 @@ template<bool MOSAIC> FORCEINLINE void extRotBG2(GPU * gpu, const BGxPARMS *para
 	default: break;
 	}
 }
-
-/*****************************************************************************/
-//			BACKGROUND RENDERING -HELPER FUNCTIONS-
-/*****************************************************************************/
-
-#if 0
-static void lineNull(GPU * gpu)
-{
-}
-#endif
 
 /*****************************************************************************/
 //			SPRITE RENDERING -HELPER FUNCTIONS-
