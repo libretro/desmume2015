@@ -1332,13 +1332,6 @@ static void lineNull(GPU * gpu)
 }
 #endif
 
-template<bool MOSAIC> void lineText(GPU * gpu)
-{
-   const u16 vofs = gpu->getVOFS(gpu->currBgNum);
-   const u16 hofs = gpu->getHOFS(gpu->currBgNum);
-   renderline_textBG<MOSAIC>(gpu, hofs, gpu->currLine + vofs, 256);
-}
-
 template<bool MOSAIC> void lineRot(GPU * gpu)
 {	
 	BGxPARMS * parms;
@@ -2780,7 +2773,9 @@ template<bool MOSAIC> void GPU::modeRender(int layer)
 {
 	switch(GPU_mode2type[dispCnt().BG_Mode][layer])
 	{
-		case BGType_Text: lineText<MOSAIC>(this); break;
+		case BGType_Text:
+         renderline_textBG<MOSAIC>(this, getHOFS(layer), currLine + getVOFS(layer), 256);
+         break;
 		case BGType_Affine: lineRot<MOSAIC>(this); break;
 		case BGType_AffineExt: lineExtRot<MOSAIC>(this); break;
 		case BGType_Large8bpp: lineExtRot<MOSAIC>(this); break;
