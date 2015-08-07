@@ -38,7 +38,6 @@ SOURCES_CXX += \
 	$(CORE_DIR)/thumb_instructions.cpp \
 	$(CORE_DIR)/utils/advanscene.cpp \
 	$(CORE_DIR)/utils/datetime.cpp \
-	$(CORE_DIR)/utils/guid.cpp \
 	$(CORE_DIR)/utils/emufat.cpp \
 	$(CORE_DIR)/utils/fsnitro.cpp \
 	$(CORE_DIR)/utils/xstring.cpp \

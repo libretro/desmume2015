@@ -23,7 +23,6 @@
 #include <time.h>
 
 #include "utils/datetime.h"
-#include "utils/guid.h"
 
 extern int currFrameCounter;
 
