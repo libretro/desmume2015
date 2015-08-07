@@ -59,9 +59,6 @@ extern unsigned long crc32(unsigned long, const unsigned char*,unsigned int);
 #include "SPU.h"
 #include "wifi.h"
 
-#ifdef GDB_STUB
-#include "gdbstub.h"
-#endif
 
 //int xxctr=0;
 //#define LOG_ARM9
@@ -1840,10 +1837,6 @@ void NDS_debug_step()
 template<bool FORCE>
 void NDS_exec(s32 nb)
 {
-	#ifdef GDB_STUB
-	gdbstub_mutex_lock();
-	#endif
-
 	LagFrameFlag=1;
 
 	sequencer.nds_vblankEnded = false;
@@ -1876,13 +1869,7 @@ void NDS_exec(s32 nb)
 					
 					while((NDS_ARM9.stalled || NDS_ARM7.stalled) && execute)
 					{
-					        #ifdef GDB_STUB
-					        gdbstub_mutex_unlock();
-					        #endif
 						driver->EMU_DebugIdleUpdate();
-					        #ifdef GDB_STUB
-					        gdbstub_mutex_lock();
-					        #endif
 						nds_debug_continuing[0] = nds_debug_continuing[1] = true;
 					}
 					
@@ -1983,10 +1970,6 @@ void NDS_exec(s32 nb)
 	DEBUG_Notify.NextFrame();
 	if (cheats)
 		cheats->process();
-
-        #ifdef GDB_STUB
-        gdbstub_mutex_unlock();
-        #endif
 }
 
 template<int PROCNUM> static void execHardware_interrupts_core()
