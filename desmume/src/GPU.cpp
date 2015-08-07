@@ -1324,24 +1324,6 @@ static void lineNull(GPU * gpu)
 }
 #endif
 
-template<bool MOSAIC> void lineExtRot(GPU * gpu)
-{
-	BGxPARMS *parms = &(gpu->dispx_st)->dispx_BG3PARMS;		
-	if (gpu->currBgNum==2)
-		parms = &(gpu->dispx_st)->dispx_BG2PARMS;
-
-   extRotBG2<MOSAIC>(gpu,
-         parms->BGxX,
-         parms->BGxY,
-         parms->BGxPA,
-         parms->BGxPB,
-         parms->BGxPC,
-         parms->BGxPD,
-         256);
-   parms->BGxX += parms->BGxPB;
-   parms->BGxY += parms->BGxPD;
-}
-
 /*****************************************************************************/
 //			SPRITE RENDERING -HELPER FUNCTIONS-
 /*****************************************************************************/
@@ -2747,7 +2729,22 @@ template<bool MOSAIC> void GPU::modeRender(int layer)
       case BGType_AffineExt:
       case BGType_Large8bpp:
       case BGType_Affine:
-         lineExtRot<MOSAIC>(this);
+         {
+            BGxPARMS *parms = &(dispx_st)->dispx_BG3PARMS;		
+            if (layer == 2)
+               parms = &(dispx_st)->dispx_BG2PARMS;
+
+            extRotBG2<MOSAIC>(this,
+                  parms->BGxX,
+                  parms->BGxY,
+                  parms->BGxPA,
+                  parms->BGxPB,
+                  parms->BGxPC,
+                  parms->BGxPD,
+                  256);
+            parms->BGxX += parms->BGxPB;
+            parms->BGxY += parms->BGxPD;
+         }
          break;
 		case BGType_Invalid: 
 			PROGINFO("Attempting to render an invalid BG type\n");
