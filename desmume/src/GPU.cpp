@@ -1334,17 +1334,9 @@ static void lineNull(GPU * gpu)
 
 template<bool MOSAIC> void lineText(GPU * gpu)
 {
-	if(gpu->debug)
-	{
-		const s32 wh = gpu->BGSize[gpu->currBgNum][0];
-		renderline_textBG<MOSAIC>(gpu, 0, gpu->currLine, wh);
-	}
-	else
-	{
-		const u16 vofs = gpu->getVOFS(gpu->currBgNum);
-		const u16 hofs = gpu->getHOFS(gpu->currBgNum);
-		renderline_textBG<MOSAIC>(gpu, hofs, gpu->currLine + vofs, 256);
-	}
+   const u16 vofs = gpu->getVOFS(gpu->currBgNum);
+   const u16 hofs = gpu->getHOFS(gpu->currBgNum);
+   renderline_textBG<MOSAIC>(gpu, hofs, gpu->currLine + vofs, 256);
 }
 
 template<bool MOSAIC> void lineRot(GPU * gpu)
@@ -1356,24 +1348,16 @@ template<bool MOSAIC> void lineRot(GPU * gpu)
 		parms = &(gpu->dispx_st)->dispx_BG3PARMS;		
 	}
 
-	if(gpu->debug)
-	{
-		s32 wh = gpu->BGSize[gpu->currBgNum][0];
-		rotBG2<MOSAIC>(gpu, 0, (s16)gpu->currLine*256, 256,0, 0,-77, wh);
-	}
-	else
-	{
-		 rotBG2<MOSAIC>(gpu, 
-				  parms->BGxX,
-				  parms->BGxY,
-				  parms->BGxPA,
-				  parms->BGxPB,
-				  parms->BGxPC,
-				  parms->BGxPD,
-				  256);
-		 parms->BGxX += parms->BGxPB;
-		 parms->BGxY += parms->BGxPD;
-	}
+   rotBG2<MOSAIC>(gpu, 
+         parms->BGxX,
+         parms->BGxY,
+         parms->BGxPA,
+         parms->BGxPB,
+         parms->BGxPC,
+         parms->BGxPD,
+         256);
+   parms->BGxX += parms->BGxPB;
+   parms->BGxY += parms->BGxPD;
 }
 
 template<bool MOSAIC> void lineExtRot(GPU * gpu)
@@ -1385,24 +1369,16 @@ template<bool MOSAIC> void lineExtRot(GPU * gpu)
 		parms = &(gpu->dispx_st)->dispx_BG3PARMS;		
 	}
 
-	if(gpu->debug)
-	{
-		s32 wh = gpu->BGSize[gpu->currBgNum][0];
-		extRotBG2<MOSAIC>(gpu, 0, (s16)gpu->currLine*256, 256,0, 0,-77, wh);
-	}
-	else
-	{
-		extRotBG2<MOSAIC>(gpu,
-              parms->BGxX,
-              parms->BGxY,
-              parms->BGxPA,
-              parms->BGxPB,
-              parms->BGxPC,
-              parms->BGxPD,
-              256);
-		parms->BGxX += parms->BGxPB;
-		parms->BGxY += parms->BGxPD;
-	}
+   extRotBG2<MOSAIC>(gpu,
+         parms->BGxX,
+         parms->BGxY,
+         parms->BGxPA,
+         parms->BGxPB,
+         parms->BGxPC,
+         parms->BGxPD,
+         256);
+   parms->BGxX += parms->BGxPB;
+   parms->BGxY += parms->BGxPD;
 }
 
 /*****************************************************************************/
