@@ -2478,6 +2478,7 @@ void GPU::update_winh(int WIN_NUM)
 
 void GPU_RenderLine(NDS_Screen * screen, u16 l, bool skip)
 {
+   size_t i;
 	GPU * gpu = screen->gpu;
 
 	//here is some setup which is only done on line 0
@@ -2559,16 +2560,13 @@ void GPU_RenderLine(NDS_Screen * screen, u16 l, bool skip)
 	}
 
 	GPU_RenderLine_layer(screen, l);
+   u8 * dst =  GPU_screen + (screen->offset + l) * 512;
 
 	switch (gpu->dispMode)
 	{
 		case 0: // Display Off(Display white)
-			{
-				u8 * dst =  GPU_screen + (screen->offset + l) * 512;
-
-				for (int i=0; i<256; i++)
-					HostWriteWord(dst, i << 1, 0x7FFF);
-			}
+         for (i=0; i<256; i++)
+            HostWriteWord(dst, i << 1, 0x7FFF);
 			break;
 
 		case 1: // Display BG and OBJ layers
@@ -2577,10 +2575,8 @@ void GPU_RenderLine(NDS_Screen * screen, u16 l, bool skip)
 
 		case 2: // Display vram framebuffer
 			{
-				u8 * dst = GPU_screen + (screen->offset + l) * 512;
 				u8 * src = gpu->VRAMaddr + (l*512);
 #ifdef MSB_FIRST
-            size_t i;
 				for(i = 0; i < 256; i++)
 					((u16 *)dst)[i] = LE_TO_LOCAL_16(((u16 *)src)[i]);
 #else
@@ -2592,8 +2588,7 @@ void GPU_RenderLine(NDS_Screen * screen, u16 l, bool skip)
 			{
 				//this has not been tested since the dma timing for dispfifo was changed around the time of
 				//newemuloop. it may not work.
-				u8 * dst =  GPU_screen + (screen->offset + l) * 512;
-				for (int i=0; i < 128; i++)
+				for (i=0; i < 128; i++)
 					T1WriteLong(dst, i << 2, DISP_FIFOrecv() & 0x7FFF7FFF);
 			}
 			break;
