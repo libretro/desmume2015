@@ -5,12 +5,12 @@
 #include "MMU.h"
 #include "NDSSystem.h"
 #include "debug.h"
-#include "sndsdl.h"
 #include "render3D.h"
 #include "rasterize.h"
 #include "saves.h"
 #include "firmware.h"
 #include "GPU.h"
+#include "SPU.h"
 #include "emufile.h"
 #include "common.h"
 
@@ -519,12 +519,6 @@ void frontend_process_samples(u32 frames, const s16* data)
     audio_batch_cb(data, frames);
 }
 
-SoundInterface_struct* SNDCoreList[] =
-{
-   &SNDRetro,
-   NULL
-};
-
 #ifndef GPU3D_NULL
 #define GPU3D_NULL 0
 #endif
@@ -730,7 +724,7 @@ void retro_init (void)
 
     //addonsChangePak(NDS_ADDON_NONE);
     NDS_Init();
-    SPU_ChangeSoundCore(SNDCORE_RETRO, 735 * 2);
+    SPU_ChangeSoundCore(0, 735 * 2);
     NDS_CreateDummyFirmware(&fw_config);
 
     Change3DCoreWithFallback(GPU3D_SWRAST);

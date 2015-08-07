@@ -28,6 +28,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <libretro.h>
 #include <queue>
 #include <vector>
 
@@ -41,6 +42,11 @@
 #include "NDSSystem.h"
 #include "matrix.h"
 
+extern retro_audio_sample_batch_t audio_batch_cb;
+
+unsigned retro_audio_frames;
+
+#define SNDRetroGetAudioSpace() (735 - (retro_audio_frames))
 
 static inline s16 read16(u32 addr) { return (s16)_MMU_read16<ARMCPU_ARM7,MMU_AT_DEBUG>(addr); }
 static inline u8 read08(u32 addr) { return _MMU_read08<ARMCPU_ARM7,MMU_AT_DEBUG>(addr); }
@@ -66,10 +72,6 @@ static int volume = 100;
 static size_t buffersize = 0;
 static ESynchMode synchmode = ESynchMode_DualSynchAsynch;
 static ESynchMethod synchmethod = ESynchMethod_N;
-
-static int SNDCoreId=-1;
-static SoundInterface_struct *SNDCore=NULL;
-extern SoundInterface_struct *SNDCoreList[];
 
 //const int shift = (FORMAT == 0 ? 2 : 1);
 static const int format_shift[] = { 2, 1, 3, 0 };
@@ -136,55 +138,14 @@ int SPU_ChangeSoundCore(int coreid, int buffersize)
 
 	delete SPU_user; SPU_user = NULL;
 
-	// Make sure the old core is freed
-	if (SNDCore)
-		SNDCore->DeInit();
-
-	// So which core do we want?
-	if (coreid == SNDCORE_DEFAULT)
-		coreid = 0; // Assume we want the first one
-
-	SPU_currentCoreNum = coreid;
-
-	// Go through core list and find the id
-	for (i = 0; SNDCoreList[i] != NULL; i++)
-	{
-		if (SNDCoreList[i]->id == coreid)
-		{
-			// Set to current core
-			SNDCore = SNDCoreList[i];
-			break;
-		}
-	}
-
-	SNDCoreId = coreid;
-
-	//If the core wasnt found in the list for some reason, disable the user spu
-	if (SNDCore == NULL)
-		return -1;
-
-	// Since it failed, instead of it being fatal, disable the user spu
-	if (SNDCore->Init(buffersize * 2) == -1)
-	{
-		SNDCore = 0;
-		return -1;
-	}
-
-	SNDCore->SetVolume(volume);
-
 	SPU_SetSynchMode(synchmode,synchmethod);
 
 	return 0;
 }
 
-SoundInterface_struct *SPU_SoundCore()
-{
-	return SNDCore;
-}
-
 void SPU_ReInit(bool fakeBoot)
 {
-	SPU_Init(SNDCoreId, buffersize);
+	SPU_Init(0, buffersize);
 
 	// Firmware set BIAS to 0x200
 	if (fakeBoot)
@@ -226,12 +187,6 @@ int SPU_Init(int coreid, int buffersize)
 
 void SPU_Pause(int pause)
 {
-	if (SNDCore == NULL) return;
-
-	if(pause)
-		SNDCore->MuteAudio();
-	else
-		SNDCore->UnMuteAudio();
 }
 
 void SPU_CloneUser()
@@ -267,15 +222,10 @@ void SPU_SetSynchMode(int mode, int method)
 
 void SPU_ClearOutputBuffer()
 {
-	if(SNDCore && SNDCore->ClearBuffer)
-		SNDCore->ClearBuffer();
 }
 
 void SPU_SetVolume(int volume)
 {
-	::volume = volume;
-	if (SNDCore)
-		SNDCore->SetVolume(volume);
 }
 
 
@@ -285,15 +235,8 @@ void SPU_Reset(void)
 
 	SPU_core->reset();
 
-	if(SPU_user) {
-		if(SNDCore)
-		{
-			SNDCore->DeInit();
-			SNDCore->Init(SPU_user->bufsize*2);
-			SNDCore->SetVolume(volume);
-		}
+	if(SPU_user)
 		SPU_user->reset();
-	}
 
 	//zero - 09-apr-2010: this concerns me, regarding savestate synch.
 	//After 0.9.6, lets experiment with removing it and just properly zapping the spu instead
@@ -341,10 +284,6 @@ SPU_struct::~SPU_struct()
 
 void SPU_DeInit(void)
 {
-	if(SNDCore)
-		SNDCore->DeInit();
-	SNDCore = 0;
-
 	delete SPU_core; SPU_core=0;
 	delete SPU_user; SPU_user=0;
 }
@@ -1676,16 +1615,10 @@ void SPU_Emulate_user(bool mix)
 	static size_t postProcessBufferSize = 0;
 	size_t freeSampleCount = 0;
 	size_t processedSampleCount = 0;
-	SoundInterface_struct *soundProcessor = SPU_SoundCore();
-	
-	if (soundProcessor == NULL)
-	{
-		return;
-	}
 	
 	// Check to see how many free samples are available.
 	// If there are some, fill up the output buffer.
-	freeSampleCount = soundProcessor->GetAudioSpace();
+	freeSampleCount = SNDRetroGetAudioSpace();
 	if (freeSampleCount == 0)
 	{
 		return;
@@ -1707,7 +1640,9 @@ void SPU_Emulate_user(bool mix)
 	
    processedSampleCount = SPU_DefaultPostProcessSamples(postProcessBuffer, freeSampleCount, synchmode, synchronizer);
 	
-	soundProcessor->UpdateAudio(postProcessBuffer, processedSampleCount);
+   if (audio_batch_cb)
+      audio_batch_cb(postProcessBuffer, processedSampleCount);
+   retro_audio_frames += processedSampleCount;
 }
 
 void SPU_DefaultFetchSamples(s16 *sampleBuffer, size_t sampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer)
