@@ -20,7 +20,8 @@ CORE_DIR := src
 ifeq ($(platform), unix)
 	TARGET := $(TARGET_NAME)_libretro.so
 	fpic := -fPIC
-	SHARED := -lpthread -shared -Wl,--no-undefined -Wl,--version-script=$(CORE_DIR)/libretro/link.T
+	SHARED := -shared -Wl,--no-undefined -Wl,--version-script=$(CORE_DIR)/libretro/link.T
+	LIBS := -lpthread
 	DESMUME_JIT = 1
 
 # OS X
@@ -157,7 +158,8 @@ else ifneq (,$(findstring armv,$(platform)))
 	DESMUME_JIT_ARM = 1
 	CXXFLAGS = -DUSE_POSIX_MEMALIGN -D__RETRO_ARM__
 	TARGET := $(TARGET_NAME)_libretro.so
-	SHARED := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
+	SHARED := -shared -Wl,--no-undefined -Wl,--version-script=$(CORE_DIR)/libretro/link.T
+	LIBS := -lpthread
 	fpic := -fPIC
 	ifneq (,$(findstring clang,$(platform)))
 		CC = clang
