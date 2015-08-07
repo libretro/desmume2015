@@ -383,11 +383,6 @@ extern void (*oglrender_endOpenGL)();
 extern void (*OGLLoadEntryPoints_3_2_Func)();
 extern void (*OGLCreateRenderer_3_2_Func)(OpenGLRenderer **rendererPtr);
 
-// Lookup Tables
-extern CACHE_ALIGN GLfloat material_8bit_to_float[256];
-extern CACHE_ALIGN GLuint dsDepthToD24S8_LUT[32768];
-extern const GLfloat divide5bitBy31_LUT[32];
-
 FORCEINLINE u32 BGRA8888_32_To_RGBA6665_32(const u32 srcPix);
 FORCEINLINE u32 BGRA8888_32Rev_To_RGBA6665_32Rev(const u32 srcPix);
 bool IsVersionSupported(unsigned int checkVersionMajor, unsigned int checkVersionMinor, unsigned int checkVersionRevision);
