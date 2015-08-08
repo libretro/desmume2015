@@ -196,12 +196,12 @@ static void QuickSwap(void)
 	   if(current_screen == 1)
 	   {
 		   SetupScreens(LAYOUT_BOTTOM_ONLY);
-		   current_screen=2;
+		   current_screen = 2;
 	   }
 	   else
 	   {
 		   SetupScreens(LAYOUT_TOP_ONLY);
-		   current_screen=1;
+		   current_screen = 1;
 	   }
 	}
 }
@@ -980,9 +980,17 @@ void retro_run (void)
          case LAYOUT_QUICK_SWITCH:
             dst  = &screen_buf[0];
             dst2 = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT];
-            SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
-            SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
-            DrawPointer(dst2, screenLayout->pitchInPix);
+
+            switch (current_screen)
+            {
+               case 1:
+                  SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
+                  break;
+               case 2:
+                  SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
+                  DrawPointer(dst2, screenLayout->pitchInPix);
+                  break;
+            }
             break;
       }
 
