@@ -941,36 +941,51 @@ void retro_run (void)
          case LAYOUT_TOP_BOTTOM:
             dst  = &screen_buf[0];
             dst2 = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
+            SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
+            SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
+            DrawPointer(dst2, screenLayout->pitchInPix);
             break;
          case LAYOUT_BOTTOM_TOP:
             dst  = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
             dst2 = &screen_buf[0];
+            SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
+            SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
+            DrawPointer(dst2, screenLayout->pitchInPix);
             break;
          case LAYOUT_LEFT_RIGHT:
             dst  = &screen_buf[0];
             dst2 = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
+            SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
+            SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
+            DrawPointer(dst2, screenLayout->pitchInPix);
             break;
          case LAYOUT_RIGHT_LEFT:
             dst  = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
             dst2 = &screen_buf[0];
+            SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
+            SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
+            DrawPointer(dst2, screenLayout->pitchInPix);
             break;
          case LAYOUT_TOP_ONLY:
             dst  = &screen_buf[0];
             dst2 = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT];
+            SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
             break;
          case LAYOUT_BOTTOM_ONLY:
             dst  = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT];
             dst2 = &screen_buf[0];
+            SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
+            DrawPointer(dst2, screenLayout->pitchInPix);
             break;
          case LAYOUT_QUICK_SWITCH:
             dst  = &screen_buf[0];
             dst2 = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT];
+            SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
+            SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
+            DrawPointer(dst2, screenLayout->pitchInPix);
             break;
       }
 
-      SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
-      SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
-      DrawPointer(dst2, screenLayout->pitchInPix);
    }
 
    video_cb(skipped ? 0 : screen_buf, screenLayout->width, screenLayout->height, screenLayout->pitchInPix * 2);
