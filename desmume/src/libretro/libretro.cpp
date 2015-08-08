@@ -133,7 +133,7 @@ void retro_get_system_info(struct retro_system_info *info)
    info->block_extract = false;
 }
 
-static void get_layout_params(unsigned id, LayoutData *layout)
+static void get_layout_params(unsigned id, uint16_t *src, LayoutData *layout)
 {
    if (!layout)
       return;
@@ -141,8 +141,11 @@ static void get_layout_params(unsigned id, LayoutData *layout)
    switch (id)
    {
       case LAYOUT_TOP_BOTTOM:
-         layout->dst    = &screen_buf[0];
-         layout->dst2   = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
+         if (src)
+         {
+            layout->dst    = src;
+            layout->dst2   = (uint16_t*)(src + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap));
+         }
          layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
          layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
          layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
@@ -153,8 +156,11 @@ static void get_layout_params(unsigned id, LayoutData *layout)
          layout->draw_screen2  = true;
          break;
       case LAYOUT_BOTTOM_TOP:
-         layout->dst    = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
-         layout->dst2   = &screen_buf[0];
+         if (src)
+         {
+            layout->dst   = (uint16_t*)(src + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap));
+            layout->dst2  = src;
+         }
          layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
          layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
          layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
@@ -165,8 +171,11 @@ static void get_layout_params(unsigned id, LayoutData *layout)
          layout->draw_screen2  = true;
          break;
       case LAYOUT_LEFT_RIGHT:
-         layout->dst    = &screen_buf[0];
-         layout->dst2   = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
+         if (src)
+         {
+            layout->dst    = src;
+            layout->dst2   = (uint16_t*)(src + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap);
+         }
          layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
          layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
          layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
@@ -177,8 +186,11 @@ static void get_layout_params(unsigned id, LayoutData *layout)
          layout->draw_screen2  = true;
          break;
       case LAYOUT_RIGHT_LEFT:
-         layout->dst    = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
-         layout->dst2   = &screen_buf[0];
+         if (src)
+         {
+            layout->dst   = (uint16_t*)(src + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap);
+            layout->dst2  = src;
+         }
          layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
          layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
          layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
@@ -189,8 +201,11 @@ static void get_layout_params(unsigned id, LayoutData *layout)
          layout->draw_screen2  = true;
          break;
       case LAYOUT_TOP_ONLY:
-         layout->dst    = &screen_buf[0];
-         layout->dst2   = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT];
+         if (src)
+         {
+            layout->dst    = src;
+            layout->dst2   = (uint16_t*)(src + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT);
+         }
          layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
          layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
          layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
@@ -200,8 +215,11 @@ static void get_layout_params(unsigned id, LayoutData *layout)
          layout->draw_screen1 = true;
          break;
       case LAYOUT_BOTTOM_ONLY:
-         layout->dst    = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT];
-         layout->dst2   = &screen_buf[0];
+         if (src)
+         {
+            layout->dst    = (uint16_t*)(src + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT);
+            layout->dst2   = src;
+         }
          layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
          layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
          layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
@@ -211,8 +229,11 @@ static void get_layout_params(unsigned id, LayoutData *layout)
          layout->draw_screen2 = true;
          break;
       case LAYOUT_QUICK_SWITCH:
-         layout->dst    = &screen_buf[0];
-         layout->dst2   = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT];
+         if (src)
+         {
+            layout->dst    = src;
+            layout->dst2   = (uint16_t*)(src + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT);
+         }
          layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
          layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
          layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
@@ -226,7 +247,7 @@ static void get_layout_params(unsigned id, LayoutData *layout)
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
    struct LayoutData layout;
-   get_layout_params(current_layout, &layout);
+   get_layout_params(current_layout, NULL, &layout);
 
    info->geometry.base_width   = layout.width;
    info->geometry.base_height  = layout.height;
@@ -825,7 +846,7 @@ void retro_run (void)
    }
 
    poll_cb();
-   get_layout_params(current_layout, &layout);
+   get_layout_params(current_layout, screen_buf, &layout);
 
    if(pointer_device != 0)
    {
