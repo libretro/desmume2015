@@ -38,8 +38,8 @@ static int nds_screen_gap = 0;
 
 int currFrameCounter;
 
-#define GPU_LR_FRAMEBUFFER_NATIVE_WIDTH  256
-#define GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT 192
+unsigned GPU_LR_FRAMEBUFFER_NATIVE_WIDTH  = 256;
+unsigned GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT = 192;
 
 #define NDS_MAX_SCREEN_GAP               100
 
@@ -53,7 +53,6 @@ int currFrameCounter;
 
 static int current_layout = LAYOUT_TOP_BOTTOM;
 
-static uint16_t screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + NDS_MAX_SCREEN_GAP) * 2];
 
 struct LayoutData
 {
@@ -828,11 +827,10 @@ void retro_reset (void)
 
 extern unsigned retro_audio_frames;
 
-
-
 void retro_run (void)
 {
    struct LayoutData layout;
+   uint16_t screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + NDS_MAX_SCREEN_GAP) * 2];
    bool updated                  = false;	
    bool have_touch               = false;
 
