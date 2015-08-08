@@ -108,21 +108,17 @@ namespace /* VIDEO */
 
     static LayoutData* screenLayout = &layouts[0];
 
-    static void SwapScreen(void *dst, const void *src, uint32_t pitch, bool render_fullscreen)
-    {
-        const uint32_t *_src = (const uint32_t*)src;
-        uint32_t width = render_fullscreen ? GPU_FRAMEBUFFER_NATIVE_WIDTH : (GPU_FRAMEBUFFER_NATIVE_WIDTH / 2);
-        
-        for(int i = 0; i < GPU_FRAMEBUFFER_NATIVE_HEIGHT; i ++)
-        {
-            uint32_t *_dst = (uint32_t*)dst + (i * pitch);
+#define CONVERT_COLOR(color) (((color & 0x001f) << 11) | ((color & 0x03e0) << 1) | ((color & 0x0200) >> 4) | ((color & 0x7c00) >> 10))
 
-            for(int j = 0; j < width; j ++)
-            {
-               const uint32_t p = *_src++;            
-               *_dst++ = (((p >> 10) & 0x001F001F001F001FULL)) | (((p >> 5) & 0x001F001F001F001FULL) << 6) | (((p >> 0) & 0x001F001F001F001FULL) << 11);
-            }
-        }
+    static void SwapScreen(uint16_t *dst, const uint16_t *src, uint32_t pitch)
+    {
+       unsigned i, j;
+       for(i = 0; i < GPU_FRAMEBUFFER_NATIVE_HEIGHT; i ++)
+          for(j = 0; j < GPU_FRAMEBUFFER_NATIVE_WIDTH; j ++)
+          {
+             uint16_t col = *src++;
+             *dst++ = CONVERT_COLOR(col);
+          }
     }
 
     void SetupScreens(const char* aLayout)
@@ -136,8 +132,8 @@ namespace /* VIDEO */
 
     void SwapScreens(bool render_fullscreen)
     {
-       SwapScreen(screenLayout->screens[0], &GPU_screen[0], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
-       SwapScreen(screenLayout->screens[1], &GPU_screen[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
+       SwapScreen(screenLayout->screens[0], &GPU_screen[0], screenLayout->pitchInPix);
+       SwapScreen(screenLayout->screens[1], &GPU_screen[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
        DrawPointer(screenLayout->screens[1], screenLayout->pitchInPix);
     }
     
