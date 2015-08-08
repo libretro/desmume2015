@@ -913,7 +913,8 @@ void retro_run (void)
          analogX = 0;
          analogY = 0;
       }        
-      //log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
+      log_cb(RETRO_LOG_DEBUG, "%d %d.\n", GPU_LR_FRAMEBUFFER_NATIVE_WIDTH,GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT);
+      log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
 
       have_touch = have_touch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); 
 
