@@ -2282,6 +2282,15 @@ PLAIN_CLEAR:
 			for (size_t i = 0; i < item->nbPixelsX; i++)
 			{
 				const size_t x = item->PixelsX[i];
+#ifdef SPEEDHACK
+            gpu->setFinalColorSpr(x,
+                  _gpuDstPitchIndex[x],
+                  gpu->currDst,
+                  gpu->bgPixels,
+                  gpu->sprColor[x],
+                  gpu->sprAlpha[x],
+                  gpu->sprType[x]);
+#else
 				for (size_t line = 0; line < _gpuDstLineCount[l]; line++)
 				{
 					for (size_t p = 0; p < _gpuDstPitchCount[x]; p++)
@@ -2295,6 +2304,7 @@ PLAIN_CLEAR:
 											  gpu->sprType[x]);
 					}
 				}
+#endif
 			}
 		}
 	}
