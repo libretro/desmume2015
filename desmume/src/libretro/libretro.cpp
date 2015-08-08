@@ -131,7 +131,7 @@ void retro_get_system_info(struct retro_system_info *info)
    info->library_name = "DeSmuME";
    info->library_version = "SVN";
    info->valid_extensions = "nds|bin";
-   info->need_fullpath = true;   
+   info->need_fullpath = true;
    info->block_extract = false;
 }
 
@@ -301,17 +301,17 @@ static void check_variables(bool first_boot)
          scale = atoi(var.value);
       }
    }
-    
+ 
     var.key = "desmume_num_cores";
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         CommonSettings.num_cores = var.value ? strtol(var.value, 0, 10) : 1;
    else
       CommonSettings.num_cores = 1;
-    
+
     var.key = "desmume_cpu_mode";
     var.value = 0;
-    
+
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         if (!strcmp(var.value, "jit"))
@@ -336,11 +336,11 @@ static void check_variables(bool first_boot)
    else
         CommonSettings.jit_max_block_size = 100;
 #endif
-    
+
     var.key = "desmume_screens_layout";
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {    
+    {
       static int old_layout_id      = -1;
       unsigned new_layout_id        = 0;
 
@@ -369,10 +369,10 @@ static void check_variables(bool first_boot)
          old_layout_id = new_layout_id;
          current_layout = new_layout_id;
       }
-    }    
+    }
    else
       quick_switch_enable = false;
-    
+
 
     var.key = "desmume_pointer_mouse";
 
@@ -399,26 +399,26 @@ static void check_variables(bool first_boot)
     }
    else
       pointer_device=0;
-        
+
     var.key = "desmume_pointer_device_deadzone";
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       analog_stick_deadzone = (int)(atoi(var.value));
-        
+
     var.key = "desmume_pointer_type";
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         touchEnabled = var.value && (!strcmp(var.value, "touch"));
     }
-    
+
     var.key = "desmume_frameskip";
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         frameSkip = var.value ? strtol(var.value, 0, 10) : 0;
    else
       frameSkip = 0;
-     
+
     var.key = "desmume_firmware_language";
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -432,7 +432,7 @@ static void check_variables(bool first_boot)
             { "Italian", 4 },
             { "Spanish", 5 }
         };
-        
+
         for (int i = 0; i < 6; i ++)
         {
             if (!strcmp(languages[i].name, var.value))
@@ -440,15 +440,15 @@ static void check_variables(bool first_boot)
                 firmwareLanguage = languages[i].id;
                 break;
             }
-        }        
+        }
     }
    else
       firmwareLanguage = 1;
 
 
    var.key = "desmume_gfx_edgemark";
-   
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
         if (!strcmp(var.value, "enable"))
          CommonSettings.GFX3D_EdgeMark = true;
@@ -459,8 +459,8 @@ static void check_variables(bool first_boot)
       CommonSettings.GFX3D_EdgeMark = true;
 
    var.key = "desmume_gfx_linehack";
-   
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "enable"))
          CommonSettings.GFX3D_LineHack = true;
@@ -472,7 +472,7 @@ static void check_variables(bool first_boot)
 
    var.key = "desmume_gfx_txthack";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "enable"))
          CommonSettings.GFX3D_TXTHack = true;
@@ -483,8 +483,8 @@ static void check_variables(bool first_boot)
       CommonSettings.GFX3D_TXTHack = false;
 
    var.key = "desmume_mic_force_enable";
-   
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "yes"))
          microphone_force_enable = 1;
@@ -493,9 +493,9 @@ static void check_variables(bool first_boot)
    }
    else
       NDS_setMic(false);
-   
+
    var.key = "desmume_mic_mode";
-   
+
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "internal"))
@@ -509,9 +509,9 @@ static void check_variables(bool first_boot)
    }
    else
       CommonSettings.micMode = TCommonSettings::InternalNoise;
-   
+
    var.key = "desmume_pointer_device_acceleration_mod";
-   
+
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       analog_stick_acceleration_modifier = atoi(var.value);
    else
@@ -599,9 +599,9 @@ static void check_variables(bool first_boot)
    }
    else
       CommonSettings.SPU_sync_method = 1;
-      
+
    var.key = "desmume_screens_gap";
-   
+
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if ((atoi(var.value)) != nds_screen_gap)
@@ -653,7 +653,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_internal_resolution", "Internal resolution (restart); 1|2|3|4|5|6|7|8|9|10" },
       { "desmume_num_cores", "CPU cores; 1|2|3|4" },
 #ifdef HAVE_JIT
-      { "desmume_cpu_mode", "CPU mode; jit|interpreter" },    
+      { "desmume_cpu_mode", "CPU mode; jit|interpreter" },
       { "desmume_jit_block_size", "JIT block size; 100|99|98|97|96|95|94|93|92|91|90|89|88|87|86|85|84|83|82|81|80|79|78|77|76|75|74|73|72|71|70|69|68|67|66|65|64|63|62|61|60|59|58|57|56|55|54|53|52|51|50|49|48|47|46|45|44|43|42|41|40|39|38|37|36|35|34|33|32|31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10|9|8|7|6|5|4|3|2|1|0" },
 #else
       { "desmume_cpu_mode", "CPU mode; interpreter" },
@@ -662,7 +662,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_pointer_mouse", "Enable mouse/pointer; enable|disable" },
       { "desmume_pointer_type", "Pointer type; mouse|touch" },
       { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
-      { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },      
+      { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },
       { "desmume_pointer_device_acceleration_mod", "Emulated pointer acceleration modifier percent; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
       { "desmume_pointer_stylus_pressure", "Emulated stylus pressure modifier percent; 50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|" },
       { "desmume_pointer_stylus_jitter", "Enable emulated stylus jitter; disable|enable"},
@@ -670,7 +670,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_advanced_timing", "Enable Advanced Bus-Level Timing; enable|disable" },
       { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
-      { "desmume_screens_gap", "Screen Gap; 0|5|64|90|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },    
+      { "desmume_screens_gap", "Screen Gap; 0|5|64|90|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
       { "desmume_gfx_edgemark", "Enable Edgemark; enable|disable" },
       { "desmume_gfx_linehack", "Enable Line Hack; enable|disable" },
       { "desmume_gfx_txthack", "Enable TXT Hack; disable|enable"},
@@ -747,7 +747,7 @@ static void Change3DCoreWithFallback(int newCore)
 #endif
          )
       newCore = GPU3D_SWRAST;
-   
+
    printf("Attempting change to 3d core to: %s\n",core3DList[newCore]->name);
 
 #ifdef HAVE_OPENGL
@@ -846,7 +846,7 @@ extern unsigned retro_audio_frames;
 void retro_run (void)
 {
    struct LayoutData layout;
-   bool updated                  = false;    
+   bool updated                  = false;
    bool have_touch               = false;
 
 
@@ -856,7 +856,7 @@ void retro_run (void)
       struct retro_system_av_info new_av_info;
       retro_get_system_av_info(&new_av_info);
 
-      environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);        
+      environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);
    }
 
    poll_cb();
@@ -888,7 +888,7 @@ void retro_run (void)
 
       // Convert cartesian coordinate analog stick to polar coordinates
       double radius = sqrt(analogX * analogX + analogY * analogY);
-      double angle = atan2(analogY, analogX);        
+      double angle = atan2(analogY, analogX);
       double max = (float)0x8000/analog_stick_acceleration;
 
       //log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
@@ -906,7 +906,7 @@ void retro_run (void)
       {
          analogX = 0;
          analogY = 0;
-      }        
+      }
       log_cb(RETRO_LOG_DEBUG, "%d %d.\n", GPU_LR_FRAMEBUFFER_NATIVE_WIDTH,GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT);
       log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
 
@@ -1054,13 +1054,13 @@ bool retro_serialize(void *data, size_t size)
 {
     EMUFILE_MEMORY state;
     savestate_save(&state);
-    
+
     if(state.size() <= size)
     {
         memcpy(data, state.buf(), state.size());
         return true;
     }
-    
+
     return false;
 }
 
@@ -1111,7 +1111,7 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
     {
         strncpy(GBAgameName, info[1].path, sizeof(GBAgameName));
         addonsChangePak(NDS_ADDON_GBAGAME);
-        
+
         return retro_load_game(&info[0]);
     }
 #endif
