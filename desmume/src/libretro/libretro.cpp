@@ -41,146 +41,140 @@ int currFrameCounter;
 #define GPU_LR_FRAMEBUFFER_NATIVE_WIDTH  256
 #define GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT 192
 
-namespace /* INPUT */
+#define NDS_MAX_SCREEN_GAP               100
+
+#define LAYOUT_TOP_BOTTOM                 0
+#define LAYOUT_BOTTOM_TOP                 1
+#define LAYOUT_LEFT_RIGHT                 2
+#define LAYOUT_RIGHT_LEFT                 3
+#define LAYOUT_TOP_ONLY                   4
+#define LAYOUT_BOTTOM_ONLY                5
+#define LAYOUT_QUICK_SWITCH               6
+
+static uint16_t screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + NDS_MAX_SCREEN_GAP) * 2];
+
+struct LayoutData
 {
-    static bool absolutePointer;
+   unsigned id;
+   uint16_t* screens[2];
+   uint32_t touchScreenX;
+   uint32_t touchScreenY;
+   uint32_t width;
+   uint32_t height;
+   uint32_t pitchInPix;
+};
 
-    template<int32_t MIN, int32_t MAX>
-    static int32_t Saturate(int32_t aValue)
-    {
-        return std::max(MIN, std::min(MAX, aValue));
-    }
+static LayoutData layouts[] =
+{
+   { LAYOUT_TOP_BOTTOM, { &screen_buf[0], &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH},
+   { LAYOUT_BOTTOM_TOP, { &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], &screen_buf[0] }, 0, 0, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2), GPU_LR_FRAMEBUFFER_NATIVE_WIDTH },
+   { LAYOUT_LEFT_RIGHT, { &screen_buf[0], &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH] }, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, 0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2), GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2) },
+   { LAYOUT_RIGHT_LEFT, { &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH], &screen_buf[0] }, 0, 0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2), GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2) },
+   { LAYOUT_TOP_ONLY, { &screen_buf[0], &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH },
+   { LAYOUT_BOTTOM_ONLY, { &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], &screen_buf[0] }, 0, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH },
+   { LAYOUT_QUICK_SWITCH, { &screen_buf[0], &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH },
+   { 0, 0, 0, 0 }
+};
 
-    static int32_t TouchX;
-    static int32_t TouchY;
+static LayoutData* screenLayout = &layouts[0];
 
-    static const uint32_t FramesWithPointerBase = 60 * 10;
-    static int32_t FramesWithPointer;
+static bool absolutePointer;
 
-    static void DrawPointerLine(uint16_t* aOut, uint32_t aPitchInPix)
-    {
-        for(int i = 0; i < 5; i ++)
-            aOut[aPitchInPix * i] = 0xFFFF;
-    }
-
-    static void DrawPointer(uint16_t* aOut, uint32_t aPitchInPix)
-    {
-        if(FramesWithPointer-- < 0)
-            return;
-
-        TouchX = Saturate<0, 255>(TouchX);
-        TouchY = Saturate<0, 191>(TouchY);
-
-        if(TouchX >   5) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX - 5], 1);
-        if(TouchX < 251) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
-        if(TouchY >   5) DrawPointerLine(&aOut[(TouchY - 5) * aPitchInPix + TouchX], aPitchInPix);
-        if(TouchY < 187) DrawPointerLine(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
-    }
+   template<int32_t MIN, int32_t MAX>
+static int32_t Saturate(int32_t aValue)
+{
+   return std::max(MIN, std::min(MAX, aValue));
 }
 
+static int32_t TouchX;
+static int32_t TouchY;
 
-#define LAYOUT_TOP_BOTTOM     0
-#define LAYOUT_BOTTOM_TOP     1
-#define LAYOUT_LEFT_RIGHT     2
-#define LAYOUT_RIGHT_LEFT     3
-#define LAYOUT_TOP_ONLY       4
-#define LAYOUT_BOTTOM_ONLY    5
-#define LAYOUT_QUICK_SWITCH   6
+static const uint32_t FramesWithPointerBase = 60 * 10;
+static int32_t FramesWithPointer;
 
-namespace /* VIDEO */
+static void DrawPointerLine(uint16_t* aOut, uint32_t aPitchInPix)
 {
-    const int nds_max_screen_gap = 100;
+   for(int i = 0; i < 5; i ++)
+      aOut[aPitchInPix * i] = 0xFFFF;
+}
 
-    static uint16_t screenSwap[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_max_screen_gap) * 2];
-    static retro_pixel_format colorMode;
-    static uint32_t frameSkip;
-    static uint32_t frameIndex;
+static void DrawPointer(uint16_t* aOut, uint32_t aPitchInPix)
+{
+   if(FramesWithPointer-- < 0)
+      return;
 
-    struct LayoutData
-    {
-       unsigned id;
-       uint16_t* screens[2];
-       uint32_t touchScreenX;
-       uint32_t touchScreenY;
-       uint32_t width;
-       uint32_t height;
-       uint32_t pitchInPix;
-    };
+   TouchX = Saturate<0, 255>(TouchX);
+   TouchY = Saturate<0, 191>(TouchY);
 
-    static LayoutData layouts[] =
-    {
-        { LAYOUT_TOP_BOTTOM, { &screenSwap[0], &screenSwap[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH},
-        { LAYOUT_BOTTOM_TOP, { &screenSwap[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], &screenSwap[0] }, 0, 0, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2), GPU_LR_FRAMEBUFFER_NATIVE_WIDTH },
-        { LAYOUT_LEFT_RIGHT, { &screenSwap[0], &screenSwap[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH] }, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, 0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2), GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2) },
-        { LAYOUT_RIGHT_LEFT, { &screenSwap[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH], &screenSwap[0] }, 0, 0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2), GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2) },
-        { LAYOUT_TOP_ONLY, { &screenSwap[0], &screenSwap[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH },
-        { LAYOUT_BOTTOM_ONLY, { &screenSwap[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], &screenSwap[0] }, 0, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH },
-        { LAYOUT_QUICK_SWITCH, { &screenSwap[0], &screenSwap[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH },
-        { 0, 0, 0, 0 }
-    };
+   if(TouchX >   5) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX - 5], 1);
+   if(TouchX < 251) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
+   if(TouchY >   5) DrawPointerLine(&aOut[(TouchY - 5) * aPitchInPix + TouchX], aPitchInPix);
+   if(TouchY < 187) DrawPointerLine(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
+}
 
-    static LayoutData* screenLayout = &layouts[0];
+static retro_pixel_format colorMode;
+static uint32_t frameSkip;
+static uint32_t frameIndex;
+
 
 #define CONVERT_COLOR(color) (((color & 0x001f) << 11) | ((color & 0x03e0) << 1) | ((color & 0x0200) >> 4) | ((color & 0x7c00) >> 10))
 
-    static void SwapScreen(uint16_t *dst, const uint16_t *src, uint32_t pitch)
-    {
-       unsigned i, j;
-       for(i = 0; i < GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT; i ++)
-          for(j = 0; j < GPU_LR_FRAMEBUFFER_NATIVE_WIDTH; j ++)
-          {
-             uint16_t col = *src++;
-             *dst++ = CONVERT_COLOR(col);
-          }
-    }
-
-    void SetupScreens(unsigned id)
-    {
-       unsigned i;
-
-       screenLayout = &layouts[0];
-
-       for (i = 0; i < LAYOUTS_MAX; i++)
-          if (layouts[i].id == id)
-             screenLayout = &layouts[i];
-    }
-
-    void SwapScreens(bool render_fullscreen)
-    {
-       SwapScreen(screenLayout->screens[0], &GPU_screen[0], screenLayout->pitchInPix);
-       SwapScreen(screenLayout->screens[1], &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
-       DrawPointer(screenLayout->screens[1], screenLayout->pitchInPix);
-    }
-    
-   void UpdateScreenLayout()
-   {
-      if (nds_screen_gap > 100)
-         nds_screen_gap = 100;
-
-      switch (screenLayout->id)
+static void SwapScreen(uint16_t *dst, const uint16_t *src, uint32_t pitch)
+{
+   unsigned i, j;
+   for(i = 0; i < GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT; i ++)
+      for(j = 0; j < GPU_LR_FRAMEBUFFER_NATIVE_WIDTH; j ++)
       {
-         case LAYOUT_TOP_BOTTOM:
-            screenLayout->screens[1] = &screenSwap[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
-            screenLayout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
-            break;
-         case LAYOUT_BOTTOM_TOP:
-            screenLayout->screens[0] = &screenSwap[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
-            screenLayout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
-            break;
-         case LAYOUT_LEFT_RIGHT:
-            screenLayout->screens[0] = &screenSwap[0];
-            screenLayout->screens[1] = &screenSwap[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
-            screenLayout->width = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
-            screenLayout->pitchInPix = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
-            break;
-         case LAYOUT_RIGHT_LEFT:
-            screenLayout->screens[0] = &screenSwap[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
-            screenLayout->width = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
-            screenLayout->pitchInPix = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
-            break;
+         uint16_t col = *src++;
+         *dst++ = CONVERT_COLOR(col);
       }
+}
+
+void SetupScreens(unsigned id)
+{
+   unsigned i;
+
+   screenLayout = &layouts[0];
+
+   for (i = 0; i < LAYOUTS_MAX; i++)
+      if (layouts[i].id == id)
+         screenLayout = &layouts[i];
+}
+
+void SwapScreens(bool render_fullscreen)
+{
+   SwapScreen(screenLayout->screens[0], &GPU_screen[0], screenLayout->pitchInPix);
+   SwapScreen(screenLayout->screens[1], &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
+   DrawPointer(screenLayout->screens[1], screenLayout->pitchInPix);
+}
+
+void UpdateScreenLayout()
+{
+   if (nds_screen_gap > 100)
+      nds_screen_gap = 100;
+
+   switch (screenLayout->id)
+   {
+      case LAYOUT_TOP_BOTTOM:
+         screenLayout->screens[1] = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
+         screenLayout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
+         break;
+      case LAYOUT_BOTTOM_TOP:
+         screenLayout->screens[0] = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
+         screenLayout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
+         break;
+      case LAYOUT_LEFT_RIGHT:
+         screenLayout->screens[0] = &screen_buf[0];
+         screenLayout->screens[1] = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
+         screenLayout->width = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+         screenLayout->pitchInPix = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+         break;
+      case LAYOUT_RIGHT_LEFT:
+         screenLayout->screens[0] = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
+         screenLayout->width = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+         screenLayout->pitchInPix = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+         break;
    }
-	
 }
 
 namespace
@@ -956,7 +950,7 @@ void retro_run (void)
    if (!skipped)
       SwapScreens(false);
 
-   video_cb(skipped ? 0 : screenSwap, screenLayout->width, screenLayout->height, screenLayout->pitchInPix * 2);
+   video_cb(skipped ? 0 : screen_buf, screenLayout->width, screenLayout->height, screenLayout->pitchInPix * 2);
 
    frameIndex = skipped ? frameIndex : 0;
 }
