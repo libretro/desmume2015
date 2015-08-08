@@ -500,8 +500,11 @@ static void check_variables(void)
    
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      nds_screen_gap = atoi(var.value);
-      UpdateScreenLayout();
+      if ((atoi(var.value)) != nds_screen_gap)
+      {
+         nds_screen_gap = atoi(var.value);
+         UpdateScreenLayout();
+      }
    }
 }
 
