@@ -45,19 +45,20 @@
 
 #ifdef __GNUC__
 #ifdef __SSE__
-#define ENABLE_SSE
-#endif
-#ifdef __SSE2__
-#define ENABLE_SSE2
-#endif
-#endif
+		#define ENABLE_SSE
+	#endif
 
-#ifdef NOSSE
-#undef ENABLE_SSE
-#endif
+	#ifdef __SSE2__
+		#define ENABLE_SSE2
+	#endif
 
-#ifdef NOSSE2
-#undef ENABLE_SSE2
+	#ifdef __SSE3__
+		#define ENABLE_SSE3
+	#endif
+
+	#ifdef __SSSE3__
+		#define ENABLE_SSSE3
+	#endif
 #endif
 
 #ifdef _MSC_VER 
@@ -365,7 +366,7 @@ char (*BLAHBLAHBLAH( UNALIGNED T (&)[N] ))[N];
 
 
 //fairly standard for loop macros
-#define MACRODO1(TRICK,TODO) { const int X = TRICK; TODO; }
+#define MACRODO1(TRICK,TODO) { const size_t X = TRICK; TODO; }
 #define MACRODO2(X,TODO)   { MACRODO1((X),TODO)   MACRODO1(((X)+1),TODO) }
 #define MACRODO4(X,TODO)   { MACRODO2((X),TODO)   MACRODO2(((X)+2),TODO) }
 #define MACRODO8(X,TODO)   { MACRODO4((X),TODO)   MACRODO4(((X)+4),TODO) }
