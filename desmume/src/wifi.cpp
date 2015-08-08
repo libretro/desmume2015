@@ -19,7 +19,7 @@
 #include "types.h"
 
 
-+#if defined(_WINDOWS) || defined(_WIN32)
+#if defined(_WINDOWS) || defined(_WIN32)
 	#include <winsock2.h> 	 
 	#include <ws2tcpip.h>
 	#define socket_t    SOCKET 	 
