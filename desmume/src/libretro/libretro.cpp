@@ -42,6 +42,7 @@ int currFrameCounter;
 
 unsigned GPU_LR_FRAMEBUFFER_NATIVE_WIDTH  = 256;
 unsigned GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT = 192;
+unsigned scale = 1;
 
 #define NDS_MAX_SCREEN_GAP               100
 
@@ -295,16 +296,9 @@ static void check_variables(bool first_boot)
 
       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       {
-         char *pch;
-         char str[100];
-         snprintf(str, sizeof(str), "%s", var.value);
-
-         pch = strtok(str, "x");
-         if (pch)
-            GPU_LR_FRAMEBUFFER_NATIVE_WIDTH = strtoul(pch, NULL, 0);
-         pch = strtok(NULL, "x");
-         if (pch)
-            GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT = strtoul(pch, NULL, 0);
+         GPU_LR_FRAMEBUFFER_NATIVE_WIDTH = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * atoi(var.value);
+         GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * atoi(var.value);
+         scale = atoi(var.value);
       }
    }
     
@@ -656,7 +650,7 @@ void retro_set_environment(retro_environment_t cb)
 
    static const retro_variable values[] =
    {
-      { "desmume_internal_resolution", "Internal resolution (restart); 256x192|512x384|768x576|1024x768|1280x960|1536x1152|1792x1344|2048x1536|320x240|320x480|360x480|400x400|512x224|512x448|640x224|640x448|640x480|800x600|960x720|1024x768|1280x800|1280x960|1600x1200|1920x1080" },
+      { "desmume_internal_resolution", "Internal resolution (restart); 1|2|3|4|5|6|7|8|9|10" },
       { "desmume_num_cores", "CPU cores; 1|2|3|4" },
 #ifdef HAVE_JIT
       { "desmume_cpu_mode", "CPU mode; jit|interpreter" },    
@@ -959,7 +953,7 @@ void retro_run (void)
    }
 
    if(have_touch)
-      NDS_setTouchPos(TouchX, TouchY);
+      NDS_setTouchPos(TouchX, TouchY, scale);
    else
       NDS_releaseTouch();
 

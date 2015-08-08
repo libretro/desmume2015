@@ -408,7 +408,7 @@ struct UserInput
 // these functions merely request the input to be changed.
 // the actual change happens later at a specific time during the frame.
 // this is to minimize the risk of desyncs.
-void NDS_setTouchPos(u16 x, u16 y);
+void NDS_setTouchPos(u16 x, u16 y, u16 scale);
 void NDS_releaseTouch(void);
 void NDS_setPad(bool right,bool left,bool down,bool up,bool select,bool start,bool B,bool A,bool Y,bool X,bool leftShoulder,bool rightShoulder,bool debug, bool lid);
 void NDS_setMic(bool pressed);
