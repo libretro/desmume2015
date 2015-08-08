@@ -280,10 +280,7 @@ static void check_variables(void)
       static int old_layout_id      = -1;
       unsigned new_layout_id        = 0;
 
-		if (!strcmp(var.value, "quick switch"))
-			quick_switch_enable = true;
-		else 
-			quick_switch_enable = false;
+      quick_switch_enable = false;
 
 		if (!strcmp(var.value, "top/bottom"))
          new_layout_id = LAYOUT_TOP_BOTTOM;
@@ -298,7 +295,10 @@ static void check_variables(void)
       else if (!strcmp(var.value, "bottom only"))
          new_layout_id = LAYOUT_BOTTOM_ONLY;
       else if (!strcmp(var.value, "quick switch"))
+      {
          new_layout_id = LAYOUT_QUICK_SWITCH;
+         quick_switch_enable = true;
+      }
 
       if (old_layout_id != new_layout_id)
       {
@@ -779,187 +779,186 @@ void retro_reset (void)
 
 void retro_run (void)
 {
-    // Settings
-    bool updated = false;	
-    bool render_fullscreen = false;
-    
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
-	{
+   // Settings
+   bool updated = false;	
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
+   {
       check_variables();
-		struct retro_system_av_info new_av_info;
-		retro_get_system_av_info(&new_av_info);
+      struct retro_system_av_info new_av_info;
+      retro_get_system_av_info(&new_av_info);
 
-		environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);		
-	}
+      environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);		
+   }
 
-    poll_cb();
+   poll_cb();
 
-    bool haveTouch = false;
-	
-	if(pointer_device!=0)
-	{
-		int16_t analogX = 0;
-		int16_t analogY = 0;
-      
+   bool haveTouch = false;
+
+   if(pointer_device!=0)
+   {
+      int16_t analogX = 0;
+      int16_t analogY = 0;
+
       float final_acceleration = analog_stick_acceleration * (1.0 + (float)analog_stick_acceleration_modifier / 100.0);
-		
-		if(pointer_device == 1)
-		{
-      analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X) / final_acceleration;
-			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y) / final_acceleration;
-		} 
-		else if(pointer_device == 2)
-		{
-			analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X) / final_acceleration;
-			analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y) / final_acceleration;
-		}
-		else
-		{
-			analogX = 0;
-			analogY = 0;
-		}
-		
 
-		// Convert cartesian coordinate analog stick to polar coordinates
-		double radius = sqrt(analogX * analogX + analogY * analogY);
-		double angle = atan2(analogY, analogX);		
-		double max = (float)0x8000/analog_stick_acceleration;
-		
-		//log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
-		//log_cb(RETRO_LOG_DEBUG, "%d %d.\n", radius,analog_stick_deadzone);
-		if (radius > (float)analog_stick_deadzone*max/100)
-		{
-			// Re-scale analog stick range to negate deadzone (makes slow movements possible)
-			radius = (radius - (float)analog_stick_deadzone*max/100)*((float)max/(max - (float)analog_stick_deadzone*max/100));
-			
-			// Convert back to cartesian coordinates
-			analogX = (int32_t)round(radius * cos(angle));
-			analogY = (int32_t)round(radius * sin(angle));
-		}
-		else
-		{
-			analogX = 0;
-			analogY = 0;
-		}		
-		//log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
-		
-		haveTouch = haveTouch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); 
-		
-		TouchX = Saturate<0, 255>(TouchX + analogX);
-		TouchY = Saturate<0, 191>(TouchY + analogY);
-		
-		FramesWithPointer = (analogX || analogY) ? FramesWithPointerBase : FramesWithPointer;
-		
-	}
+      if(pointer_device == 1)
+      {
+         analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X) / final_acceleration;
+         analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y) / final_acceleration;
+      } 
+      else if(pointer_device == 2)
+      {
+         analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X) / final_acceleration;
+         analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y) / final_acceleration;
+      }
+      else
+      {
+         analogX = 0;
+         analogY = 0;
+      }
 
-	if(mouse_enable)
-    {
-		// TOUCH: Mouse
-		if(!absolutePointer)
-		{
-			const int16_t mouseX = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
-			const int16_t mouseY = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
-			haveTouch = haveTouch || input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
-			
-			TouchX = Saturate<0, 255>(TouchX + mouseX);
-			TouchY = Saturate<0, 191>(TouchY + mouseY);
-			FramesWithPointer = (mouseX || mouseY) ? FramesWithPointerBase : FramesWithPointer;
-		}
-		// TOUCH: Pointer
-		else if(input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED))
-		{
-			const float X_FACTOR = ((float)screenLayout->width / 65536.0f);
-			const float Y_FACTOR = ((float)screenLayout->height / 65536.0f);
-		
-			float x = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X) + 32768.0f) * X_FACTOR;
-			float y = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y) + 32768.0f) * Y_FACTOR;
 
-			if (x >= screenLayout->touchScreenX && x < screenLayout->touchScreenX + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH &&
-				y >= screenLayout->touchScreenY && y < screenLayout->touchScreenY + GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT)
-			{
-				haveTouch = true;
+      // Convert cartesian coordinate analog stick to polar coordinates
+      double radius = sqrt(analogX * analogX + analogY * analogY);
+      double angle = atan2(analogY, analogX);		
+      double max = (float)0x8000/analog_stick_acceleration;
 
-				TouchX = x - screenLayout->touchScreenX;
-				TouchY = y - screenLayout->touchScreenY;
-			}
-		}
-	}
-	
-	
-	
-    // TOUCH: Final        
-    if(haveTouch)
-        NDS_setTouchPos(TouchX, TouchY);
-    else
-        NDS_releaseTouch();
+      //log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
+      //log_cb(RETRO_LOG_DEBUG, "%d %d.\n", radius,analog_stick_deadzone);
+      if (radius > (float)analog_stick_deadzone*max/100)
+      {
+         // Re-scale analog stick range to negate deadzone (makes slow movements possible)
+         radius = (radius - (float)analog_stick_deadzone*max/100)*((float)max/(max - (float)analog_stick_deadzone*max/100));
 
-    // BUTTONS
-    NDS_beginProcessingInput();
-    
+         // Convert back to cartesian coordinates
+         analogX = (int32_t)round(radius * cos(angle));
+         analogY = (int32_t)round(radius * sin(angle));
+      }
+      else
+      {
+         analogX = 0;
+         analogY = 0;
+      }		
+      //log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
+
+      haveTouch = haveTouch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); 
+
+      TouchX = Saturate<0, 255>(TouchX + analogX);
+      TouchY = Saturate<0, 191>(TouchY + analogY);
+
+      FramesWithPointer = (analogX || analogY) ? FramesWithPointerBase : FramesWithPointer;
+
+   }
+
+   if(mouse_enable)
+   {
+      // TOUCH: Mouse
+      if(!absolutePointer)
+      {
+         const int16_t mouseX = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
+         const int16_t mouseY = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
+         haveTouch = haveTouch || input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+
+         TouchX = Saturate<0, 255>(TouchX + mouseX);
+         TouchY = Saturate<0, 191>(TouchY + mouseY);
+         FramesWithPointer = (mouseX || mouseY) ? FramesWithPointerBase : FramesWithPointer;
+      }
+      // TOUCH: Pointer
+      else if(input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED))
+      {
+         const float X_FACTOR = ((float)screenLayout->width / 65536.0f);
+         const float Y_FACTOR = ((float)screenLayout->height / 65536.0f);
+
+         float x = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X) + 32768.0f) * X_FACTOR;
+         float y = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y) + 32768.0f) * Y_FACTOR;
+
+         if (x >= screenLayout->touchScreenX && x < screenLayout->touchScreenX + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH &&
+               y >= screenLayout->touchScreenY && y < screenLayout->touchScreenY + GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT)
+         {
+            haveTouch = true;
+
+            TouchX = x - screenLayout->touchScreenX;
+            TouchY = y - screenLayout->touchScreenY;
+         }
+      }
+   }
+
+
+
+   // TOUCH: Final        
+   if(haveTouch)
+      NDS_setTouchPos(TouchX, TouchY);
+   else
+      NDS_releaseTouch();
+
+   // BUTTONS
+   NDS_beginProcessingInput();
+
    NDS_setPad(
-      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT),
-      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT),
-      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN),
-      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP),
-      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT),
-      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START),
-      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B),
-      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A),
-      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y),
-      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X),
-      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L),
-      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R),
-      0, // debug
-      input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) //Lid
-   );
-   
-  if (!microphone_force_enable)
-  {
-    if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3))
+         input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT),
+         input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT),
+         input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN),
+         input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP),
+         input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT),
+         input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START),
+         input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B),
+         input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A),
+         input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y),
+         input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X),
+         input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L),
+         input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R),
+         0, // debug
+         input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) //Lid
+         );
+
+   if (!microphone_force_enable)
+   {
+      if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3))
+         NDS_setMic(true);
+      else if(!input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3))
+         NDS_setMic(false);
+   }
+   else
       NDS_setMic(true);
-    else if(!input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3))
-      NDS_setMic(false);
-  }
-  else
-    NDS_setMic(true);
-  
-	
-	if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) && quick_switch_enable && delay_timer == 0)
-	{
-		QuickSwap();
-		delay_timer++;
-	}
-	
-	if(delay_timer != 0)
-	{
-		delay_timer++;
-		if(delay_timer == 30)
-			delay_timer = 0;
-	}
-	
-	
-    NDS_endProcessingInput();
 
-    extern unsigned retro_audio_frames;
-    retro_audio_frames = 0;
 
-    // RUN
-    frameIndex ++;
-    bool skipped = frameIndex <= frameSkip;
+   if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) && quick_switch_enable && delay_timer == 0)
+   {
+      QuickSwap();
+      delay_timer++;
+   }
 
-    if (skipped)
-       NDS_SkipNextFrame();
+   if(delay_timer != 0)
+   {
+      delay_timer++;
+      if(delay_timer == 30)
+         delay_timer = 0;
+   }
 
-    NDS_exec<false>();
-    SPU_Emulate_user();
-    
-    // VIDEO: Swap screen colors and pass on
-    if (!skipped)
-        SwapScreens(render_fullscreen);
 
-    video_cb(skipped ? 0 : screenSwap, screenLayout->width, screenLayout->height, screenLayout->pitchInPix * (render_fullscreen ? 1 : 2));
+   NDS_endProcessingInput();
 
-    frameIndex = skipped ? frameIndex : 0;
+   extern unsigned retro_audio_frames;
+   retro_audio_frames = 0;
+
+   // RUN
+   frameIndex ++;
+   bool skipped = frameIndex <= frameSkip;
+
+   if (skipped)
+      NDS_SkipNextFrame();
+
+   NDS_exec<false>();
+   SPU_Emulate_user();
+
+   // VIDEO: Swap screen colors and pass on
+   if (!skipped)
+      SwapScreens(false);
+
+   video_cb(skipped ? 0 : screenSwap, screenLayout->width, screenLayout->height, screenLayout->pitchInPix * 2);
+
+   frameIndex = skipped ? frameIndex : 0;
 }
 
 size_t retro_serialize_size (void)
