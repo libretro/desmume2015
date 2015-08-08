@@ -2638,11 +2638,11 @@ void NDS_setPad(bool R,bool L,bool D,bool U,bool T,bool S,bool B,bool A,bool Y,b
 	rawButtons.G = G;
 	rawButtons.F = F;
 }
-void NDS_setTouchPos(u16 x, u16 y)
+void NDS_setTouchPos(u16 x, u16 y, u16 scale)
 {
 	gotInputRequest();
-	rawUserInput.touch.touchX = x<<4;
-	rawUserInput.touch.touchY = y<<4;
+	rawUserInput.touch.touchX = (x/scale)<<4;
+	rawUserInput.touch.touchY = (y/scale)<<4;
 	rawUserInput.touch.isTouch = true;
 
    nds.stylusJitter = CommonSettings.StylusJitter;

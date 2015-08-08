@@ -42,6 +42,7 @@ int currFrameCounter;
 
 unsigned GPU_LR_FRAMEBUFFER_NATIVE_WIDTH  = 256;
 unsigned GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT = 192;
+unsigned scale = 1;
 
 #define NDS_MAX_SCREEN_GAP               100
 
@@ -69,7 +70,7 @@ struct LayoutData
    bool draw_screen2;
 };
 
-static bool absolutePointer;
+static bool touchEnabled;
 
 static inline int32_t Saturate(int32_t min, int32_t max, int32_t aValue)
 {
@@ -84,7 +85,7 @@ static int32_t FramesWithPointer;
 
 static void DrawPointerLine(uint16_t* aOut, uint32_t aPitchInPix)
 {
-   for(int i = 0; i < 5; i ++)
+   for(int i = 0; i < (5 * scale) ; i ++)
       aOut[aPitchInPix * i] = 0xFFFF;
 }
 
@@ -96,10 +97,10 @@ static void DrawPointer(uint16_t* aOut, uint32_t aPitchInPix)
    TouchX = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1), TouchX);
    TouchY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1), TouchY);
 
-   if(TouchX >   5) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX - 5], 1);
-   if(TouchX < (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-5)) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
-   if(TouchY >   5) DrawPointerLine(&aOut[(TouchY - 5) * aPitchInPix + TouchX], aPitchInPix);
-   if(TouchY < (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-5)) DrawPointerLine(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
+   if(TouchX >   (5 * scale)) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX - (5 * scale) ], 1);
+   if(TouchX < (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH - (5 * scale) )) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
+   if(TouchY >   (5 * scale)) DrawPointerLine(&aOut[(TouchY - (5 * scale) ) * aPitchInPix + TouchX], aPitchInPix);
+   if(TouchY < (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-(5 * scale) )) DrawPointerLine(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
 }
 
 static retro_pixel_format colorMode;
@@ -130,7 +131,7 @@ void retro_get_system_info(struct retro_system_info *info)
    info->library_name = "DeSmuME";
    info->library_version = "SVN";
    info->valid_extensions = "nds|bin";
-   info->need_fullpath = true;   
+   info->need_fullpath = true;
    info->block_extract = false;
 }
 
@@ -262,19 +263,19 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 
 static void QuickSwap(void)
 {
-	if(quick_switch_enable)
-	{
-	   if(current_screen == 1)
-	   {
+    if(quick_switch_enable)
+    {
+       if(current_screen == 1)
+       {
          current_layout = LAYOUT_BOTTOM_ONLY;
-		   current_screen = 2;
-	   }
-	   else
-	   {
+           current_screen = 2;
+       }
+       else
+       {
          current_layout = LAYOUT_TOP_ONLY;
-		   current_screen = 1;
-	   }
-	}
+           current_screen = 1;
+       }
+    }
 }
 
 static void MicrophoneToggle(void)
@@ -287,7 +288,7 @@ static void MicrophoneToggle(void)
 
 static void check_variables(bool first_boot)
 {
-	struct retro_variable var = {0};
+    struct retro_variable var = {0};
 
    if (first_boot)
    {
@@ -295,36 +296,29 @@ static void check_variables(bool first_boot)
 
       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       {
-         char *pch;
-         char str[100];
-         snprintf(str, sizeof(str), "%s", var.value);
-
-         pch = strtok(str, "x");
-         if (pch)
-            GPU_LR_FRAMEBUFFER_NATIVE_WIDTH = strtoul(pch, NULL, 0);
-         pch = strtok(NULL, "x");
-         if (pch)
-            GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT = strtoul(pch, NULL, 0);
+         GPU_LR_FRAMEBUFFER_NATIVE_WIDTH = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * atoi(var.value);
+         GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * atoi(var.value);
+         scale = atoi(var.value);
       }
    }
-	
-	var.key = "desmume_num_cores";
+ 
+    var.key = "desmume_num_cores";
 
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-		CommonSettings.num_cores = var.value ? strtol(var.value, 0, 10) : 1;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        CommonSettings.num_cores = var.value ? strtol(var.value, 0, 10) : 1;
    else
       CommonSettings.num_cores = 1;
-	
-	var.key = "desmume_cpu_mode";
-	var.value = 0;
-	
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-	{
-		if (!strcmp(var.value, "jit"))
-			CommonSettings.use_jit = true;
-		else if (!strcmp(var.value, "interpreter"))
-			CommonSettings.use_jit = false;
-	}
+
+    var.key = "desmume_cpu_mode";
+    var.value = 0;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "jit"))
+            CommonSettings.use_jit = true;
+        else if (!strcmp(var.value, "interpreter"))
+            CommonSettings.use_jit = false;
+    }
    else
    {
 #ifdef HAVE_JIT
@@ -335,24 +329,24 @@ static void check_variables(bool first_boot)
    }
 
 #ifdef HAVE_JIT
-	var.key = "desmume_jit_block_size";
+    var.key = "desmume_jit_block_size";
 
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-		CommonSettings.jit_max_block_size = var.value ? strtol(var.value, 0, 10) : 100;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        CommonSettings.jit_max_block_size = var.value ? strtol(var.value, 0, 10) : 100;
    else
-		CommonSettings.jit_max_block_size = 100;
+        CommonSettings.jit_max_block_size = 100;
 #endif
-	
-	var.key = "desmume_screens_layout";
 
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-	{	
+    var.key = "desmume_screens_layout";
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
       static int old_layout_id      = -1;
       unsigned new_layout_id        = 0;
 
       quick_switch_enable = false;
 
-		if (!strcmp(var.value, "top/bottom"))
+        if (!strcmp(var.value, "top/bottom"))
          new_layout_id = LAYOUT_TOP_BOTTOM;
       else if (!strcmp(var.value, "bottom/top"))
          new_layout_id = LAYOUT_BOTTOM_TOP;
@@ -375,88 +369,88 @@ static void check_variables(bool first_boot)
          old_layout_id = new_layout_id;
          current_layout = new_layout_id;
       }
-	}	
+    }
    else
       quick_switch_enable = false;
-	
 
-	var.key = "desmume_pointer_mouse";
 
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-	{
-		if (!strcmp(var.value, "enable"))
-			mouse_enable = true;
+    var.key = "desmume_pointer_mouse";
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "enable"))
+            mouse_enable = true;
       else if (!strcmp(var.value, "disable"))
-			mouse_enable = false;
-	}
+            mouse_enable = false;
+    }
    else
       mouse_enable = false;
 
-	var.key = "desmume_pointer_device";
+    var.key = "desmume_pointer_device";
 
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-	{
-		if (!strcmp(var.value, "l-stick"))
-			pointer_device = 1;
-		else if(!strcmp(var.value, "r-stick"))
-			pointer_device = 2;
-		else 
-			pointer_device=0;
-	}
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (!strcmp(var.value, "l-stick"))
+            pointer_device = 1;
+        else if(!strcmp(var.value, "r-stick"))
+            pointer_device = 2;
+        else 
+            pointer_device=0;
+    }
    else
       pointer_device=0;
-		
-	var.key = "desmume_pointer_device_deadzone";
 
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    var.key = "desmume_pointer_device_deadzone";
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       analog_stick_deadzone = (int)(atoi(var.value));
-		
-	var.key = "desmume_pointer_type";
 
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-	{
-		absolutePointer = var.value && (!strcmp(var.value, "absolute"));
-	}
-	
-	var.key = "desmume_frameskip";
+    var.key = "desmume_pointer_type";
 
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-		frameSkip = var.value ? strtol(var.value, 0, 10) : 0;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        touchEnabled = var.value && (!strcmp(var.value, "touch"));
+    }
+
+    var.key = "desmume_frameskip";
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        frameSkip = var.value ? strtol(var.value, 0, 10) : 0;
    else
       frameSkip = 0;
-	 
-	var.key = "desmume_firmware_language";
 
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-	{
-		static const struct { const char* name; uint32_t id; } languages[6] = 
-		{
-			{ "Japanese", 0 },
-			{ "English", 1 },
-			{ "French", 2 },
-			{ "German", 3 },
-			{ "Italian", 4 },
-			{ "Spanish", 5 }
-		};
-		
-		for (int i = 0; i < 6; i ++)
-		{
-			if (!strcmp(languages[i].name, var.value))
-			{
-				firmwareLanguage = languages[i].id;
-				break;
-			}
-		}		
-	}
+    var.key = "desmume_firmware_language";
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        static const struct { const char* name; uint32_t id; } languages[6] = 
+        {
+            { "Japanese", 0 },
+            { "English", 1 },
+            { "French", 2 },
+            { "German", 3 },
+            { "Italian", 4 },
+            { "Spanish", 5 }
+        };
+
+        for (int i = 0; i < 6; i ++)
+        {
+            if (!strcmp(languages[i].name, var.value))
+            {
+                firmwareLanguage = languages[i].id;
+                break;
+            }
+        }
+    }
    else
       firmwareLanguage = 1;
 
 
    var.key = "desmume_gfx_edgemark";
-   
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-		if (!strcmp(var.value, "enable"))
+        if (!strcmp(var.value, "enable"))
          CommonSettings.GFX3D_EdgeMark = true;
       else if (!strcmp(var.value, "disable"))
          CommonSettings.GFX3D_EdgeMark = false;
@@ -465,8 +459,8 @@ static void check_variables(bool first_boot)
       CommonSettings.GFX3D_EdgeMark = true;
 
    var.key = "desmume_gfx_linehack";
-   
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "enable"))
          CommonSettings.GFX3D_LineHack = true;
@@ -478,7 +472,7 @@ static void check_variables(bool first_boot)
 
    var.key = "desmume_gfx_txthack";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "enable"))
          CommonSettings.GFX3D_TXTHack = true;
@@ -489,8 +483,8 @@ static void check_variables(bool first_boot)
       CommonSettings.GFX3D_TXTHack = false;
 
    var.key = "desmume_mic_force_enable";
-   
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "yes"))
          microphone_force_enable = 1;
@@ -499,10 +493,10 @@ static void check_variables(bool first_boot)
    }
    else
       NDS_setMic(false);
-   
+
    var.key = "desmume_mic_mode";
-   
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "internal"))
          CommonSettings.micMode = TCommonSettings::InternalNoise;
@@ -515,9 +509,9 @@ static void check_variables(bool first_boot)
    }
    else
       CommonSettings.micMode = TCommonSettings::InternalNoise;
-   
+
    var.key = "desmume_pointer_device_acceleration_mod";
-   
+
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       analog_stick_acceleration_modifier = atoi(var.value);
    else
@@ -605,9 +599,9 @@ static void check_variables(bool first_boot)
    }
    else
       CommonSettings.SPU_sync_method = 1;
-      
+
    var.key = "desmume_screens_gap";
-   
+
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if ((atoi(var.value)) != nds_screen_gap)
@@ -656,19 +650,19 @@ void retro_set_environment(retro_environment_t cb)
 
    static const retro_variable values[] =
    {
-      { "desmume_internal_resolution", "Internal resolution (restart); 256x192|512x384|768x576|1024x768|1280x960|1536x1152|1792x1344|2048x1536|320x240|320x480|360x480|400x400|512x224|512x448|640x224|640x448|640x480|800x600|960x720|1024x768|1280x800|1280x960|1600x1200|1920x1080" },
+      { "desmume_internal_resolution", "Internal resolution (restart); 1|2|3|4|5|6|7|8|9|10" },
       { "desmume_num_cores", "CPU cores; 1|2|3|4" },
 #ifdef HAVE_JIT
-      { "desmume_cpu_mode", "CPU mode; jit|interpreter" },	
+      { "desmume_cpu_mode", "CPU mode; jit|interpreter" },
       { "desmume_jit_block_size", "JIT block size; 100|99|98|97|96|95|94|93|92|91|90|89|88|87|86|85|84|83|82|81|80|79|78|77|76|75|74|73|72|71|70|69|68|67|66|65|64|63|62|61|60|59|58|57|56|55|54|53|52|51|50|49|48|47|46|45|44|43|42|41|40|39|38|37|36|35|34|33|32|31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10|9|8|7|6|5|4|3|2|1|0" },
 #else
       { "desmume_cpu_mode", "CPU mode; interpreter" },
 #endif
       { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch" },
       { "desmume_pointer_mouse", "Enable mouse/pointer; enable|disable" },
-      { "desmume_pointer_type", "Mouse/pointer mode; relative|absolute" },
+      { "desmume_pointer_type", "Pointer type; mouse|touch" },
       { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
-      { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },	  
+      { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },
       { "desmume_pointer_device_acceleration_mod", "Emulated pointer acceleration modifier percent; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
       { "desmume_pointer_stylus_pressure", "Emulated stylus pressure modifier percent; 50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|" },
       { "desmume_pointer_stylus_jitter", "Enable emulated stylus jitter; disable|enable"},
@@ -676,7 +670,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_advanced_timing", "Enable Advanced Bus-Level Timing; enable|disable" },
       { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
-      { "desmume_screens_gap", "Screen Gap; 0|5|64|90|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },	
+      { "desmume_screens_gap", "Screen Gap; 0|5|64|90|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
       { "desmume_gfx_edgemark", "Enable Edgemark; enable|disable" },
       { "desmume_gfx_linehack", "Enable Line Hack; enable|disable" },
       { "desmume_gfx_txthack", "Enable TXT Hack; disable|enable"},
@@ -694,24 +688,24 @@ void retro_set_environment(retro_environment_t cb)
 
 //====================== Message box
 #define MSG_ARG \
-	char msg_buf[1024] = {0}; \
-	{ \
-		va_list args; \
-		va_start (args, fmt); \
-		vsprintf (msg_buf, fmt, args); \
-		va_end (args); \
-	}
+    char msg_buf[1024] = {0}; \
+    { \
+        va_list args; \
+        va_start (args, fmt); \
+        vsprintf (msg_buf, fmt, args); \
+        va_end (args); \
+    }
 
 void msgWndInfo(const char *fmt, ...)
 {
-	MSG_ARG;
+    MSG_ARG;
    if (log_cb)
       log_cb(RETRO_LOG_INFO, "%s.\n", msg_buf);
 }
 
 bool msgWndConfirm(const char *fmt, ...)
 {
-	MSG_ARG;
+    MSG_ARG;
    if (log_cb)
       log_cb(RETRO_LOG_INFO, "%s.\n", msg_buf);
    return true;
@@ -719,23 +713,23 @@ bool msgWndConfirm(const char *fmt, ...)
 
 void msgWndError(const char *fmt, ...)
 {
-	MSG_ARG;
+    MSG_ARG;
    if (log_cb)
       log_cb(RETRO_LOG_ERROR, "%s.\n", msg_buf);
 }
 
 void msgWndWarn(const char *fmt, ...)
 {
-	MSG_ARG;
+    MSG_ARG;
    if (log_cb)
       log_cb(RETRO_LOG_WARN, "%s.\n", msg_buf);
 }
 
 msgBoxInterface msgBoxWnd = {
-	msgWndInfo,
-	msgWndConfirm,
-	msgWndError,
-	msgWndWarn,
+    msgWndInfo,
+    msgWndConfirm,
+    msgWndError,
+    msgWndWarn,
 };
 //====================== Dialogs end
 
@@ -753,7 +747,7 @@ static void Change3DCoreWithFallback(int newCore)
 #endif
          )
       newCore = GPU3D_SWRAST;
-   
+
    printf("Attempting change to 3d core to: %s\n",core3DList[newCore]->name);
 
 #ifdef HAVE_OPENGL
@@ -852,7 +846,7 @@ extern unsigned retro_audio_frames;
 void retro_run (void)
 {
    struct LayoutData layout;
-   bool updated                  = false;	
+   bool updated                  = false;
    bool have_touch               = false;
 
 
@@ -862,7 +856,7 @@ void retro_run (void)
       struct retro_system_av_info new_av_info;
       retro_get_system_av_info(&new_av_info);
 
-      environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);		
+      environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);
    }
 
    poll_cb();
@@ -894,7 +888,7 @@ void retro_run (void)
 
       // Convert cartesian coordinate analog stick to polar coordinates
       double radius = sqrt(analogX * analogX + analogY * analogY);
-      double angle = atan2(analogY, analogX);		
+      double angle = atan2(analogY, analogX);
       double max = (float)0x8000/analog_stick_acceleration;
 
       //log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
@@ -912,8 +906,9 @@ void retro_run (void)
       {
          analogX = 0;
          analogY = 0;
-      }		
-      //log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
+      }
+      log_cb(RETRO_LOG_DEBUG, "%d %d.\n", GPU_LR_FRAMEBUFFER_NATIVE_WIDTH,GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT);
+      log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
 
       have_touch = have_touch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); 
 
@@ -927,7 +922,7 @@ void retro_run (void)
    if(mouse_enable)
    {
       // TOUCH: Mouse
-      if(!absolutePointer)
+      if(!touchEnabled)
       {
          const int16_t mouseX = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
          const int16_t mouseY = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
@@ -958,7 +953,7 @@ void retro_run (void)
    }
 
    if(have_touch)
-      NDS_setTouchPos(TouchX, TouchY);
+      NDS_setTouchPos(TouchX, TouchY, scale);
    else
       NDS_releaseTouch();
 
@@ -1059,13 +1054,13 @@ bool retro_serialize(void *data, size_t size)
 {
     EMUFILE_MEMORY state;
     savestate_save(&state);
-    
+
     if(state.size() <= size)
     {
         memcpy(data, state.buf(), state.size());
         return true;
     }
-    
+
     return false;
 }
 
@@ -1116,7 +1111,7 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
     {
         strncpy(GBAgameName, info[1].path, sizeof(GBAgameName));
         addonsChangePak(NDS_ADDON_GBAGAME);
-        
+
         return retro_load_game(&info[0]);
     }
 #endif
