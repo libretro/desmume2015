@@ -70,7 +70,7 @@ struct LayoutData
    bool draw_screen2;
 };
 
-static bool absolutePointer;
+static bool touchEnabled;
 
 static inline int32_t Saturate(int32_t min, int32_t max, int32_t aValue)
 {
@@ -97,10 +97,10 @@ static void DrawPointer(uint16_t* aOut, uint32_t aPitchInPix)
    TouchX = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1), TouchX);
    TouchY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1), TouchY);
 
-   if(TouchX >   5) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX - 5], 1);
-   if(TouchX < (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-5)) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
-   if(TouchY >   5) DrawPointerLine(&aOut[(TouchY - 5) * aPitchInPix + TouchX], aPitchInPix);
-   if(TouchY < (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-5)) DrawPointerLine(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
+   if(TouchX >   5) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX - 5 * scale], 1);
+   if(TouchX < (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH - 5 * scale)) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
+   if(TouchY >   5) DrawPointerLine(&aOut[(TouchY - 5 * scale) * aPitchInPix + TouchX], aPitchInPix);
+   if(TouchY < (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-5 * scale)) DrawPointerLine(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
 }
 
 static retro_pixel_format colorMode;
@@ -409,7 +409,7 @@ static void check_variables(bool first_boot)
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        absolutePointer = var.value && (!strcmp(var.value, "absolute"));
+        touchEnabled = var.value && (!strcmp(var.value, "touch"));
     }
     
     var.key = "desmume_frameskip";
@@ -660,7 +660,7 @@ void retro_set_environment(retro_environment_t cb)
 #endif
       { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch" },
       { "desmume_pointer_mouse", "Enable mouse/pointer; enable|disable" },
-      { "desmume_pointer_type", "Mouse/pointer mode; relative|absolute" },
+      { "desmume_pointer_type", "Pointer type; mouse|touch" },
       { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
       { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },      
       { "desmume_pointer_device_acceleration_mod", "Emulated pointer acceleration modifier percent; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
@@ -922,7 +922,7 @@ void retro_run (void)
    if(mouse_enable)
    {
       // TOUCH: Mouse
-      if(!absolutePointer)
+      if(!touchEnabled)
       {
          const int16_t mouseX = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
          const int16_t mouseY = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
