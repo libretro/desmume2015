@@ -106,9 +106,9 @@ static void DrawPointer(uint16_t* aOut, uint32_t aPitchInPix)
    TouchY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1), TouchY);
 
    if(TouchX >   5) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX - 5], 1);
-   if(TouchX < 251) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
+   if(TouchX < (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-5)) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
    if(TouchY >   5) DrawPointerLine(&aOut[(TouchY - 5) * aPitchInPix + TouchX], aPitchInPix);
-   if(TouchY < 187) DrawPointerLine(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
+   if(TouchY < (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-5)) DrawPointerLine(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
 }
 
 static retro_pixel_format colorMode;
