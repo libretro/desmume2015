@@ -615,15 +615,11 @@ enum GPULayerType
 struct GPU
 {
 	GPU()
-		: debug(false)
 	{}
 
 	// some structs are becoming redundant
 	// some functions too (no need to recopy some vars as it is done by MMU)
 	REG_DISPx * dispx_st;
-
-	//this indicates whether this gpu is handling debug tools
-	bool debug;
 
 	CACHE_ALIGN u16 sprColor[GPU_FRAMEBUFFER_NATIVE_WIDTH];
 	CACHE_ALIGN u8 sprAlpha[GPU_FRAMEBUFFER_NATIVE_WIDTH];
@@ -844,16 +840,6 @@ void GPU_DeInit(GPU *gpu);
 size_t GPU_GetFramebufferWidth();
 size_t GPU_GetFramebufferHeight();
 void GPU_SetFramebufferSize(size_t w, size_t h);
-
-//these are functions used by debug tools which want to render layers etc outside the context of the emulation
-namespace GPU_EXT
-{
-	void textBG(GPU *gpu, u8 num, u8 *DST);		//Draw text based background
-	void rotBG(GPU *gpu, u8 num, u8 *DST);
-	void extRotBG(GPU *gpu, u8 num, u8 *DST);
-};
-void sprite1D(GPU *gpu, u16 l, u8 *dst, u8 *dst_alpha, u8 *typeTab, u8 *prioTab);
-void sprite2D(GPU *gpu, u16 l, u8 *dst, u8 *dst_alpha, u8 *typeTab, u8 *prioTab);
 
 typedef struct
 {

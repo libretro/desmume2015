@@ -1355,53 +1355,27 @@ static void lineNull(GPU *gpu)
 
 template<bool MOSAIC> void lineText(GPU *gpu)
 {
-	if(gpu->debug)
-	{
-		const s32 wh = gpu->BGSize[gpu->currBgNum][0];
-		renderline_textBG<MOSAIC>(gpu, 0, gpu->currLine, wh);
-	}
-	else
-	{
-		const u16 vofs = gpu->getVOFS(gpu->currBgNum);
-		const u16 hofs = gpu->getHOFS(gpu->currBgNum);
-		renderline_textBG<MOSAIC>(gpu, hofs, gpu->currLine + vofs, 256);
-	}
+   const u16 vofs = gpu->getVOFS(gpu->currBgNum);
+   const u16 hofs = gpu->getHOFS(gpu->currBgNum);
+   renderline_textBG<MOSAIC>(gpu, hofs, gpu->currLine + vofs, 256);
 }
 
 template<bool MOSAIC> void lineRot(GPU *gpu)
 {
-	if (gpu->debug)
-	{
-		static const BGxPARMS debugParams = {256, 0, 0, -77, 0, (s16)gpu->currLine*GPU_FRAMEBUFFER_NATIVE_WIDTH};
-		const s32 wh = gpu->BGSize[gpu->currBgNum][0];
-		rotBG2<MOSAIC>(gpu, debugParams, wh);
-	}
-	else
-	{
-		BGxPARMS &params = (gpu->currBgNum == 2) ? (gpu->dispx_st)->dispx_BG2PARMS : (gpu->dispx_st)->dispx_BG3PARMS;
-		
-		rotBG2<MOSAIC>(gpu, params, 256);
-		params.BGxX += params.BGxPB;
-		params.BGxY += params.BGxPD;
-	}
+   BGxPARMS &params = (gpu->currBgNum == 2) ? (gpu->dispx_st)->dispx_BG2PARMS : (gpu->dispx_st)->dispx_BG3PARMS;
+
+   rotBG2<MOSAIC>(gpu, params, 256);
+   params.BGxX += params.BGxPB;
+   params.BGxY += params.BGxPD;
 }
 
 template<bool MOSAIC> void lineExtRot(GPU *gpu)
 {
-	if (gpu->debug)
-	{
-		static BGxPARMS debugParams = {256, 0, 0, -77, 0, (s16)gpu->currLine*GPU_FRAMEBUFFER_NATIVE_WIDTH};
-		const s32 wh = gpu->BGSize[gpu->currBgNum][0];
-		extRotBG2<MOSAIC>(gpu, debugParams, wh);
-	}
-	else
-	{
-		BGxPARMS &params = (gpu->currBgNum == 2) ? (gpu->dispx_st)->dispx_BG2PARMS : (gpu->dispx_st)->dispx_BG3PARMS;
-		
-		extRotBG2<MOSAIC>(gpu, params, 256);
-		params.BGxX += params.BGxPB;
-		params.BGxY += params.BGxPD;
-	}
+   BGxPARMS &params = (gpu->currBgNum == 2) ? (gpu->dispx_st)->dispx_BG2PARMS : (gpu->dispx_st)->dispx_BG3PARMS;
+
+   extRotBG2<MOSAIC>(gpu, params, 256);
+   params.BGxX += params.BGxPB;
+   params.BGxY += params.BGxPD;
 }
 
 /*****************************************************************************/

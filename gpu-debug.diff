@@ -1,0 +1,109 @@
+diff --git a/desmume/src/GPU.cpp b/desmume/src/GPU.cpp
+index b95c304..84006de 100644
+--- a/desmume/src/GPU.cpp
++++ b/desmume/src/GPU.cpp
+@@ -1355,53 +1355,27 @@ static void lineNull(GPU *gpu)
+ 
+ template<bool MOSAIC> void lineText(GPU *gpu)
+ {
+-	if(gpu->debug)
+-	{
+-		const s32 wh = gpu->BGSize[gpu->currBgNum][0];
+-		renderline_textBG<MOSAIC>(gpu, 0, gpu->currLine, wh);
+-	}
+-	else
+-	{
+-		const u16 vofs = gpu->getVOFS(gpu->currBgNum);
+-		const u16 hofs = gpu->getHOFS(gpu->currBgNum);
+-		renderline_textBG<MOSAIC>(gpu, hofs, gpu->currLine + vofs, 256);
+-	}
++   const u16 vofs = gpu->getVOFS(gpu->currBgNum);
++   const u16 hofs = gpu->getHOFS(gpu->currBgNum);
++   renderline_textBG<MOSAIC>(gpu, hofs, gpu->currLine + vofs, 256);
+ }
+ 
+ template<bool MOSAIC> void lineRot(GPU *gpu)
+ {
+-	if (gpu->debug)
+-	{
+-		static const BGxPARMS debugParams = {256, 0, 0, -77, 0, (s16)gpu->currLine*GPU_FRAMEBUFFER_NATIVE_WIDTH};
+-		const s32 wh = gpu->BGSize[gpu->currBgNum][0];
+-		rotBG2<MOSAIC>(gpu, debugParams, wh);
+-	}
+-	else
+-	{
+-		BGxPARMS &params = (gpu->currBgNum == 2) ? (gpu->dispx_st)->dispx_BG2PARMS : (gpu->dispx_st)->dispx_BG3PARMS;
+-		
+-		rotBG2<MOSAIC>(gpu, params, 256);
+-		params.BGxX += params.BGxPB;
+-		params.BGxY += params.BGxPD;
+-	}
++   BGxPARMS &params = (gpu->currBgNum == 2) ? (gpu->dispx_st)->dispx_BG2PARMS : (gpu->dispx_st)->dispx_BG3PARMS;
++
++   rotBG2<MOSAIC>(gpu, params, 256);
++   params.BGxX += params.BGxPB;
++   params.BGxY += params.BGxPD;
+ }
+ 
+ template<bool MOSAIC> void lineExtRot(GPU *gpu)
+ {
+-	if (gpu->debug)
+-	{
+-		static BGxPARMS debugParams = {256, 0, 0, -77, 0, (s16)gpu->currLine*GPU_FRAMEBUFFER_NATIVE_WIDTH};
+-		const s32 wh = gpu->BGSize[gpu->currBgNum][0];
+-		extRotBG2<MOSAIC>(gpu, debugParams, wh);
+-	}
+-	else
+-	{
+-		BGxPARMS &params = (gpu->currBgNum == 2) ? (gpu->dispx_st)->dispx_BG2PARMS : (gpu->dispx_st)->dispx_BG3PARMS;
+-		
+-		extRotBG2<MOSAIC>(gpu, params, 256);
+-		params.BGxX += params.BGxPB;
+-		params.BGxY += params.BGxPD;
+-	}
++   BGxPARMS &params = (gpu->currBgNum == 2) ? (gpu->dispx_st)->dispx_BG2PARMS : (gpu->dispx_st)->dispx_BG3PARMS;
++
++   extRotBG2<MOSAIC>(gpu, params, 256);
++   params.BGxX += params.BGxPB;
++   params.BGxY += params.BGxPD;
+ }
+ 
+ /*****************************************************************************/
+diff --git a/desmume/src/GPU.h b/desmume/src/GPU.h
+index e5b1576..1c82f10 100644
+--- a/desmume/src/GPU.h
++++ b/desmume/src/GPU.h
+@@ -615,16 +615,12 @@ enum GPULayerType
+ struct GPU
+ {
+ 	GPU()
+-		: debug(false)
+ 	{}
+ 
+ 	// some structs are becoming redundant
+ 	// some functions too (no need to recopy some vars as it is done by MMU)
+ 	REG_DISPx * dispx_st;
+ 
+-	//this indicates whether this gpu is handling debug tools
+-	bool debug;
+-
+ 	CACHE_ALIGN u16 sprColor[GPU_FRAMEBUFFER_NATIVE_WIDTH];
+ 	CACHE_ALIGN u8 sprAlpha[GPU_FRAMEBUFFER_NATIVE_WIDTH];
+ 	CACHE_ALIGN u8 sprType[GPU_FRAMEBUFFER_NATIVE_WIDTH];
+@@ -845,16 +841,6 @@ size_t GPU_GetFramebufferWidth();
+ size_t GPU_GetFramebufferHeight();
+ void GPU_SetFramebufferSize(size_t w, size_t h);
+ 
+-//these are functions used by debug tools which want to render layers etc outside the context of the emulation
+-namespace GPU_EXT
+-{
+-	void textBG(GPU *gpu, u8 num, u8 *DST);		//Draw text based background
+-	void rotBG(GPU *gpu, u8 num, u8 *DST);
+-	void extRotBG(GPU *gpu, u8 num, u8 *DST);
+-};
+-void sprite1D(GPU *gpu, u16 l, u8 *dst, u8 *dst_alpha, u8 *typeTab, u8 *prioTab);
+-void sprite2D(GPU *gpu, u16 l, u8 *dst, u8 *dst_alpha, u8 *typeTab, u8 *prioTab);
+-
+ typedef struct
+ {
+ 	GPU *gpu;
