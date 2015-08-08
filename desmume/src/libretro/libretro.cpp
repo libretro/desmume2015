@@ -36,6 +36,8 @@ static int analog_stick_acceleration_modifier = 0;
 static int microphone_force_enable = 0;
 static int nds_screen_gap = 0;
 
+static uint16_t *screen_buf;
+
 int currFrameCounter;
 
 unsigned GPU_LR_FRAMEBUFFER_NATIVE_WIDTH  = 256;
@@ -830,9 +832,9 @@ extern unsigned retro_audio_frames;
 void retro_run (void)
 {
    struct LayoutData layout;
-   uint16_t screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + NDS_MAX_SCREEN_GAP) * 2];
    bool updated                  = false;	
    bool have_touch               = false;
+
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
    {
@@ -1081,6 +1083,9 @@ bool retro_load_game(const struct retro_game_info *game)
    environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, desc);
 
    execute = NDS_LoadROM(game->path);
+
+   screen_buf = (uint16_t*)malloc(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + NDS_MAX_SCREEN_GAP) * 2 * sizeof(uint16_t));
+
    return execute;
 }
 
@@ -1101,6 +1106,9 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
 void retro_unload_game (void)
 {
     NDS_FreeROM();
+    if (screen_buf)
+       free(screen_buf);
+    screen_buf = NULL;
     execute = false;
 }
 
