@@ -80,10 +80,9 @@ static LayoutData* screenLayout = &layouts[0];
 
 static bool absolutePointer;
 
-   template<int32_t MIN, int32_t MAX>
-static int32_t Saturate(int32_t aValue)
+static inline int32_t Saturate(int32_t min, int32_t max, int32_t aValue)
 {
-   return std::max(MIN, std::min(MAX, aValue));
+   return std::max(min, std::min(max, aValue));
 }
 
 static int32_t TouchX;
@@ -103,8 +102,8 @@ static void DrawPointer(uint16_t* aOut, uint32_t aPitchInPix)
    if(FramesWithPointer-- < 0)
       return;
 
-   TouchX = Saturate<0, 255>(TouchX);
-   TouchY = Saturate<0, 191>(TouchY);
+   TouchX = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1), TouchX);
+   TouchY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1), TouchY);
 
    if(TouchX >   5) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX - 5], 1);
    if(TouchX < 251) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
@@ -838,8 +837,8 @@ void retro_run (void)
 
       haveTouch = haveTouch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); 
 
-      TouchX = Saturate<0, 255>(TouchX + analogX);
-      TouchY = Saturate<0, 191>(TouchY + analogY);
+      TouchX = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1), TouchX + analogX);
+      TouchY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1), TouchY + analogY);
 
       FramesWithPointer = (analogX || analogY) ? FramesWithPointerBase : FramesWithPointer;
 
@@ -854,8 +853,8 @@ void retro_run (void)
          const int16_t mouseY = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
          haveTouch = haveTouch || input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
 
-         TouchX = Saturate<0, 255>(TouchX + mouseX);
-         TouchY = Saturate<0, 191>(TouchY + mouseY);
+         TouchX = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1), TouchX + mouseX);
+         TouchY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1), TouchY + mouseY);
          FramesWithPointer = (mouseX || mouseY) ? FramesWithPointerBase : FramesWithPointer;
       }
       // TOUCH: Pointer
