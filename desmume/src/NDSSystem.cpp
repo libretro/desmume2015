@@ -2644,6 +2644,8 @@ void NDS_setTouchPos(u16 x, u16 y)
 	rawUserInput.touch.touchX = x<<4;
 	rawUserInput.touch.touchY = y<<4;
 	rawUserInput.touch.isTouch = true;
+
+   nds.stylusJitter = CommonSettings.StylusJitter;
 }
 
 void NDS_releaseTouch(void)
