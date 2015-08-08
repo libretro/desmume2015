@@ -19,14 +19,10 @@
 
 #include "common.h"
 
-#ifndef _MSC_VER
 #include <stdint.h>
-#endif
-
 #include <string.h>
 #include <ctype.h>
 #include <string>
-#include <stdint.h>
 #include <stdarg.h>
 extern unsigned long crc32(unsigned long, const unsigned char*,unsigned int);
 #include <stdlib.h>
