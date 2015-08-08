@@ -85,7 +85,7 @@ static int32_t FramesWithPointer;
 
 static void DrawPointerLine(uint16_t* aOut, uint32_t aPitchInPix)
 {
-   for(int i = 0; i < 5; i ++)
+   for(int i = 0; i < 5 * scale; i ++)
       aOut[aPitchInPix * i] = 0xFFFF;
 }
 
