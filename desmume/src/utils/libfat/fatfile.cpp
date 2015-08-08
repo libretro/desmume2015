@@ -47,6 +47,11 @@
 #include "filetime.h"
 #include "lock.h"
 
+ 
+#if defined(_WIN32) && !defined(_MSC_VER)
+#define EOVERFLOW 132
+#endif
+
 intptr_t _FAT_open_r (struct _reent *r, void *fileStruct, const char *path, int flags, int mode) {
 	PARTITION* partition = NULL;
 	bool fileExists;

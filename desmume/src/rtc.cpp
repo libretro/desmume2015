@@ -25,7 +25,7 @@
 #include "armcpu.h"
 #include <string.h>
 #include "saves.h"
-#ifdef WIN32
+#if defined(WIN32) && defined(_MSC_VER)
 #include "windows/main.h"
 #endif
 #include "movie.h"

@@ -29,6 +29,10 @@
 #include <stdint.h>
 #endif
 
+#if defined(_WIN32) && !defined(_MSC_VER)
+#define sscanf_s sscanf
+#endif
+
 CHEATS *cheats = NULL;
 CHEATSEARCH *cheatSearch = NULL;
 
