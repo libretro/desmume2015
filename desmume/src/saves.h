@@ -64,7 +64,7 @@ void savestate_slot(int num);
 void loadstate_slot(int num);
 
 bool savestate_load(class EMUFILE* is);
-bool savestate_save(class EMUFILE* outstream, int compressionLevel);
+bool savestate_save(class EMUFILE* outstream);
 
 void dorewind();
 void rewindsave();

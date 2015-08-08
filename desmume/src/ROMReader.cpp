@@ -21,9 +21,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
-#ifdef HAVE_LIBZZIP
-#include <zzip/zzip.h>
-#endif
 
 #ifdef WIN32
 #define stat(...) _stat(__VA_ARGS__)
@@ -33,20 +30,6 @@
 
 ROMReader_struct * ROMReaderInit(char ** filename)
 {
-#ifdef HAVE_LIBZ
-	if(!strcasecmp(".gz", *filename + (strlen(*filename) - 3)))
-	{
-		(*filename)[strlen(*filename) - 3] = '\0';
-		return &GZIPROMReader;
-	}
-#endif
-#ifdef HAVE_LIBZZIP
-	if (!strcasecmp(".zip", *filename + (strlen(*filename) - 4)))
-	{
-		(*filename)[strlen(*filename) - 4] = '\0';
-		return &ZIPROMReader;
-	}
-#endif
 	return &STDROMReader;
 }
 
@@ -113,123 +96,3 @@ int STDROMReaderRead(void * file, void * buffer, u32 size)
 	if (!file) return 0 ;
 	return fread(buffer, 1, size, (FILE*)file);
 }
-
-#ifdef HAVE_LIBZ
-void * GZIPROMReaderInit(const char * filename);
-void GZIPROMReaderDeInit(void *);
-u32 GZIPROMReaderSize(void *);
-int GZIPROMReaderSeek(void *, int, int);
-int GZIPROMReaderRead(void *, void *, u32);
-
-ROMReader_struct GZIPROMReader =
-{
-	ROMREADER_GZIP,
-	"Gzip ROM Reader",
-	GZIPROMReaderInit,
-	GZIPROMReaderDeInit,
-	GZIPROMReaderSize,
-	GZIPROMReaderSeek,
-	GZIPROMReaderRead
-};
-
-void * GZIPROMReaderInit(const char * filename)
-{
-	return (void*)gzopen(filename, "rb");
-}
-
-void GZIPROMReaderDeInit(void * file)
-{
-	gzclose((gzFile)file);
-}
-
-u32 GZIPROMReaderSize(void * file)
-{
-	char useless[1024];
-	u32 size = 0;
-
-	/* FIXME this function should first save the current
-	 * position and restore it after size calculation */
-	gzrewind((gzFile)file);
-	while (gzeof ((gzFile)file) == 0)
-		size += gzread((gzFile)file, useless, 1024);
-	gzrewind((gzFile)file);
-
-	return size;
-}
-
-int GZIPROMReaderSeek(void * file, int offset, int whence)
-{
-	return gzseek((gzFile)file, offset, whence);
-}
-
-int GZIPROMReaderRead(void * file, void * buffer, u32 size)
-{
-	return gzread((gzFile)file, buffer, size);
-}
-#endif
-
-#ifdef HAVE_LIBZZIP
-void * ZIPROMReaderInit(const char * filename);
-void ZIPROMReaderDeInit(void *);
-u32 ZIPROMReaderSize(void *);
-int ZIPROMReaderSeek(void *, int, int);
-int ZIPROMReaderRead(void *, void *, u32);
-
-ROMReader_struct ZIPROMReader =
-{
-	ROMREADER_ZIP,
-	"Zip ROM Reader",
-	ZIPROMReaderInit,
-	ZIPROMReaderDeInit,
-	ZIPROMReaderSize,
-	ZIPROMReaderSeek,
-	ZIPROMReaderRead
-};
-
-void * ZIPROMReaderInit(const char * filename)
-{
-	ZZIP_DIR * dir = zzip_opendir(filename);
-	ZZIP_DIRENT * dirent = zzip_readdir(dir);
-	if (dir != NULL)
-	{
-		char tmp1[1024];
-		char tmp2[1024];
-		memset(tmp1,0,sizeof(tmp1));
-		memset(tmp2,0,sizeof(tmp2));
-		strncpy(tmp1, filename, strlen(filename) - 4);
-		sprintf(tmp2, "%s/%s", tmp1, dirent->d_name);
-		return zzip_fopen(tmp2, "rb");
-	}
-	return NULL;
-}
-
-void ZIPROMReaderDeInit(void * file)
-{
-	zzip_close((ZZIP_FILE*)file);
-}
-
-u32 ZIPROMReaderSize(void * file)
-{
-	u32 size;
-
-	zzip_seek((ZZIP_FILE*)file, 0, SEEK_END);
-	size = zzip_tell((ZZIP_FILE*)file);
-	zzip_seek((ZZIP_FILE*)file, 0, SEEK_SET);
-
-	return size;
-}
-
-int ZIPROMReaderSeek(void * file, int offset, int whence)
-{
-	return zzip_seek((ZZIP_FILE*)file, offset, whence);
-}
-
-int ZIPROMReaderRead(void * file, void * buffer, u32 size)
-{
-#ifdef ZZIP_OLD_READ
-	return zzip_read((ZZIP_FILE*)file, (char *) buffer, size);
-#else
-	return zzip_read((ZZIP_FILE*)file, buffer, size);
-#endif
-}
-#endif

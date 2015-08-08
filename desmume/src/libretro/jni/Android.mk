@@ -30,7 +30,7 @@ LOCAL_MODULE    := libretro
 include ../../../Makefile.common
 
 LOCAL_SRC_FILES := $(SOURCES_CXX) $(SOURCES_C)
-GLOBAL_DEFINES :=  $(JIT) -DHAVE_LIBZ -fexceptions
+GLOBAL_DEFINES :=  $(JIT) -fexceptions
 
 LOCAL_CXXFLAGS += -O3 -D__LIBRETRO__ -Wno-write-strings -DANDROID -DFRONTEND_SUPPORTS_RGB565 $(GLOBAL_DEFINES)
 LOCAL_CFLAGS = -O3 -D__LIBRETRO__ -Wno-psabi -Wno-write-strings -DANDROID -DFRONTEND_SUPPORTS_RGB565 $(GLOBAL_DEFINES)

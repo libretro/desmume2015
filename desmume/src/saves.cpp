@@ -18,9 +18,6 @@
 	along with the this software.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifdef HAVE_LIBZ
-#include <zlib.h>
-#endif
 #include <stack>
 #include <set>
 #include <stdio.h>
@@ -925,25 +922,11 @@ static void savestate_WriteChunk(EMUFILE* os, int type, void (*saveproc)(EMUFILE
 
 static void writechunks(EMUFILE* os);
 
-#ifndef HAVE_LIBZ
-
-#ifndef Z_OK
-#define Z_OK 0
-#endif
-
-#ifndef Z_NO_COMPRESSION
-#define Z_NO_COMPRESSION 0
-#endif
-#endif
-
-bool savestate_save(EMUFILE* outstream, int compressionLevel)
+bool savestate_save(EMUFILE* outstream)
 {
 #ifdef HAVE_JIT 
 	arm_jit_sync();
 #endif
-	#ifndef HAVE_LIBZ
-	compressionLevel = Z_NO_COMPRESSION;
-	#endif
 
 	EMUFILE_MEMORY ms;
 	EMUFILE* os = outstream;
@@ -956,9 +939,6 @@ bool savestate_save(EMUFILE* outstream, int compressionLevel)
 	u32 comprlen = 0xFFFFFFFF;
 	u8* cbuf;
 
-	//compress the data
-	int error = Z_OK;
-
 	//dump the header
 	outstream->fseek(0,SEEK_SET);
 	outstream->fwrite(magic,16);
@@ -967,18 +947,14 @@ bool savestate_save(EMUFILE* outstream, int compressionLevel)
 	write32le(len,outstream); //uncompressed length
 	write32le(comprlen,outstream); //compressed length (-1 if it is not compressed)
 
-	return error == Z_OK;
+	return true;
 }
 
 bool savestate_save (const char *file_name)
 {
 	EMUFILE_MEMORY ms;
 	size_t elems_written;
-#ifdef HAVE_LIBZ
-	if(!savestate_save(&ms, Z_DEFAULT_COMPRESSION))
-#else
-	if(!savestate_save(&ms, 0))
-#endif
+	if(!savestate_save(&ms))
 		return false;
 	FILE* file = fopen(file_name,"wb");
 	if(file)
@@ -1142,24 +1118,7 @@ bool savestate_load(EMUFILE* is)
 
 	std::vector<u8> buf(len);
 
-	if(comprlen != 0xFFFFFFFF) {
-#ifndef HAVE_LIBZ
-		//without libz, we can't decompress this savestate
-		return false;
-#endif
-		std::vector<char> cbuf(comprlen);
-		is->fread(&cbuf[0],comprlen);
-		if(is->fail()) return false;
-
-#ifdef HAVE_LIBZ
-		uLongf uncomprlen = len;
-		int error = uncompress((uint8*)&buf[0],&uncomprlen,(uint8*)&cbuf[0],comprlen);
-		if(error != Z_OK || uncomprlen != len)
-			return false;
-#endif
-	} else {
-		is->fread((char*)&buf[0],len-32);
-	}
+   is->fread((char*)&buf[0],len-32);
 
 	//GO!! READ THE SAVESTATE
 	//THERE IS NO GOING BACK NOW
@@ -1229,7 +1188,7 @@ void rewindsave () {
 		ms = new EMUFILE_MEMORY(1024*1024*12);
 	}
 
-	if(!savestate_save(ms, Z_NO_COMPRESSION))
+	if(!savestate_save(ms))
 		return;
 
 	rewindbuffer.push_back(ms);

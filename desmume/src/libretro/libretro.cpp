@@ -1058,7 +1058,7 @@ size_t retro_serialize_size (void)
 bool retro_serialize(void *data, size_t size)
 {
     EMUFILE_MEMORY state;
-    savestate_save(&state, 0);
+    savestate_save(&state);
     
     if(state.size() <= size)
     {

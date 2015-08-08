@@ -16,9 +16,6 @@
 	along with the this software.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifdef HAVE_LIBZ
-#include <zlib.h>
-#endif
 #include <string.h>
 
 #include "types.h"
@@ -40,11 +37,5 @@ typedef struct
 } ROMReader_struct;
 
 extern ROMReader_struct STDROMReader;
-#ifdef HAVE_LIBZ
-extern ROMReader_struct GZIPROMReader;
-#endif
-#ifdef HAVE_LIBZZIP
-extern ROMReader_struct ZIPROMReader;
-#endif
 
 ROMReader_struct * ROMReaderInit(char ** filename);
