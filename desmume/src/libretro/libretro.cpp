@@ -51,31 +51,22 @@ int currFrameCounter;
 #define LAYOUT_BOTTOM_ONLY                5
 #define LAYOUT_QUICK_SWITCH               6
 
+static int current_layout = LAYOUT_TOP_BOTTOM;
+
 static uint16_t screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + NDS_MAX_SCREEN_GAP) * 2];
 
 struct LayoutData
 {
-   unsigned id;
-   uint32_t touchScreenX;
-   uint32_t touchScreenY;
+   uint16_t *dst;
+   uint16_t *dst2;
+   uint32_t touch_x;
+   uint32_t touch_y;
    uint32_t width;
    uint32_t height;
-   uint32_t pitchInPix;
+   uint32_t pitch;
+   bool draw_screen1;
+   bool draw_screen2;
 };
-
-static LayoutData layouts[] =
-{
-   { LAYOUT_TOP_BOTTOM,   0, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH},
-   { LAYOUT_BOTTOM_TOP,   0, 0, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2), GPU_LR_FRAMEBUFFER_NATIVE_WIDTH },
-   { LAYOUT_LEFT_RIGHT,   GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, 0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2), GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2) },
-   { LAYOUT_RIGHT_LEFT,   0, 0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2), GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2) },
-   { LAYOUT_TOP_ONLY,     0, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH },
-   { LAYOUT_BOTTOM_ONLY,  0, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH },
-   { LAYOUT_QUICK_SWITCH, 0, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH },
-   { 0, 0, 0, 0 }
-};
-
-static LayoutData* screenLayout = &layouts[0];
 
 static bool absolutePointer;
 
@@ -128,41 +119,6 @@ static void SwapScreen(uint16_t *dst, const uint16_t *src, uint32_t pitch)
       }
 }
 
-void SetupScreens(unsigned id)
-{
-   unsigned i;
-
-   screenLayout = &layouts[0];
-
-   for (i = 0; i < LAYOUTS_MAX; i++)
-      if (layouts[i].id == id)
-         screenLayout = &layouts[i];
-}
-
-void UpdateScreenLayout(void)
-{
-   if (nds_screen_gap > 100)
-      nds_screen_gap = 100;
-
-   switch (screenLayout->id)
-   {
-      case LAYOUT_TOP_BOTTOM:
-         screenLayout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
-         break;
-      case LAYOUT_BOTTOM_TOP:
-         screenLayout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
-         break;
-      case LAYOUT_LEFT_RIGHT:
-         screenLayout->width = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
-         screenLayout->pitchInPix = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
-         break;
-      case LAYOUT_RIGHT_LEFT:
-         screenLayout->width = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
-         screenLayout->pitchInPix = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
-         break;
-   }
-}
-
 namespace
 {
     uint32_t firmwareLanguage;
@@ -177,15 +133,108 @@ void retro_get_system_info(struct retro_system_info *info)
    info->block_extract = false;
 }
 
+static void get_layout_params(unsigned id, LayoutData *layout)
+{
+   if (!layout)
+      return;
+
+   switch (id)
+   {
+      case LAYOUT_TOP_BOTTOM:
+         layout->dst    = &screen_buf[0];
+         layout->dst2   = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
+         layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+         layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
+         layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+         layout->touch_x= 0;
+         layout->touch_y= GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+
+         layout->draw_screen1  = true;
+         layout->draw_screen2  = true;
+         break;
+      case LAYOUT_BOTTOM_TOP:
+         layout->dst    = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
+         layout->dst2   = &screen_buf[0];
+         layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+         layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
+         layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+         layout->touch_x= 0;
+         layout->touch_y= GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+
+         layout->draw_screen1  = true;
+         layout->draw_screen2  = true;
+         break;
+      case LAYOUT_LEFT_RIGHT:
+         layout->dst    = &screen_buf[0];
+         layout->dst2   = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
+         layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+         layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+         layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+         layout->touch_x= GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+         layout->touch_y= 0;
+
+         layout->draw_screen1  = true;
+         layout->draw_screen2  = true;
+         break;
+      case LAYOUT_RIGHT_LEFT:
+         layout->dst    = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
+         layout->dst2   = &screen_buf[0];
+         layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+         layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+         layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+         layout->touch_x= 0;
+         layout->touch_y= 0;
+
+         layout->draw_screen1  = true;
+         layout->draw_screen2  = true;
+         break;
+      case LAYOUT_TOP_ONLY:
+         layout->dst    = &screen_buf[0];
+         layout->dst2   = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT];
+         layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+         layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+         layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+         layout->touch_x= 0;
+         layout->touch_y= GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+
+         layout->draw_screen1 = true;
+         break;
+      case LAYOUT_BOTTOM_ONLY:
+         layout->dst    = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT];
+         layout->dst2   = &screen_buf[0];
+         layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+         layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+         layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+         layout->touch_x= 0;
+         layout->touch_y= GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+
+         layout->draw_screen2 = true;
+         break;
+      case LAYOUT_QUICK_SWITCH:
+         layout->dst    = &screen_buf[0];
+         layout->dst2   = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT];
+         layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+         layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+         layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+         layout->touch_x= 0;
+         layout->touch_y= GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+
+         break;
+   }
+}
+
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
-    info->geometry.base_width = screenLayout->width;
-    info->geometry.base_height = screenLayout->height;
-    info->geometry.max_width = screenLayout->width*2;
-    info->geometry.max_height = screenLayout->height;
-    info->geometry.aspect_ratio = 0.0;
-    info->timing.fps = 60.0;
-    info->timing.sample_rate = 44100.0;
+   struct LayoutData layout;
+   get_layout_params(current_layout, &layout);
+
+   info->geometry.base_width   = layout.width;
+   info->geometry.base_height  = layout.height;
+   info->geometry.max_width    = layout.width * 2;
+   info->geometry.max_height   = layout.height;
+   info->geometry.aspect_ratio = 0.0;
+   info->timing.fps = 60.0;
+   info->timing.sample_rate = 44100.0;
 }
 
 
@@ -195,12 +244,12 @@ static void QuickSwap(void)
 	{
 	   if(current_screen == 1)
 	   {
-		   SetupScreens(LAYOUT_BOTTOM_ONLY);
+         current_layout = LAYOUT_BOTTOM_ONLY;
 		   current_screen = 2;
 	   }
 	   else
 	   {
-		   SetupScreens(LAYOUT_TOP_ONLY);
+         current_layout = LAYOUT_TOP_ONLY;
 		   current_screen = 1;
 	   }
 	}
@@ -283,7 +332,7 @@ static void check_variables(void)
       if (old_layout_id != new_layout_id)
       {
          old_layout_id = new_layout_id;
-         SetupScreens(new_layout_id);
+         current_layout = new_layout_id;
       }
 	}	
    else
@@ -523,7 +572,8 @@ static void check_variables(void)
       if ((atoi(var.value)) != nds_screen_gap)
       {
          nds_screen_gap = atoi(var.value);
-         UpdateScreenLayout();
+         if (nds_screen_gap > 100)
+            nds_screen_gap = 100;
       }
    }
 }
@@ -755,10 +805,15 @@ void retro_reset (void)
     NDS_Reset();
 }
 
+extern unsigned retro_audio_frames;
+
+
+
 void retro_run (void)
 {
-   // Settings
-   bool updated = false;	
+   struct LayoutData layout;
+   bool updated                  = false;	
+   bool have_touch               = false;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
    {
@@ -770,10 +825,9 @@ void retro_run (void)
    }
 
    poll_cb();
+   get_layout_params(current_layout, &layout);
 
-   bool haveTouch = false;
-
-   if(pointer_device!=0)
+   if(pointer_device != 0)
    {
       int16_t analogX = 0;
       int16_t analogY = 0;
@@ -820,7 +874,7 @@ void retro_run (void)
       }		
       //log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
 
-      haveTouch = haveTouch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); 
+      have_touch = have_touch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); 
 
       TouchX = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1), TouchX + analogX);
       TouchY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1), TouchY + analogY);
@@ -836,7 +890,7 @@ void retro_run (void)
       {
          const int16_t mouseX = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
          const int16_t mouseY = input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
-         haveTouch = haveTouch || input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+         have_touch           = have_touch || input_cb(1, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
 
          TouchX = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1), TouchX + mouseX);
          TouchY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1), TouchY + mouseY);
@@ -845,27 +899,24 @@ void retro_run (void)
       // TOUCH: Pointer
       else if(input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED))
       {
-         const float X_FACTOR = ((float)screenLayout->width / 65536.0f);
-         const float Y_FACTOR = ((float)screenLayout->height / 65536.0f);
+         const float X_FACTOR = ((float)layout.width / 65536.0f);
+         const float Y_FACTOR = ((float)layout.height / 65536.0f);
 
          float x = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X) + 32768.0f) * X_FACTOR;
          float y = (input_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y) + 32768.0f) * Y_FACTOR;
 
-         if (x >= screenLayout->touchScreenX && x < screenLayout->touchScreenX + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH &&
-               y >= screenLayout->touchScreenY && y < screenLayout->touchScreenY + GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT)
+         if ((x >= layout.touch_x) && (x < layout.touch_x + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH) &&
+               (y >= layout.touch_y) && (y < layout.touch_y + GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT))
          {
-            haveTouch = true;
+            have_touch = true;
 
-            TouchX = x - screenLayout->touchScreenX;
-            TouchY = y - screenLayout->touchScreenY;
+            TouchX = x - layout.touch_x;
+            TouchY = y - layout.touch_y;
          }
       }
    }
 
-
-
-   // TOUCH: Final        
-   if(haveTouch)
+   if(have_touch)
       NDS_setTouchPos(TouchX, TouchY);
    else
       NDS_releaseTouch();
@@ -914,10 +965,8 @@ void retro_run (void)
          delay_timer = 0;
    }
 
-
    NDS_endProcessingInput();
 
-   extern unsigned retro_audio_frames;
    retro_audio_frames = 0;
 
    // RUN
@@ -930,73 +979,31 @@ void retro_run (void)
    NDS_exec<false>();
    SPU_Emulate_user();
 
-   // VIDEO: Swap screen colors and pass on
    if (!skipped)
    {
-      uint16_t *dst  = NULL;
-      uint16_t *dst2 = NULL;
-
-      switch (screenLayout->id)
+      if (current_layout == LAYOUT_QUICK_SWITCH)
       {
-         case LAYOUT_TOP_BOTTOM:
-            dst  = &screen_buf[0];
-            dst2 = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
-            SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
-            SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
-            DrawPointer(dst2, screenLayout->pitchInPix);
-            break;
-         case LAYOUT_BOTTOM_TOP:
-            dst  = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
-            dst2 = &screen_buf[0];
-            SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
-            SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
-            DrawPointer(dst2, screenLayout->pitchInPix);
-            break;
-         case LAYOUT_LEFT_RIGHT:
-            dst  = &screen_buf[0];
-            dst2 = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
-            SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
-            SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
-            DrawPointer(dst2, screenLayout->pitchInPix);
-            break;
-         case LAYOUT_RIGHT_LEFT:
-            dst  = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
-            dst2 = &screen_buf[0];
-            SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
-            SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
-            DrawPointer(dst2, screenLayout->pitchInPix);
-            break;
-         case LAYOUT_TOP_ONLY:
-            dst  = &screen_buf[0];
-            dst2 = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT];
-            SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
-            break;
-         case LAYOUT_BOTTOM_ONLY:
-            dst  = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT];
-            dst2 = &screen_buf[0];
-            SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
-            DrawPointer(dst2, screenLayout->pitchInPix);
-            break;
-         case LAYOUT_QUICK_SWITCH:
-            dst  = &screen_buf[0];
-            dst2 = &screen_buf[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT];
-
-            switch (current_screen)
-            {
-               case 1:
-                  SwapScreen (dst,  &GPU_screen[0], screenLayout->pitchInPix);
-                  break;
-               case 2:
-                  SwapScreen (dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], screenLayout->pitchInPix);
-                  DrawPointer(dst2, screenLayout->pitchInPix);
-                  break;
-            }
-            break;
+         switch (current_screen)
+         {
+            case 1:
+               layout.draw_screen1 = true;
+               break;
+            case 2:
+               layout.draw_screen2 = true;
+               break;
+         }
       }
 
+      if (layout.draw_screen1)
+         SwapScreen (layout.dst,  &GPU_screen[0], layout.pitch);
+      if (layout.draw_screen2)
+      {
+         SwapScreen (layout.dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], layout.pitch);
+         DrawPointer(layout.dst2, layout.pitch);
+      }
    }
 
-   video_cb(skipped ? 0 : screen_buf, screenLayout->width, screenLayout->height, screenLayout->pitchInPix * 2);
+   video_cb(skipped ? 0 : screen_buf, layout.width, layout.height, layout.pitch * 2);
 
    frameIndex = skipped ? frameIndex : 0;
 }
