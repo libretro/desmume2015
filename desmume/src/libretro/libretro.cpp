@@ -14,6 +14,8 @@
 #include "emufile.h"
 #include "common.h"
 
+#define LAYOUTS_MAX 7
+
 retro_log_printf_t log_cb = NULL;
 static retro_video_refresh_t video_cb = NULL;
 static retro_input_poll_t poll_cb = NULL;
@@ -74,6 +76,14 @@ namespace /* INPUT */
 }
 
 
+#define LAYOUT_TOP_BOTTOM     0
+#define LAYOUT_BOTTOM_TOP     1
+#define LAYOUT_LEFT_RIGHT     2
+#define LAYOUT_RIGHT_LEFT     3
+#define LAYOUT_TOP_ONLY       4
+#define LAYOUT_BOTTOM_ONLY    5
+#define LAYOUT_QUICK_SWITCH   6
+
 namespace /* VIDEO */
 {
     const int nds_max_screen_gap = 100;
@@ -85,24 +95,24 @@ namespace /* VIDEO */
 
     struct LayoutData
     {
-        const char* name;
-        uint16_t* screens[2];
-        uint32_t touchScreenX;
-        uint32_t touchScreenY;
-        uint32_t width;
-        uint32_t height;
-        uint32_t pitchInPix;
+       unsigned id;
+       uint16_t* screens[2];
+       uint32_t touchScreenX;
+       uint32_t touchScreenY;
+       uint32_t width;
+       uint32_t height;
+       uint32_t pitchInPix;
     };
 
     static LayoutData layouts[] =
     {
-        { "top/bottom", { &screenSwap[0], &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH, GPU_FRAMEBUFFER_NATIVE_HEIGHT * 2, GPU_FRAMEBUFFER_NATIVE_WIDTH},
-        { "bottom/top", { &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT], &screenSwap[0] }, 0, 0, GPU_FRAMEBUFFER_NATIVE_WIDTH, (GPU_FRAMEBUFFER_NATIVE_HEIGHT * 2), GPU_FRAMEBUFFER_NATIVE_WIDTH },
-        { "left/right", { &screenSwap[0], &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH] }, GPU_FRAMEBUFFER_NATIVE_WIDTH, 0, (GPU_FRAMEBUFFER_NATIVE_WIDTH * 2), GPU_FRAMEBUFFER_NATIVE_HEIGHT, (GPU_FRAMEBUFFER_NATIVE_WIDTH * 2) },
-        { "right/left", { &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH], &screenSwap[0] }, 0, 0, (GPU_FRAMEBUFFER_NATIVE_WIDTH * 2), GPU_FRAMEBUFFER_NATIVE_HEIGHT, (GPU_FRAMEBUFFER_NATIVE_WIDTH * 2) },
-        { "top only", { &screenSwap[0], &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH },
-        { "bottom only", { &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT], &screenSwap[0] }, 0, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH },
-        { "quick switch", { &screenSwap[0], &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH },
+        { 0, { &screenSwap[0], &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH, GPU_FRAMEBUFFER_NATIVE_HEIGHT * 2, GPU_FRAMEBUFFER_NATIVE_WIDTH},
+        { 1, { &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT], &screenSwap[0] }, 0, 0, GPU_FRAMEBUFFER_NATIVE_WIDTH, (GPU_FRAMEBUFFER_NATIVE_HEIGHT * 2), GPU_FRAMEBUFFER_NATIVE_WIDTH },
+        { 2, { &screenSwap[0], &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH] }, GPU_FRAMEBUFFER_NATIVE_WIDTH, 0, (GPU_FRAMEBUFFER_NATIVE_WIDTH * 2), GPU_FRAMEBUFFER_NATIVE_HEIGHT, (GPU_FRAMEBUFFER_NATIVE_WIDTH * 2) },
+        { 3, { &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH], &screenSwap[0] }, 0, 0, (GPU_FRAMEBUFFER_NATIVE_WIDTH * 2), GPU_FRAMEBUFFER_NATIVE_HEIGHT, (GPU_FRAMEBUFFER_NATIVE_WIDTH * 2) },
+        { 4, { &screenSwap[0], &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH },
+        { 5, { &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT], &screenSwap[0] }, 0, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH },
+        { 6, { &screenSwap[0], &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT] }, 0, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH, GPU_FRAMEBUFFER_NATIVE_HEIGHT, GPU_FRAMEBUFFER_NATIVE_WIDTH },
         { 0, 0, 0, 0 }
     };
 
@@ -121,13 +131,15 @@ namespace /* VIDEO */
           }
     }
 
-    void SetupScreens(const char* aLayout)
+    void SetupScreens(unsigned id)
     {
-        screenLayout = &layouts[0];
+       unsigned i;
 
-        for(int i = 0; aLayout && layouts[i].name; i ++)
-            if(!strcmp(aLayout, layouts[i].name))
-                screenLayout = &layouts[i];
+       screenLayout = &layouts[0];
+
+       for (i = 0; i < LAYOUTS_MAX; i++)
+          if (layouts[i].id == id)
+             screenLayout = &layouts[i];
     }
 
     void SwapScreens(bool render_fullscreen)
@@ -142,21 +154,27 @@ namespace /* VIDEO */
       if (nds_screen_gap > 100)
          nds_screen_gap = 100;
 
-      if (screenLayout->name == "top/bottom") {
-         screenLayout->screens[1] = &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * (GPU_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
-         screenLayout->height = GPU_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
-      } else if (screenLayout->name == "bottom/top") {
-         screenLayout->screens[0] = &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * (GPU_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
-         screenLayout->height = GPU_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
-      } else if (screenLayout->name == "left/right") {
-         screenLayout->screens[0] = &screenSwap[0];
-         screenLayout->screens[1] = &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
-         screenLayout->width = GPU_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
-         screenLayout->pitchInPix = GPU_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
-      } else if (screenLayout->name == "right/left") {
-         screenLayout->screens[0] = &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
-         screenLayout->width = GPU_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
-         screenLayout->pitchInPix = GPU_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+      switch (screenLayout->id)
+      {
+         case LAYOUT_TOP_BOTTOM:
+            screenLayout->screens[1] = &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * (GPU_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
+            screenLayout->height = GPU_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
+            break;
+         case LAYOUT_BOTTOM_TOP:
+            screenLayout->screens[0] = &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH * (GPU_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap)];
+            screenLayout->height = GPU_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
+            break;
+         case LAYOUT_LEFT_RIGHT:
+            screenLayout->screens[0] = &screenSwap[0];
+            screenLayout->screens[1] = &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
+            screenLayout->width = GPU_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+            screenLayout->pitchInPix = GPU_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+            break;
+         case LAYOUT_RIGHT_LEFT:
+            screenLayout->screens[0] = &screenSwap[GPU_FRAMEBUFFER_NATIVE_WIDTH + nds_screen_gap];
+            screenLayout->width = GPU_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+            screenLayout->pitchInPix = GPU_FRAMEBUFFER_NATIVE_WIDTH * 2 + nds_screen_gap;
+            break;
       }
    }
 	
@@ -194,12 +212,12 @@ static void QuickSwap(void)
 	{
 	   if(current_screen == 1)
 	   {
-		   SetupScreens("bottom only");
+		   SetupScreens(LAYOUT_BOTTOM_ONLY);
 		   current_screen=2;
 	   }
 	   else
 	   {
-		   SetupScreens("top only");
+		   SetupScreens(LAYOUT_TOP_ONLY);
 		   current_screen=1;
 	   }
 	}
@@ -256,11 +274,34 @@ static void check_variables(void)
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{	
+      static int old_layout_id      = -1;
+      unsigned new_layout_id        = 0;
+
 		if (!strcmp(var.value, "quick switch"))
 			quick_switch_enable = true;
 		else 
 			quick_switch_enable = false;
-		SetupScreens(var.value);
+
+		if (!strcmp(var.value, "top/bottom"))
+         new_layout_id = LAYOUT_TOP_BOTTOM;
+      else if (!strcmp(var.value, "bottom/top"))
+         new_layout_id = LAYOUT_BOTTOM_TOP;
+      else if (!strcmp(var.value, "left/right"))
+         new_layout_id = LAYOUT_LEFT_RIGHT;
+      else if (!strcmp(var.value, "right/left"))
+         new_layout_id = LAYOUT_RIGHT_LEFT;
+      else if (!strcmp(var.value, "top only"))
+         new_layout_id = LAYOUT_TOP_ONLY;
+      else if (!strcmp(var.value, "bottom only"))
+         new_layout_id = LAYOUT_BOTTOM_ONLY;
+      else if (!strcmp(var.value, "quick switch"))
+         new_layout_id = LAYOUT_QUICK_SWITCH;
+
+      if (old_layout_id != new_layout_id)
+      {
+         old_layout_id = new_layout_id;
+         SetupScreens(new_layout_id);
+      }
 	}	
    else
       quick_switch_enable = false;
