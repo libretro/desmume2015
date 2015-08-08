@@ -29,6 +29,9 @@
 class EMUFILE;
 struct MMU_struct;
 
+//#undef FORCEINLINE
+//#define FORCEINLINE
+
 void gpu_savestate(EMUFILE* os);
 bool gpu_loadstate(EMUFILE* is, int size);
 
@@ -37,7 +40,7 @@ bool gpu_loadstate(EMUFILE* is, int size);
     it holds flags for general display
 *******************************************************************************/
 
-#ifdef MSB_FIRST
+#ifdef WORDS_BIGENDIAN
 struct _DISPCNT
 {
 /* 7*/  u8 ForceBlank:1;      // A+B:
@@ -109,13 +112,12 @@ struct _DISPCNT
 
 union FragmentColor
 {
-   u32 color;
-   struct
-   {
-      u8 r,g,b,a;
-   };
+	u32 color;
+	struct
+	{
+		u8 r,g,b,a;
+	};
 };
-
 
 typedef union
 {
@@ -138,7 +140,7 @@ enum BlendFunc
     some flags indicate special drawing mode, size, FX
 *******************************************************************************/
 
-#ifdef MSB_FIRST
+#ifdef WORDS_BIGENDIAN
 struct _BGxCNT
 {
 /* 7*/ u8 Palette_256:1;         // 0=16x16, 1=1*256 palette
@@ -224,9 +226,8 @@ typedef union {
 	u16 val;
 } WINxDIM;
 
-typedef struct
-{
-#ifdef MSB_FIRST
+#ifdef WORDS_BIGENDIAN
+typedef struct {
 /* 6*/  u8 :2;
 /* 5*/  u8 WINx_Effect_Enable:1;
 /* 4*/  u8 WINx_OBJ_Enable:1;
@@ -234,46 +235,67 @@ typedef struct
 /* 2*/  u8 WINx_BG2_Enable:1;
 /* 1*/  u8 WINx_BG1_Enable:1;
 /* 0*/  u8 WINx_BG0_Enable:1;
-#else
-/* 0*/  u8 WINx_BG0_Enable:1;
-/* 1*/  u8 WINx_BG1_Enable:1;
-/* 2*/  u8 WINx_BG2_Enable:1;
-/* 3*/  u8 WINx_BG3_Enable:1;
-/* 4*/  u8 WINx_OBJ_Enable:1;
-/* 5*/  u8 WINx_Effect_Enable:1;
-/* 6*/  u8 :2;
-#endif
 } WINxBIT;
-
-typedef union
-{
-   struct
-   {
-      WINxBIT win0;
-      WINxBIT win1;
-   } bits;
-
-   u16 val ;
-   struct
-   {
-#ifdef MSB_FIRST
-u8 :3;
-    u8 win0_en:5;
-u8 :3;
-    u8 win1_en:5;
 #else
-    u8 win0_en:5;
-u8 :3;
-    u8 win1_en:5;
-u8 :3;
+typedef struct {
+/* 0*/  u8 WINx_BG0_Enable:1;
+/* 1*/  u8 WINx_BG1_Enable:1;
+/* 2*/  u8 WINx_BG2_Enable:1;
+/* 3*/  u8 WINx_BG3_Enable:1;
+/* 4*/  u8 WINx_OBJ_Enable:1;
+/* 5*/  u8 WINx_Effect_Enable:1;
+/* 6*/  u8 :2;
+} WINxBIT;
 #endif
-   } packed_bits;
-   struct
-   {
-      u8 low;
-      u8 high;
-   } bytes;
-} WINxCNT;
+
+#ifdef WORDS_BIGENDIAN
+typedef union {
+	struct {
+		WINxBIT win0;
+		WINxBIT win1;
+	} bits;
+	struct {
+		u8 :3;
+		u8 win0_en:5;
+		u8 :3;
+		u8 win1_en:5;
+	} packed_bits;
+	struct {
+		u8 low;
+		u8 high;
+	} bytes;
+	u16 val ;
+} WINxCNT ;
+#else
+typedef union {
+	struct {
+		WINxBIT win0;
+		WINxBIT win1;
+	} bits;
+	struct {
+		u8 win0_en:5;
+		u8 :3;
+		u8 win1_en:5;
+		u8 :3;
+	} packed_bits;
+	struct {
+		u8 low;
+		u8 high;
+	} bytes;
+	u16 val ;
+} WINxCNT ;
+#endif
+
+/*
+typedef struct {
+    WINxDIM WIN0H;
+    WINxDIM WIN1H;
+    WINxDIM WIN0V;
+    WINxDIM WIN1V;
+    WINxCNT WININ;
+    WINxCNT WINOUT;
+} WINCNT;
+*/
 
 /*******************************************************************************
     this structure is for miscellanous settings
@@ -394,21 +416,23 @@ void register_gl_fun(fun_gl_Begin beg,fun_gl_End end);
 #define ADDRESS_STEP_512KB	   0x80000
 #define ADDRESS_MASK_256KB	   (ADDRESS_STEP_256KB-1)
 
+#ifdef WORDS_BIGENDIAN
 struct _TILEENTRY
 {
-#ifdef MSB_FIRST
 /*14*/	unsigned Palette:4;
 /*13*/	unsigned VFlip:1;	// VERTICAL FLIP (top<-->bottom)
 /*12*/	unsigned HFlip:1;	// HORIZONTAL FLIP (left<-->right)
 /* 0*/	unsigned TileNum:10;
-#else
-/* 0*/	unsigned TileNum:10;
-/*12*/	unsigned HFlip:1;	// HORIZONTAL FLIP (left<-->right)
-/*13*/	unsigned VFlip:1;	// VERTICAL FLIP (top<-->bottom)
-/*14*/	unsigned Palette:4;
-#endif
 };
-
+#else
+struct _TILEENTRY
+{
+/* 0*/	unsigned TileNum:10;
+/*12*/	unsigned HFlip:1;	// HORIZONTAL FLIP (left<-->right)
+/*13*/	unsigned VFlip:1;	// VERTICAL FLIP (top<-->bottom)
+/*14*/	unsigned Palette:4;
+};
+#endif
 typedef union
 {
 	struct _TILEENTRY bits;
@@ -436,16 +460,16 @@ typedef union
 */
 
 struct _COLOR { // abgr x555
-#ifdef MSB_FIRST
-   unsigned alpha:1;    // sometimes it is unused (pad)
-   unsigned blue:5;
-   unsigned green:5;
-   unsigned red:5;
+#ifdef WORDS_BIGENDIAN
+	unsigned alpha:1;    // sometimes it is unused (pad)
+	unsigned blue:5;
+	unsigned green:5;
+	unsigned red:5;
 #else
-   unsigned red:5;
-   unsigned green:5;
-   unsigned blue:5;
-   unsigned alpha:1;    // sometimes it is unused (pad)
+     unsigned red:5;
+     unsigned green:5;
+     unsigned blue:5;
+     unsigned alpha:1;    // sometimes it is unused (pad)
 #endif
 };
 struct _COLORx { // abgr x555
@@ -495,8 +519,6 @@ enum GPU_OBJ_MODE
 	GPU_OBJ_MODE_Bitmap = 3
 };
 
-
-#ifdef MSB_FIRST
 struct _OAM_
 {
 	//attr0
@@ -520,40 +542,6 @@ struct _OAM_
 };
 
 void SlurpOAM(_OAM_* oam_output, void* oam_buffer, int oam_index);
-#else
-union _OAM_tag
-{
-   u16 attr[4];
-
-   struct
-   {
-      //attr0
-      unsigned Y:8;
-      unsigned RotScale:2;
-     unsigned Mode:2;
-      unsigned Mosaic:1;
-      unsigned Depth:1;
-      unsigned Shape:2;
-      //att1
-      signed X:9;
-      unsigned RotScalIndex:3;
-      unsigned HFlip:1;
-      unsigned VFlip:1;
-      unsigned Size:2;
-      //attr2
-      unsigned TileIndex:10;
-      unsigned Priority:2;
-      unsigned PaletteIndex:4;
-      //attr3
-   	unsigned attr3:16;
-   };
-};
-
-typedef const _OAM_tag _OAM_;
-
-_OAM_* SlurpOAM(void* oam_buffer, int oam_index);
-#endif
-
 u16 SlurpOAMAffineParam(void* oam_buffer, int oam_index);
 
 typedef struct
@@ -595,16 +583,37 @@ enum BGType {
 	BGType_AffineExt=4, BGType_AffineExt_256x16=5, BGType_AffineExt_256x1=6, BGType_AffineExt_Direct=7
 };
 
+enum GPUDisplayMode
+{
+	GPUDisplayMode_Off				= 0,
+	GPUDisplayMode_Normal			= 1,
+	GPUDisplayMode_VRAM				= 2,
+	GPUDisplayMode_MainMemory		= 3
+};
+
+enum GPUMasterBrightMode
+{
+	GPUMasterBrightMode_Disable		= 0,
+	GPUMasterBrightMode_Up			= 1,
+	GPUMasterBrightMode_Down		= 2,
+	GPUMasterBrightMode_Reserved	= 3
+	
+};
+
 extern const BGType GPU_mode2type[8][4];
 
 struct GPU
 {
 	GPU()
+		: debug(false)
 	{}
 
 	// some structs are becoming redundant
 	// some functions too (no need to recopy some vars as it is done by MMU)
 	REG_DISPx * dispx_st;
+
+	//this indicates whether this gpu is handling debug tools
+	bool debug;
 
 	_BGxCNT & bgcnt(int num) { return (dispx_st)->dispx_BGxCNT[num].bits; }
 	_DISPCNT & dispCnt() { return dispx_st->dispx_DISPCNT.bits; }
@@ -644,7 +653,7 @@ struct GPU
 
 	u8 core;
 
-	u8 dispMode;
+	GPUDisplayMode dispMode;
 	u8 vramBlock;
 	u8 *VRAMaddr;
 
@@ -693,8 +702,9 @@ struct GPU
 	bool blend2[8];
 
 	CACHE_ALIGN u16 tempScanlineBuffer[256];
+	u16 *tempScanline;
 
-	u8	MasterBrightMode;
+	GPUMasterBrightMode	MasterBrightMode;
 	u32 MasterBrightFactor;
 
 	CACHE_ALIGN u8 bgPixels[1024]; //yes indeed, this is oversized. map debug tools try to write to it
@@ -702,11 +712,8 @@ struct GPU
 	u32 currLine;
 	u8 currBgNum;
 	bool blend1;
-	u8* currDst;
-
-	FragmentColor * _3dColorLine;
-
-
+	u16 *currDst;
+	
 	static struct MosaicLookup {
 
 		struct TableEntry {
@@ -735,7 +742,7 @@ struct GPU
 	FORCEINLINE FASTCALL bool _master_setFinalBGColor(u16 &color, const u32 x);
 
 	template<BlendFunc FUNC, bool WINDOW>
-	FORCEINLINE FASTCALL void _master_setFinal3dColor(int dstX, int srcX);
+	FORCEINLINE FASTCALL void _master_setFinal3dColor(int dstX, const FragmentColor src);
 
 	int setFinalColorBck_funcNum;
 	int bgFunc;
@@ -758,7 +765,7 @@ struct GPU
 	}
 
 
-	void setFinalColor3d(int dstX, int srcX);
+	void setFinalColor3d(int dstX, const FragmentColor src);
 	
 	template<bool BACKDROP, int FUNCNUM> void setFinalColorBG(u16 color, const u32 x);
 	template<bool MOSAIC, bool BACKDROP> FORCEINLINE void __setFinalColorBck(u16 color, const u32 x, const int opaque);
@@ -811,13 +818,44 @@ struct GPU
 	}
 	
 };
+#if 0
+// normally should have same addresses
+static void REG_DISPx_pack_test(GPU * gpu)
+{
+	REG_DISPx * r = gpu->dispx_st;
+	printf ("%08x %02x\n",  (u32)r, (u32)(&r->dispx_DISPCNT) - (u32)r);
+	printf ("\t%02x\n", (u32)(&r->dispA_DISPSTAT) - (u32)r);
+	printf ("\t%02x\n", (u32)(&r->dispx_VCOUNT) - (u32)r);
+	printf ("\t%02x\n", (u32)(&r->dispx_BGxCNT[0]) - (u32)r);
+	printf ("\t%02x\n", (u32)(&r->dispx_BGxOFS[0]) - (u32)r);
+	printf ("\t%02x\n", (u32)(&r->dispx_BG2PARMS) - (u32)r);
+	printf ("\t%02x\n", (u32)(&r->dispx_BG3PARMS) - (u32)r);
+//	printf ("\t%02x\n", (u32)(&r->dispx_WINCNT) - (u32)r);
+	printf ("\t%02x\n", (u32)(&r->dispx_MISC) - (u32)r);
+	printf ("\t%02x\n", (u32)(&r->dispA_DISP3DCNT) - (u32)r);
+	printf ("\t%02x\n", (u32)(&r->dispA_DISPCAPCNT) - (u32)r);
+	printf ("\t%02x\n", (u32)(&r->dispA_DISPMMEMFIFO) - (u32)r);
+}
+#endif
 
-CACHE_ALIGN extern u8 GPU_screen[4*256*192];
-
+extern u16 *GPU_screen;
 
 GPU * GPU_Init(u8 l);
 void GPU_Reset(GPU *g, u8 l);
 void GPU_DeInit(GPU *);
+size_t GPU_GetFramebufferWidth();
+size_t GPU_GetFramebufferHeight();
+void GPU_SetFramebufferSize(size_t w, size_t h);
+
+//these are functions used by debug tools which want to render layers etc outside the context of the emulation
+namespace GPU_EXT
+{
+	void textBG(GPU * gpu, u8 num, u8 * DST);		//Draw text based background
+	void rotBG(GPU * gpu, u8 num, u8 * DST);
+	void extRotBG(GPU * gpu, u8 num, u8 * DST);
+};
+void sprite1D(GPU * gpu, u16 l, u8 * dst, u8 * dst_alpha, u8 * typeTab, u8 * prioTab);
+void sprite2D(GPU * gpu, u16 l, u8 * dst, u8 * dst_alpha, u8 * typeTab, u8 * prioTab);
 
 extern const size sprSizeTab[4][4];
 
@@ -841,6 +879,10 @@ void GPU_setBGProp(GPU *, u16 num, u16 p);
 void GPU_setBLDCNT(GPU *gpu, u16 v) ;
 void GPU_setBLDY(GPU *gpu, u16 v) ;
 void GPU_setMOSAIC(GPU *gpu, u16 v) ;
+
+
+void GPU_remove(GPU *, u8 num);
+void GPU_addBack(GPU *, u8 num);
 
 int GPU_ChangeGraphicsCore(int coreid);
 
@@ -893,16 +935,20 @@ void SetupFinalPixelBlitter (GPU *gpu);
 
 #define GPU_setBLDY_EVY(gpu, val) {gpu->BLDY_EVY = ((val)&0x1f) > 16 ? 16 : ((val)&0x1f);}
 
+//these arent needed right now since the values get poked into memory via default mmu handling and dispx_st
+//#define GPU_setBGxHOFS(bg, gpu, val) gpu->dispx_st->dispx_BGxOFS[bg].BGxHOFS = ((val) & 0x1FF)
+//#define GPU_setBGxVOFS(bg, gpu, val) gpu->dispx_st->dispx_BGxOFS[bg].BGxVOFS = ((val) & 0x1FF)
+
 void gpu_SetRotateScreen(u16 angle);
 
-static inline FragmentColor MakeFragmentColor(const u8 r, const u8 g, const u8 b, const u8 a)
+//#undef FORCEINLINE
+//#define FORCEINLINE __forceinline
+
+inline FragmentColor MakeFragmentColor(const u8 r, const u8 g, const u8 b, const u8 a)
 {
 	FragmentColor ret;
 	ret.r = r; ret.g = g; ret.b = b; ret.a = a;
 	return ret;
 }
-
-#include <map>
-#include <utility>
 
 #endif

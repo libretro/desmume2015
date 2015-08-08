@@ -136,8 +136,8 @@ namespace /* VIDEO */
 
     void SwapScreens(bool render_fullscreen)
     {
-       SwapScreen(screenLayout->screens[0], (uint16_t*)&GPU_screen[0], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
-       SwapScreen(screenLayout->screens[1], (uint16_t*)&GPU_screen[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT * (render_fullscreen ? 1 : 2)], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
+       SwapScreen(screenLayout->screens[0], &GPU_screen[0], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
+       SwapScreen(screenLayout->screens[1], &GPU_screen[GFX3D_FRAMEBUFFER_WIDTH * GFX3D_FRAMEBUFFER_HEIGHT], screenLayout->pitchInPix / (render_fullscreen ? 1 : 2), false);
        DrawPointer(screenLayout->screens[1], screenLayout->pitchInPix);
     }
     
@@ -512,11 +512,6 @@ static void check_variables(void)
       nds_screen_gap = atoi(var.value);
       UpdateScreenLayout();
    }
-}
-
-void frontend_process_samples(u32 frames, const s16* data)
-{
-    audio_batch_cb(data, frames);
 }
 
 #ifndef GPU3D_NULL

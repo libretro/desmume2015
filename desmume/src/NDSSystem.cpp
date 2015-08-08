@@ -153,8 +153,6 @@ int NDS_Init()
 		NDS_RunAdvansceneAutoImport();
 	}
 
-	gfx3d_init();
-
 	armcpu_new(&NDS_ARM9,0);
 	NDS_ARM9.SetBaseMemoryInterface(&arm9_base_memory_iface);
 	NDS_ARM9.SetBaseMemoryInterfaceData(NULL);
@@ -182,7 +180,6 @@ void NDS_DeInit(void)
 	SPU_DeInit();
 	Screen_DeInit();
 	MMU_DeInit();
-   gfx3d_deinit();
 
 	WIFI_DeInit();
 	
