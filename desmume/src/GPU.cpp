@@ -1848,6 +1848,9 @@ void GPU::_spriteRender(u16 *dst, u8 *dst_alpha, u8 *typeTab, u8 *prioTab)
 //			SCREEN FUNCTIONS
 /*****************************************************************************/
 
+extern unsigned GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+extern unsigned GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+
 int Screen_Init()
 {
 	MainScreen.gpu = GPU_Init(GPUCOREID_MAIN);
@@ -1856,7 +1859,7 @@ int Screen_Init()
 	
 	disp_fifo.head = disp_fifo.tail = 0;
 	
-	GPU_SetFramebufferSize(GPU_FRAMEBUFFER_NATIVE_WIDTH, GPU_FRAMEBUFFER_NATIVE_HEIGHT);
+	GPU_SetFramebufferSize(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT);
 	
 	return 0;
 }
