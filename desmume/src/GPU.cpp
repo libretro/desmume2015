@@ -1307,23 +1307,13 @@ FORCEINLINE void apply_rot_fun(GPU *gpu, const BGxPARMS &param, const u16 LG, co
 		rot_scale_op<fun,false>(gpu, param, LG, wh, ht, map, tile, pal);
 }
 
-
-template<bool MOSAIC>
-FORCEINLINE void rotBG2(GPU *gpu, const BGxPARMS &param, const u16 LG)
-{
-	const size_t num = gpu->currBgNum;
-	const u16 *pal = (u16 *)(MMU.ARM9_VMEM + gpu->core * ADDRESS_STEP_1KB);
-//	printf("rot mode\n");
-	apply_rot_fun< rot_tiled_8bit_entry<MOSAIC> >(gpu, param, LG, gpu->BG_map_ram[num], gpu->BG_tile_ram[num], pal);
-}
-
 template<bool MOSAIC>
 FORCEINLINE void extRotBG2(GPU *gpu, const BGxPARMS &param, const u16 LG)
 {
 	const size_t num = gpu->currBgNum;
 	struct _DISPCNT * dispCnt = &(gpu->dispx_st)->dispx_DISPCNT.bits;
 	
-	u16 *pal = NULL;
+	u16 *pal = (u16 *)(MMU.ARM9_VMEM + gpu->core * ADDRESS_STEP_1KB);
 
 	switch(gpu->BGTypes[num])
 	{
@@ -1339,10 +1329,11 @@ FORCEINLINE void extRotBG2(GPU *gpu, const BGxPARMS &param, const u16 LG)
 			
 		case BGType_AffineExt_256x1:
 			// 256 colors
-			pal = (u16 *)(MMU.ARM9_VMEM + gpu->core * ADDRESS_STEP_1KB);
 			apply_rot_fun< rot_256_map<MOSAIC> >(gpu, param, LG, gpu->BG_bmp_ram[num], 0, pal);
 			break;
-			
+      case BGType_Affine:
+         apply_rot_fun< rot_tiled_8bit_entry<MOSAIC> >(gpu, param, LG, gpu->BG_map_ram[num], gpu->BG_tile_ram[num], pal);
+         break;
 		case BGType_AffineExt_Direct:
 			// direct colors / BMP
 			apply_rot_fun< rot_BMP_map<MOSAIC> >(gpu, param, LG, gpu->BG_bmp_ram[num], 0, NULL);
@@ -1350,7 +1341,6 @@ FORCEINLINE void extRotBG2(GPU *gpu, const BGxPARMS &param, const u16 LG)
 			
 		case BGType_Large8bpp:
 			// large screen 256 colors
-			pal = (u16 *)(MMU.ARM9_VMEM + gpu->core * ADDRESS_STEP_1KB);
 			apply_rot_fun< rot_256_map<MOSAIC> >(gpu, param, LG, gpu->BG_bmp_large_ram[num], 0, pal);
 			break;
 			
@@ -1359,39 +1349,8 @@ FORCEINLINE void extRotBG2(GPU *gpu, const BGxPARMS &param, const u16 LG)
 	}
 }
 
-/*****************************************************************************/
-//			BACKGROUND RENDERING -HELPER FUNCTIONS-
-/*****************************************************************************/
-
-#if 0
-static void lineNull(GPU *gpu)
-{
-}
-#endif
-
 template<bool MOSAIC> void lineText(GPU *gpu)
 {
-   const u16 vofs = gpu->getVOFS(gpu->currBgNum);
-   const u16 hofs = gpu->getHOFS(gpu->currBgNum);
-   renderline_textBG<MOSAIC>(gpu, hofs, gpu->currLine + vofs, 256);
-}
-
-template<bool MOSAIC> void lineRot(GPU *gpu)
-{
-   BGxPARMS &params = (gpu->currBgNum == 2) ? (gpu->dispx_st)->dispx_BG2PARMS : (gpu->dispx_st)->dispx_BG3PARMS;
-
-   rotBG2<MOSAIC>(gpu, params, 256);
-   params.BGxX += params.BGxPB;
-   params.BGxY += params.BGxPD;
-}
-
-template<bool MOSAIC> void lineExtRot(GPU *gpu)
-{
-   BGxPARMS &params = (gpu->currBgNum == 2) ? (gpu->dispx_st)->dispx_BG2PARMS : (gpu->dispx_st)->dispx_BG3PARMS;
-
-   extRotBG2<MOSAIC>(gpu, params, 256);
-   params.BGxX += params.BGxPB;
-   params.BGxY += params.BGxPD;
 }
 
 /*****************************************************************************/
@@ -2954,10 +2913,20 @@ template<bool MOSAIC> void GPU::modeRender(const size_t layer)
 {
 	switch(GPU_mode2type[dispCnt().BG_Mode][layer])
 	{
-		case BGType_Text: lineText<MOSAIC>(this); break;
-		case BGType_Affine: lineRot<MOSAIC>(this); break;
-		case BGType_AffineExt: lineExtRot<MOSAIC>(this); break;
-		case BGType_Large8bpp: lineExtRot<MOSAIC>(this); break;
+		case BGType_Text:
+         renderline_textBG<MOSAIC>(this, getHOFS(layer), currLine + getVOFS(layer), 256);
+         break;
+		case BGType_Affine:
+		case BGType_AffineExt:
+		case BGType_Large8bpp:
+         {
+            BGxPARMS &params = (layer == 2) ? (dispx_st)->dispx_BG2PARMS : (dispx_st)->dispx_BG3PARMS;
+
+            extRotBG2<MOSAIC>(this, params, 256);
+            params.BGxX += params.BGxPB;
+            params.BGxY += params.BGxPD;
+         }
+         break;
 		case BGType_Invalid: 
 			PROGINFO("Attempting to render an invalid BG type\n");
 			break;
