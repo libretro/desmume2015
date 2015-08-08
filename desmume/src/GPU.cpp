@@ -845,8 +845,6 @@ FORCEINLINE void GPU::__setFinalColorBck(const u16 color, const size_t srcX, con
 	return ___setFinalColorBck<MOSAIC, BACKDROP, 0>(color, srcX, opaque);
 }
 
-#define SPEEDHACK 1
-
 //this was forced inline because most of the time it just falls through to setFinalColorBck() and the function call
 //overhead was ridiculous and terrible
 template<bool MOSAIC, bool BACKDROP, int FUNCNUM>
@@ -858,13 +856,6 @@ FORCEINLINE void GPU::___setFinalColorBck(u16 color, const size_t srcX, const bo
 	{
 		if (opaque)
 		{
-#ifdef SPEEDHACK
-         setFinalColorBG<BACKDROP,FUNCNUM>(srcX,
-               _gpuDstPitchIndex[srcX],
-               currDst,
-               bgPixels,
-               color);
-#else
 			for (size_t line = 0; line < _gpuDstLineCount[currLine]; line++)
 			{
 				for (size_t p = 0; p < _gpuDstPitchCount[srcX]; p++)
@@ -876,7 +867,6 @@ FORCEINLINE void GPU::___setFinalColorBck(u16 color, const size_t srcX, const bo
 													  color);
 				}
 			}
-#endif
 		}
 		
 		return;
@@ -901,13 +891,6 @@ FORCEINLINE void GPU::___setFinalColorBck(u16 color, const size_t srcX, const bo
 	
 	if (color != 0xFFFF)
 	{
-#ifdef SPEEDHACK
-      setFinalColorBG<BACKDROP,FUNCNUM>(srcX,
-            _gpuDstPitchIndex[srcX],
-            currDst,
-            bgPixels,
-            color);
-#else
 		for (size_t line = 0; line < _gpuDstLineCount[currLine]; line++)
 		{
 			for (size_t p = 0; p < _gpuDstPitchCount[srcX]; p++)
@@ -919,7 +902,6 @@ FORCEINLINE void GPU::___setFinalColorBck(u16 color, const size_t srcX, const bo
 												  color);
 			}
 		}
-#endif
 	}
 }
 
@@ -2235,15 +2217,6 @@ PLAIN_CLEAR:
 			for (size_t i = 0; i < item->nbPixelsX; i++)
 			{
 				const size_t x = item->PixelsX[i];
-#ifdef SPEEDHACK
-            gpu->setFinalColorSpr(x,
-                  _gpuDstPitchIndex[x],
-                  gpu->currDst,
-                  gpu->bgPixels,
-                  gpu->sprColor[x],
-                  gpu->sprAlpha[x],
-                  gpu->sprType[x]);
-#else
 				for (size_t line = 0; line < _gpuDstLineCount[l]; line++)
 				{
 					for (size_t p = 0; p < _gpuDstPitchCount[x]; p++)
@@ -2257,7 +2230,6 @@ PLAIN_CLEAR:
 											  gpu->sprType[x]);
 					}
 				}
-#endif
 			}
 		}
 	}
