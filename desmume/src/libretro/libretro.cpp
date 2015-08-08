@@ -85,7 +85,7 @@ static int32_t FramesWithPointer;
 
 static void DrawPointerLine(uint16_t* aOut, uint32_t aPitchInPix)
 {
-   for(int i = 0; i < 5 * scale; i ++)
+   for(int i = 0; i < (5 * scale) ; i ++)
       aOut[aPitchInPix * i] = 0xFFFF;
 }
 
@@ -97,10 +97,10 @@ static void DrawPointer(uint16_t* aOut, uint32_t aPitchInPix)
    TouchX = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1), TouchX);
    TouchY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1), TouchY);
 
-   if(TouchX >   5) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX - 5 * scale], 1);
-   if(TouchX < (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH - 5 * scale)) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
-   if(TouchY >   5) DrawPointerLine(&aOut[(TouchY - 5 * scale) * aPitchInPix + TouchX], aPitchInPix);
-   if(TouchY < (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-5 * scale)) DrawPointerLine(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
+   if(TouchX >   (5 * scale)) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX - (5 * scale) ], 1);
+   if(TouchX < (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH - (5 * scale) )) DrawPointerLine(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
+   if(TouchY >   (5 * scale)) DrawPointerLine(&aOut[(TouchY - (5 * scale) ) * aPitchInPix + TouchX], aPitchInPix);
+   if(TouchY < (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-(5 * scale) )) DrawPointerLine(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
 }
 
 static retro_pixel_format colorMode;
