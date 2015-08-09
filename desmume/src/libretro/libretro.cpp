@@ -568,8 +568,6 @@ static void check_variables(bool first_boot)
          CommonSettings.SPU_sync_method = 0;
       else if (!strcmp(var.value, "Z"))
          CommonSettings.SPU_sync_method = 1;
-      else if (!strcmp(var.value, "P"))
-         CommonSettings.SPU_sync_method = 2;
    }
    else
       CommonSettings.SPU_sync_method = 1;
@@ -650,7 +648,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_gfx_txthack", "Enable TXT Hack; disable|enable"},
       { "desmume_mic_force_enable", "Force Microphone Enable; no|yes" },
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
-      { "desmume_spu_sync_method", "SPU Synchronization Method; Z|P|N" },
+      { "desmume_spu_sync_method", "SPU Synchronization Method; Z|N" },
       { 0, 0 }
    };
 
