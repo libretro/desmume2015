@@ -1466,11 +1466,6 @@ void SPU_Emulate_user(bool mix)
       audio_batch_cb(postProcessBuffer, 735);
 }
 
-void SPU_DefaultFetchSamples(s16 *sampleBuffer, size_t sampleCount, ISynchronizingAudioBuffer *theSynchronizer)
-{
-   theSynchronizer->enqueue_samples(sampleBuffer, sampleCount);
-}
-
 void spu_savestate(EMUFILE* os)
 {
 	//version
