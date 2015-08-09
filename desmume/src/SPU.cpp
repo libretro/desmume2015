@@ -1453,53 +1453,22 @@ void SPU_Emulate_core()
 	
 	SPU_MixAudio(needToMix, SPU_core, spu_core_samples);
 	
-   SPU_DefaultFetchSamples(SPU_core->outbuf, spu_core_samples, synchronizer);
+   synchronizer->enqueue_samples(SPU_core->outbuf, spu_core_samples);
 }
 
 void SPU_Emulate_user(bool mix)
 {
-	static s16 *postProcessBuffer = NULL;
-	static size_t postProcessBufferSize = 0;
-	size_t freeSampleCount = 0;
-	size_t processedSampleCount = 0;
+	static s16 postProcessBuffer[735 * 2 * sizeof(s16)];
 	
-	// Check to see how many free samples are available.
-	// If there are some, fill up the output buffer.
-	freeSampleCount = SNDRetroGetAudioSpace();
-	if (freeSampleCount == 0)
-	{
-		return;
-	}
-	
-	//printf("mix %i samples\n", audiosize);
-	if (freeSampleCount > buffersize)
-	{
-		freeSampleCount = buffersize;
-	}
-	
-	// If needed, resize the post-process buffer to guarantee that
-	// we can store all the sound data.
-	if (postProcessBufferSize < freeSampleCount * 2 * sizeof(s16))
-	{
-		postProcessBufferSize = freeSampleCount * 2 * sizeof(s16);
-		postProcessBuffer = (s16 *)realloc(postProcessBuffer, postProcessBufferSize);
-	}
-	
-   processedSampleCount = SPU_DefaultPostProcessSamples(postProcessBuffer, freeSampleCount, synchronizer);
-	
+   synchronizer->output_samples(postProcessBuffer, 735);
+
    if (audio_batch_cb)
-      audio_batch_cb(postProcessBuffer, processedSampleCount);
-   retro_audio_frames += processedSampleCount;
+      audio_batch_cb(postProcessBuffer, 735);
 }
 
 void SPU_DefaultFetchSamples(s16 *sampleBuffer, size_t sampleCount, ISynchronizingAudioBuffer *theSynchronizer)
 {
    theSynchronizer->enqueue_samples(sampleBuffer, sampleCount);
-}
-
-size_t SPU_DefaultPostProcessSamples(s16 *postProcessBuffer, size_t requestedSampleCount, ISynchronizingAudioBuffer *theSynchronizer)
-{
-   return theSynchronizer->output_samples(postProcessBuffer, requestedSampleCount);
 }
 
 void spu_savestate(EMUFILE* os)

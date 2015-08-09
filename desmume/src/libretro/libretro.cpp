@@ -975,8 +975,6 @@ void retro_run (void)
 
    NDS_endProcessingInput();
 
-   retro_audio_frames = 0;
-
    // RUN
    frameIndex ++;
    bool skipped = frameIndex <= frameSkip;
