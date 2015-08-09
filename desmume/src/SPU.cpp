@@ -1044,68 +1044,24 @@ static FORCEINLINE void FetchPSGData(channel_struct *chan, s32 *data)
 
 //////////////////////////////////////////////////////////////////////////////
 
-template<int FORMAT> static FORCEINLINE void TestForLoop(SPU_struct *SPU, channel_struct *chan)
+static FORCEINLINE int TestForLoop(SPU_struct *SPU, channel_struct *chan, int shift)
 {
-	const int shift = (FORMAT == 0 ? 2 : 1);
-
-	chan->sampcnt += chan->sampinc;
-
 	if (chan->sampcnt > chan->double_totlength_shifted)
-	{
-		// Do we loop? Or are we done?
-		if (chan->repeat == 1)
-		{
-			while (chan->sampcnt > chan->double_totlength_shifted)
-				chan->sampcnt -= chan->double_totlength_shifted - (double)(chan->loopstart << shift);
-			//chan->sampcnt = (double)(chan->loopstart << shift);
-		}
-		else
-		{
-			SPU->KeyOff(chan->num);
-			SPU->bufpos = SPU->buflength;
-		}
-	}
-}
-
-static FORCEINLINE void TestForLoop2(SPU_struct *SPU, channel_struct *chan)
-{
-	// Minimum length (the sum of PNT+LEN) is 4 words (16 bytes), 
-	// smaller values (0..3 words) are causing hang-ups 
-	// (busy bit remains set infinite, but no sound output occurs).
-	// fix: 7th Dragon (JP) - http://sourceforge.net/p/desmume/bugs/1357/
-	if (chan->totlength < 4) return;
-
-	chan->sampcnt += chan->sampinc;
-
-	if (chan->sampcnt > chan->double_totlength_shifted)
-	{
-		// Do we loop? Or are we done?
-		if (chan->repeat == 1)
-		{
-         const int shift = 3;
+   {
+      // Do we loop? Or are we done?
+      if (chan->repeat == 1)
+      {
          while (chan->sampcnt > chan->double_totlength_shifted)
             chan->sampcnt -= chan->double_totlength_shifted - (double)(chan->loopstart << shift);
+         return 0;
+      }
 
-			if(chan->loop_index == K_ADPCM_LOOPING_RECOVERY_INDEX)
-			{
-				chan->pcm16b = (s16)read16(chan->addr);
-				chan->index = read08(chan->addr+2) & 0x7F;
-				chan->lastsampcnt = 7;
-			}
-			else
-			{
-				chan->pcm16b = chan->loop_pcm16b;
-				chan->index = chan->loop_index;
-				chan->lastsampcnt = (chan->loopstart << 3);
-			}
-		}
-		else
-		{
-			chan->status = CHANSTAT_STOPPED;
-			SPU->KeyOff(chan->num);
-			SPU->bufpos = SPU->buflength;
-		}
-	}
+      SPU->KeyOff(chan->num);
+      SPU->bufpos = SPU->buflength;
+      return 1;
+   }
+
+   return -1;
 }
 
 template<int CHANNELS> FORCEINLINE static void SPU_Mix(SPU_struct* SPU, channel_struct *chan, s32 data)
@@ -1135,6 +1091,9 @@ template<int FORMAT, int CHANNELS>
 {
 	for (; SPU->bufpos < SPU->buflength; SPU->bufpos++)
 	{
+      int ret;
+      int shift = (FORMAT == 0 ? 2 : 1);
+
 		if(CHANNELS != -1)
 		{
 			s32 data;
@@ -1171,19 +1130,49 @@ template<int FORMAT, int CHANNELS>
 			SPU_Mix<CHANNELS>(SPU, chan, data);
 		}
 
+      // Minimum length (the sum of PNT+LEN) is 4 words (16 bytes), 
+      // smaller values (0..3 words) are causing hang-ups 
+      // (busy bit remains set infinite, but no sound output occurs).
+      // fix: 7th Dragon (JP) - http://sourceforge.net/p/desmume/bugs/1357/
+      if (FORMAT == 2 && chan->totlength < 4)
+         continue;
+
+      chan->sampcnt += chan->sampinc;
+
 		switch(FORMAT)
       {
-			case 0:
+         case 2:
+            shift = 3;
+            /* fall-through */
+         case 0:
          case 1:
-            TestForLoop<FORMAT>(SPU, chan);
+            ret   = TestForLoop(SPU, chan, shift);
+
+            if (FORMAT == 2 && ret != -1)
+            {
+               switch (ret)
+               {
+                  case 0:
+                     if(chan->loop_index == K_ADPCM_LOOPING_RECOVERY_INDEX)
+                     {
+                        chan->pcm16b = (s16)read16(chan->addr);
+                        chan->index = read08(chan->addr+2) & 0x7F;
+                        chan->lastsampcnt = 7;
+                     }
+                     else
+                     {
+                        chan->pcm16b = chan->loop_pcm16b;
+                        chan->index = chan->loop_index;
+                        chan->lastsampcnt = (chan->loopstart << 3);
+                     }
+                     break;
+                  case 1:
+                     chan->status = CHANSTAT_STOPPED;
+                     break;
+               }
+            }
             break;
-			case 2:
-            TestForLoop2(SPU, chan);
-            break;
-			case 3:
-            chan->sampcnt += chan->sampinc;
-            break;
-		}
+      }
 	}
 }
 
