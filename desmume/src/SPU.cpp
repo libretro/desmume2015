@@ -1218,7 +1218,7 @@ FORCEINLINE static void _SPU_ChanUpdate(const bool actuallyMix, SPU_struct* cons
 }
 
 //ENTERNEW
-static void SPU_MixAudio_Advanced(bool actuallyMix, SPU_struct *SPU, int length)
+static void SPU_MixAudio_Advanced(SPU_struct *SPU, int length)
 {
 	//the advanced spu function correctly handles all sound control mixing options, as well as capture
 	//this code is not entirely optimal, as it relies on sort of manhandling the core mixing functions
@@ -1438,9 +1438,7 @@ static void SPU_MixAudio(bool actuallyMix, SPU_struct *SPU, int length)
 	//it remainds to be seen exactly how much slower it is
 	//if it isnt much slower then we should refactor everything to be simpler, once it is working
 	if(advanced && SPU == SPU_core)
-	{
-		SPU_MixAudio_Advanced(actuallyMix, SPU, length);
-	}
+		SPU_MixAudio_Advanced(SPU, length);
 	else
 	{
 		//non-advanced mode
