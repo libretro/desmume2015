@@ -109,7 +109,6 @@ static const s16 wavedutytbl[8][8] = {
 
 static s32 precalcdifftbl[89][16];
 static u8 precalcindextbl[89][8];
-static double cos_lut[COSINE_INTERPOLATION_RESOLUTION];
 
 static const double ARM7_CLOCK = 33513982;
 
@@ -156,10 +155,6 @@ int SPU_Init(int coreid, int buffersize)
 {
 	int i, j;
 	
-	// Build the cosine interpolation LUT
-	for(unsigned int i = 0; i < COSINE_INTERPOLATION_RESOLUTION; i++)
-		cos_lut[i] = (1.0 - cos(((double)i/(double)COSINE_INTERPOLATION_RESOLUTION) * M_PI)) * 0.5;
-
 	SPU_core = new SPU_struct((int)ceil(samples_per_hline));
 	SPU_Reset();
 
@@ -986,37 +981,14 @@ void SPU_struct::WriteLong(u32 addr, u32 val)
 	} //switch on address
 }
 
-template<SPUInterpolationMode INTERPOLATE_MODE> static FORCEINLINE s32 Interpolate(s32 a, s32 b, double ratio)
+static FORCEINLINE s32 Interpolate(s32 a, s32 b, double ratio)
 {
-	double sampleA = (double)a;
-	double sampleB = (double)b;
-	ratio = ratio - sputrunc(ratio);
-	
-	switch (INTERPOLATE_MODE)
-	{
-		case SPUInterpolation_Cosine:
-			// Cosine Interpolation Formula:
-			// ratio2 = (1 - cos(ratio * M_PI)) / 2
-			// sampleI = sampleA * (1 - ratio2) + sampleB * ratio2
-			return s32floor((cos_lut[(unsigned int)(ratio * (double)COSINE_INTERPOLATION_RESOLUTION)] * (sampleB - sampleA)) + sampleA);
-			break;
-			
-		case SPUInterpolation_Linear:
-			// Linear Interpolation Formula:
-			// sampleI = sampleA * (1 - ratio) + sampleB * ratio
-			return s32floor((ratio * (sampleB - sampleA)) + sampleA);
-			break;
-			
-		default:
-			break;
-	}
-	
 	return a;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-template<SPUInterpolationMode INTERPOLATE_MODE> static FORCEINLINE void Fetch8BitData(channel_struct *chan, s32 *data)
+static FORCEINLINE void Fetch8BitData(channel_struct *chan, s32 *data)
 {
 	if (chan->sampcnt < 0)
 	{
@@ -1025,20 +997,10 @@ template<SPUInterpolationMode INTERPOLATE_MODE> static FORCEINLINE void Fetch8Bi
 	}
 
 	u32 loc = sputrunc(chan->sampcnt);
-	if(INTERPOLATE_MODE != SPUInterpolation_None)
-	{
-		s32 a = (s32)(read_s8(chan->addr + loc) << 8);
-		if(loc < (chan->totlength << 2) - 1) {
-			s32 b = (s32)(read_s8(chan->addr + loc + 1) << 8);
-			a = Interpolate<INTERPOLATE_MODE>(a, b, chan->sampcnt);
-		}
-		*data = a;
-	}
-	else
-		*data = (s32)read_s8(chan->addr + loc)<< 8;
+   *data = (s32)read_s8(chan->addr + loc)<< 8;
 }
 
-template<SPUInterpolationMode INTERPOLATE_MODE> static FORCEINLINE void Fetch16BitData(const channel_struct * const chan, s32 *data)
+static FORCEINLINE void Fetch16BitData(const channel_struct * const chan, s32 *data)
 {
 	if (chan->sampcnt < 0)
 	{
@@ -1046,23 +1008,10 @@ template<SPUInterpolationMode INTERPOLATE_MODE> static FORCEINLINE void Fetch16B
 		return;
 	}
 
-	if(INTERPOLATE_MODE != SPUInterpolation_None)
-	{
-		u32 loc = sputrunc(chan->sampcnt);
-		
-		s32 a = (s32)read16(loc*2 + chan->addr), b;
-		if(loc < (chan->totlength << 1) - 1)
-		{
-			b = (s32)read16(loc*2 + chan->addr + 2);
-			a = Interpolate<INTERPOLATE_MODE>(a, b, chan->sampcnt);
-		}
-		*data = a;
-	}
-	else
-		*data = read16(chan->addr + sputrunc(chan->sampcnt)*2);
+   *data = read16(chan->addr + sputrunc(chan->sampcnt)*2);
 }
 
-template<SPUInterpolationMode INTERPOLATE_MODE> static FORCEINLINE void FetchADPCMData(channel_struct * const chan, s32 * const data)
+static FORCEINLINE void FetchADPCMData(channel_struct * const chan, s32 * const data)
 {
 	if (chan->sampcnt < 8)
 	{
@@ -1095,10 +1044,7 @@ template<SPUInterpolationMode INTERPOLATE_MODE> static FORCEINLINE void FetchADP
 		chan->lastsampcnt = sputrunc(chan->sampcnt);
 	}
 
-	if(INTERPOLATE_MODE != SPUInterpolation_None)
-		*data = Interpolate<INTERPOLATE_MODE>((s32)chan->pcm16b_last,(s32)chan->pcm16b,chan->sampcnt);
-	else
-		*data = (s32)chan->pcm16b;
+   *data = (s32)chan->pcm16b;
 }
 
 static FORCEINLINE void FetchPSGData(channel_struct *chan, s32 *data)
@@ -1245,7 +1191,7 @@ template<int CHANNELS> FORCEINLINE static void SPU_Mix(SPU_struct* SPU, channel_
 }
 
 //WORK
-template<int FORMAT, SPUInterpolationMode INTERPOLATE_MODE, int CHANNELS> 
+template<int FORMAT, int CHANNELS> 
 	FORCEINLINE static void ____SPU_ChanUpdate(SPU_struct* const SPU, channel_struct* const chan)
 {
 	for (; SPU->bufpos < SPU->buflength; SPU->bufpos++)
@@ -1255,9 +1201,9 @@ template<int FORMAT, SPUInterpolationMode INTERPOLATE_MODE, int CHANNELS>
 			s32 data;
 			switch(FORMAT)
 			{
-				case 0: Fetch8BitData<INTERPOLATE_MODE>(chan, &data); break;
-				case 1: Fetch16BitData<INTERPOLATE_MODE>(chan, &data); break;
-				case 2: FetchADPCMData<INTERPOLATE_MODE>(chan, &data); break;
+				case 0: Fetch8BitData(chan, &data); break;
+				case 1: Fetch16BitData(chan, &data); break;
+				case 2: FetchADPCMData(chan, &data); break;
 				case 3: FetchPSGData(chan, &data); break;
 			}
 			SPU_Mix<CHANNELS>(SPU, chan, data);
@@ -1271,41 +1217,34 @@ template<int FORMAT, SPUInterpolationMode INTERPOLATE_MODE, int CHANNELS>
 	}
 }
 
-template<int FORMAT, SPUInterpolationMode INTERPOLATE_MODE> 
+template<int FORMAT> 
 	FORCEINLINE static void ___SPU_ChanUpdate(const bool actuallyMix, SPU_struct* const SPU, channel_struct* const chan)
 {
 	if(!actuallyMix)
-		____SPU_ChanUpdate<FORMAT,INTERPOLATE_MODE,-1>(SPU,chan);
+		____SPU_ChanUpdate<FORMAT,-1>(SPU,chan);
 	else if (chan->pan == 0)
-		____SPU_ChanUpdate<FORMAT,INTERPOLATE_MODE,0>(SPU,chan);
+		____SPU_ChanUpdate<FORMAT,0>(SPU,chan);
 	else if (chan->pan == 127)
-		____SPU_ChanUpdate<FORMAT,INTERPOLATE_MODE,2>(SPU,chan);
+		____SPU_ChanUpdate<FORMAT,2>(SPU,chan);
 	else
-		____SPU_ChanUpdate<FORMAT,INTERPOLATE_MODE,1>(SPU,chan);
+		____SPU_ChanUpdate<FORMAT,1>(SPU,chan);
 }
 
-template<SPUInterpolationMode INTERPOLATE_MODE> 
-	FORCEINLINE static void __SPU_ChanUpdate(const bool actuallyMix, SPU_struct* const SPU, channel_struct* const chan)
+FORCEINLINE static void __SPU_ChanUpdate(const bool actuallyMix, SPU_struct* const SPU, channel_struct* const chan)
 {
 	switch(chan->format)
 	{
-		case 0: ___SPU_ChanUpdate<0,INTERPOLATE_MODE>(actuallyMix, SPU, chan); break;
-		case 1: ___SPU_ChanUpdate<1,INTERPOLATE_MODE>(actuallyMix, SPU, chan); break;
-		case 2: ___SPU_ChanUpdate<2,INTERPOLATE_MODE>(actuallyMix, SPU, chan); break;
-		case 3: ___SPU_ChanUpdate<3,INTERPOLATE_MODE>(actuallyMix, SPU, chan); break;
+		case 0: ___SPU_ChanUpdate<0>(actuallyMix, SPU, chan); break;
+		case 1: ___SPU_ChanUpdate<1>(actuallyMix, SPU, chan); break;
+		case 2: ___SPU_ChanUpdate<2>(actuallyMix, SPU, chan); break;
+		case 3: ___SPU_ChanUpdate<3>(actuallyMix, SPU, chan); break;
 		default: assert(false);
 	}
 }
 
 FORCEINLINE static void _SPU_ChanUpdate(const bool actuallyMix, SPU_struct* const SPU, channel_struct* const chan)
 {
-	switch(CommonSettings.spuInterpolationMode)
-	{
-	case SPUInterpolation_None: __SPU_ChanUpdate<SPUInterpolation_None>(actuallyMix, SPU, chan); break;
-	case SPUInterpolation_Linear: __SPU_ChanUpdate<SPUInterpolation_Linear>(actuallyMix, SPU, chan); break;
-	case SPUInterpolation_Cosine: __SPU_ChanUpdate<SPUInterpolation_Cosine>(actuallyMix, SPU, chan); break;
-	default: assert(false);
-	}
+	__SPU_ChanUpdate(actuallyMix, SPU, chan);
 }
 
 //ENTERNEW
