@@ -955,13 +955,6 @@ void SPU_struct::WriteLong(u32 addr, u32 val)
 	} //switch on address
 }
 
-static FORCEINLINE s32 Interpolate(s32 a, s32 b, double ratio)
-{
-	return a;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 static FORCEINLINE void FetchADPCMData(channel_struct * const chan, s32 * const data)
 {
    const u32 endExclusive = sputrunc(chan->sampcnt+1);
@@ -1063,14 +1056,14 @@ template<int FORMAT, int CHANNELS>
                case 1: /* Fetch 16-bit data */
                   data = read16(chan->addr + sputrunc(chan->sampcnt)*2);
                   break;
-               case 2:
+               case 2: /* Fetch ADPCM data */
                   /* No sense decoding, just return the last sample */
                   if (chan->lastsampcnt == sputrunc(chan->sampcnt))
                      data = (s32)chan->pcm16b;
                   else
                      FetchADPCMData(chan, &data);
                   break;
-               case 3:
+               case 3: /* Fetch PSG data */
                   if(chan->num < 8)
                      data = 0;
                   else if(chan->num < 14)
