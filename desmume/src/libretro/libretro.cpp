@@ -560,32 +560,6 @@ static void check_variables(bool first_boot)
    else
       CommonSettings.advanced_timing = true;
 
-   var.key = "desmume_spu_interpolation";
-
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if (!strcmp(var.value, "Linear"))
-         CommonSettings.spuInterpolationMode = SPUInterpolation_Linear;
-      else if (!strcmp(var.value, "Cosine"))
-         CommonSettings.spuInterpolationMode = SPUInterpolation_Cosine;
-      else if (!strcmp(var.value, "None"))
-         CommonSettings.spuInterpolationMode = SPUInterpolation_None;
-   }
-   else
-      CommonSettings.spuInterpolationMode = SPUInterpolation_Linear;
-
-   var.key = "desmume_spu_sync_mode";
-
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if (!strcmp(var.value, "DualSPU"))
-         CommonSettings.SPU_sync_mode = 0;
-      else if (!strcmp(var.value, "Synchronous"))
-         CommonSettings.SPU_sync_mode = 1;
-   }
-   else
-      CommonSettings.SPU_sync_mode = 1;
-
    var.key = "desmume_spu_sync_method";
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -676,9 +650,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_gfx_txthack", "Enable TXT Hack; disable|enable"},
       { "desmume_mic_force_enable", "Force Microphone Enable; no|yes" },
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
-      { "desmume_spu_sync_mode", "SPU Synchronization Mode; Synchronous|DualSPU" },
       { "desmume_spu_sync_method", "SPU Synchronization Method; Z|P|N" },
-      { "desmume_spu_interpolation", "SPU Interpolation Mode; Linear|Cosine|None" },
       { 0, 0 }
    };
 

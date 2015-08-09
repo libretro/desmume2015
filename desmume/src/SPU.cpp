@@ -64,13 +64,11 @@ static inline s8 read_s8(u32 addr) { return (s8)_MMU_read08<ARMCPU_ARM7,MMU_AT_D
 static ISynchronizingAudioBuffer* synchronizer = metaspu_construct(ESynchMethod_N);
 
 SPU_struct *SPU_core = 0;
-SPU_struct *SPU_user = 0;
 int SPU_currentCoreNum = SNDCORE_DUMMY;
 static int volume = 100;
 
 
 static size_t buffersize = 0;
-static ESynchMode synchmode = ESynchMode_DualSynchAsynch;
 static ESynchMethod synchmethod = ESynchMethod_N;
 
 //const int shift = (FORMAT == 0 ? 2 : 1);
@@ -135,9 +133,7 @@ int SPU_ChangeSoundCore(int coreid, int buffersize)
 
 	::buffersize = buffersize;
 
-	delete SPU_user; SPU_user = NULL;
-
-	SPU_SetSynchMode(synchmode,synchmethod);
+	SPU_SetSynchMode(synchmethod);
 
 	return 0;
 }
@@ -175,7 +171,7 @@ int SPU_Init(int coreid, int buffersize)
 		}
 	}
 
-	SPU_SetSynchMode(CommonSettings.SPU_sync_mode, CommonSettings.SPU_sync_method);
+	SPU_SetSynchMode(CommonSettings.SPU_sync_method);
 
 	return SPU_ChangeSoundCore(coreid, buffersize);
 }
@@ -186,16 +182,11 @@ void SPU_Pause(int pause)
 
 void SPU_CloneUser()
 {
-	if(SPU_user) {
-		memcpy(SPU_user->channels,SPU_core->channels,sizeof(SPU_core->channels));
-		SPU_user->regs = SPU_core->regs;
-	}
 }
 
 
-void SPU_SetSynchMode(int mode, int method)
+void SPU_SetSynchMode(int method)
 {
-	synchmode = (ESynchMode)mode;
 	if(synchmethod != (ESynchMethod)method)
 	{
 		synchmethod = (ESynchMethod)method;
@@ -203,15 +194,6 @@ void SPU_SetSynchMode(int mode, int method)
 		//grr does this need to be locked? spu might need a lock method
 		  // or maybe not, maybe the platform-specific code that calls this function can deal with it.
 		synchronizer = metaspu_construct(synchmethod);
-	}
-
-	delete SPU_user;
-	SPU_user = NULL;
-		
-	if(synchmode == ESynchMode_DualSynchAsynch)
-	{
-		SPU_user = new SPU_struct(buffersize);
-		SPU_CloneUser();
 	}
 }
 
@@ -229,9 +211,6 @@ void SPU_Reset(void)
 	int i;
 
 	SPU_core->reset();
-
-	if(SPU_user)
-		SPU_user->reset();
 
 	//zero - 09-apr-2010: this concerns me, regarding savestate synch.
 	//After 0.9.6, lets experiment with removing it and just properly zapping the spu instead
@@ -280,7 +259,6 @@ SPU_struct::~SPU_struct()
 void SPU_DeInit(void)
 {
 	delete SPU_core; SPU_core=0;
-	delete SPU_user; SPU_user=0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1252,10 +1230,8 @@ static void SPU_MixAudio_Advanced(SPU_struct *SPU, int length)
 				//output to mixer unless we are bypassed.
 				//dont output to mixer if the user muted us
 				bool outputToMix = true;
-				if(CommonSettings.spu_muteChannels[i]) outputToMix = false;
 				if(bypass) outputToMix = false;
 				bool outputToCap = outputToMix;
-				if(CommonSettings.spu_captureMuted && !bypass) outputToCap = true;
 
 				//channels 1 and 3 should probably always generate their audio
 				//internally at least, just in case they get used by the spu output
@@ -1442,7 +1418,7 @@ static void SPU_MixAudio(bool actuallyMix, SPU_struct *SPU, int length)
 			SPU->buflength = length;
 
 			// Mix audio
-			_SPU_ChanUpdate(!CommonSettings.spu_muteChannels[i] && actuallyMix, SPU, chan);
+			_SPU_ChanUpdate(actuallyMix, SPU, chan);
 		}
 	}
 
@@ -1483,16 +1459,10 @@ void SPU_Emulate_core()
 	samples += samples_per_hline;
 	spu_core_samples = (int)(samples);
 	samples -= spu_core_samples;
-	// We don't need to mix audio for Dual Synch/Asynch mode since we do this
-	// later in SPU_Emulate_user(). Disable mixing here to speed up processing.
-	// However, recording still needs to mix the audio, so make sure we're also
-	// not recording before we disable mixing.
-	if ( synchmode == ESynchMode_DualSynchAsynch)
-		needToMix = false;
 	
 	SPU_MixAudio(needToMix, SPU_core, spu_core_samples);
 	
-   SPU_DefaultFetchSamples(SPU_core->outbuf, spu_core_samples, synchmode, synchronizer);
+   SPU_DefaultFetchSamples(SPU_core->outbuf, spu_core_samples, synchronizer);
 }
 
 void SPU_Emulate_user(bool mix)
@@ -1524,38 +1494,21 @@ void SPU_Emulate_user(bool mix)
 		postProcessBuffer = (s16 *)realloc(postProcessBuffer, postProcessBufferSize);
 	}
 	
-   processedSampleCount = SPU_DefaultPostProcessSamples(postProcessBuffer, freeSampleCount, synchmode, synchronizer);
+   processedSampleCount = SPU_DefaultPostProcessSamples(postProcessBuffer, freeSampleCount, synchronizer);
 	
    if (audio_batch_cb)
       audio_batch_cb(postProcessBuffer, processedSampleCount);
    retro_audio_frames += processedSampleCount;
 }
 
-void SPU_DefaultFetchSamples(s16 *sampleBuffer, size_t sampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer)
+void SPU_DefaultFetchSamples(s16 *sampleBuffer, size_t sampleCount, ISynchronizingAudioBuffer *theSynchronizer)
 {
-	if (synchMode == ESynchMode_Synchronous)
-		theSynchronizer->enqueue_samples(sampleBuffer, sampleCount);
+   theSynchronizer->enqueue_samples(sampleBuffer, sampleCount);
 }
 
-size_t SPU_DefaultPostProcessSamples(s16 *postProcessBuffer, size_t requestedSampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer)
+size_t SPU_DefaultPostProcessSamples(s16 *postProcessBuffer, size_t requestedSampleCount, ISynchronizingAudioBuffer *theSynchronizer)
 {
-	switch (synchMode)
-	{
-		case ESynchMode_DualSynchAsynch:
-			if(SPU_user != NULL)
-			{
-				SPU_MixAudio(true, SPU_user, requestedSampleCount);
-				memcpy(postProcessBuffer, SPU_user->outbuf, requestedSampleCount * 2 * sizeof(s16));
-				return requestedSampleCount;
-			}
-			break;
-		case ESynchMode_Synchronous:
-			return theSynchronizer->output_samples(postProcessBuffer, requestedSampleCount);
-		default:
-			break;
-	}
-	
-	return 0;
+   return theSynchronizer->output_samples(postProcessBuffer, requestedSampleCount);
 }
 
 void spu_savestate(EMUFILE* os)

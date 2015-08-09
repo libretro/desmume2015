@@ -45,13 +45,6 @@ FORCEINLINE s32 spumuldiv7(s32 val, u8 multiplier) {
 	return (multiplier == 127) ? val : ((val * multiplier) >> 7);
 }
 
-enum SPUInterpolationMode
-{
-	SPUInterpolation_None = 0,
-	SPUInterpolation_Linear = 1,
-	SPUInterpolation_Cosine = 2
-};
-
 struct SoundInterface_struct
 {
    int id;
@@ -216,7 +209,7 @@ public:
    void ShutUp();
 };
 
-extern SPU_struct *SPU_core, *SPU_user;
+extern SPU_struct *SPU_core;
 extern int spu_core_samples;
 
 int SPU_ChangeSoundCore(int coreid, int buffersize);
@@ -226,42 +219,39 @@ void SPU_ReInit(bool fakeBoot = false);
 int SPU_Init(int coreid, int buffersize);
 void SPU_Pause(int pause);
 void SPU_SetVolume(int volume);
-void SPU_SetSynchMode(int mode, int method);
+void SPU_SetSynchMode(int method);
 void SPU_ClearOutputBuffer(void);
 void SPU_Reset(void);
 void SPU_DeInit(void);
 void SPU_KeyOn(int channel);
+
 static FORCEINLINE void SPU_WriteByte(u32 addr, u8 val)
 {
-	addr &= 0xFFF;
+   addr &= 0xFFF;
 
-	SPU_core->WriteByte(addr,val);
-	if(SPU_user)
-		SPU_user->WriteByte(addr,val);
+   SPU_core->WriteByte(addr,val);
 }
 static FORCEINLINE void SPU_WriteWord(u32 addr, u16 val)
 {
-	addr &= 0xFFF;
+   addr &= 0xFFF;
 
-	SPU_core->WriteWord(addr,val);
-	if(SPU_user)
-		SPU_user->WriteWord(addr,val);
+   SPU_core->WriteWord(addr,val);
 }
+
 static FORCEINLINE void SPU_WriteLong(u32 addr, u32 val)
 {
 	addr &= 0xFFF;
 
 	SPU_core->WriteLong(addr,val);
-	if(SPU_user) 
-		SPU_user->WriteLong(addr,val);
 }
+
 static FORCEINLINE u8 SPU_ReadByte(u32 addr) { return SPU_core->ReadByte(addr & 0x0FFF); }
 static FORCEINLINE u16 SPU_ReadWord(u32 addr) { return SPU_core->ReadWord(addr & 0x0FFF); }
 static FORCEINLINE u32 SPU_ReadLong(u32 addr) { return SPU_core->ReadLong(addr & 0x0FFF); }
 void SPU_Emulate_core(void);
 void SPU_Emulate_user(bool mix = true);
-void SPU_DefaultFetchSamples(s16 *sampleBuffer, size_t sampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer);
-size_t SPU_DefaultPostProcessSamples(s16 *postProcessBuffer, size_t requestedSampleCount, ESynchMode synchMode, ISynchronizingAudioBuffer *theSynchronizer);
+void SPU_DefaultFetchSamples(s16 *sampleBuffer, size_t sampleCount, ISynchronizingAudioBuffer *theSynchronizer);
+size_t SPU_DefaultPostProcessSamples(s16 *postProcessBuffer, size_t requestedSampleCount, ISynchronizingAudioBuffer *theSynchronizer);
 
 void spu_savestate(EMUFILE* os);
 bool spu_loadstate(EMUFILE* is, int size);

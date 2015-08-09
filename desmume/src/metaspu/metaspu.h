@@ -49,12 +49,6 @@ public:
 	virtual int output_samples(s16* buf, int samples_requested) = 0;
 };
 
-enum ESynchMode
-{
-	ESynchMode_DualSynchAsynch,
-	ESynchMode_Synchronous
-};
-
 enum ESynchMethod
 {
 	ESynchMethod_N, //nitsuja's

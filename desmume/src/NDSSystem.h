@@ -495,16 +495,13 @@ extern struct TCommonSettings {
 		, rigorous_timing(false)
 		, advanced_timing(true)
 		, micMode(InternalNoise)
-		, spuInterpolationMode(1)
 		, manualBackupType(0)
 		, autodetectBackupMethod(0)
-		, spu_captureMuted(false)
 		, spu_advanced(false)
 		, StylusPressure(50)
 		, ConsoleType(NDS_CONSOLE_TYPE_FAT)
 		, StylusJitter(false)
 		, backupSave(false)
-		, SPU_sync_mode(0)
 		, SPU_sync_method(0)
 	{
 		strcpy(ARM9BIOS, "biosnds9.bin");
@@ -514,9 +511,6 @@ extern struct TCommonSettings {
 		/* WIFI mode: adhoc = 0, infrastructure = 1 */
 		wifi.mode = 1;
 		wifi.infraBridgeAdapter = 0;
-
-		for(int i=0;i<16;i++)
-			spu_muteChannels[i] = false;
 
 		for(int g=0;g<2;g++)
 			for(int x=0;x<5;x++)
@@ -589,8 +583,6 @@ extern struct TCommonSettings {
 	} micMode;
 
 
-	int spuInterpolationMode;
-
 	//this is a temporary hack until we straighten out the flushing logic and/or gxfifo
 	//int gfx3d_flushMode;
 
@@ -599,11 +591,8 @@ extern struct TCommonSettings {
 	int manualBackupType;
 	bool backupSave;
 
-	int SPU_sync_mode;
 	int SPU_sync_method;
 
-	bool spu_muteChannels[16];
-	bool spu_captureMuted;
 	bool spu_advanced;
 
 	struct _ShowGpu {
