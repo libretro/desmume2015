@@ -1375,13 +1375,10 @@ static void SPU_MixAudio_Advanced(SPU_struct *SPU, int length)
 }
 
 //ENTER
-static void SPU_MixAudio(bool actuallyMix, SPU_struct *SPU, int length)
+static void SPU_MixAudio(SPU_struct *SPU, int length)
 {
-	if(actuallyMix)
-	{
-		memset(SPU->sndbuf, 0, length*4*2);
-		memset(SPU->outbuf, 0, length*2*2);
-	}
+   memset(SPU->sndbuf, 0, length*4*2);
+   memset(SPU->outbuf, 0, length*2*2);
 
 	//we used to use master enable here, and do nothing if audio is disabled.
 	//now, master enable is emulated better..
@@ -1409,7 +1406,7 @@ static void SPU_MixAudio(bool actuallyMix, SPU_struct *SPU, int length)
 			SPU->buflength = length;
 
 			// Mix audio
-         __SPU_ChanUpdate(actuallyMix, SPU, chan);
+         __SPU_ChanUpdate(true, SPU, chan);
 		}
 	}
 
@@ -1419,11 +1416,11 @@ static void SPU_MixAudio(bool actuallyMix, SPU_struct *SPU, int length)
 	//so, optimization of this case is probably not necessary.
 	//later, we'll just silence the output
 	bool speakers = T1ReadWord(MMU.ARM7_REG, 0x304) & 0x01;
-
-	u8 vol = SPU->regs.mastervol;
+	u8 vol        = SPU->regs.mastervol;
 
 	// convert from 32-bit->16-bit
-	if(actuallyMix && speakers)
+	if(speakers)
+   {
 		for (int i = 0; i < length*2; i++)
 		{
 			// Apply Master Volume
@@ -1431,8 +1428,7 @@ static void SPU_MixAudio(bool actuallyMix, SPU_struct *SPU, int length)
 			s16 outsample = MinMax(SPU->sndbuf[i],-0x8000,0x7FFF);
 			SPU->outbuf[i] = outsample;
 		}
-
-
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1445,13 +1441,11 @@ int spu_core_samples = 0;
 
 void SPU_Emulate_core()
 {
-	bool needToMix = true;
-
 	samples += samples_per_hline;
 	spu_core_samples = (int)(samples);
 	samples -= spu_core_samples;
 	
-	SPU_MixAudio(needToMix, SPU_core, spu_core_samples);
+	SPU_MixAudio(SPU_core, spu_core_samples);
 	
    synchronizer->enqueue_samples(SPU_core->outbuf, spu_core_samples);
 }
