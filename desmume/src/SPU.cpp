@@ -1231,10 +1231,6 @@ static void SPU_MixAudio_Advanced(bool actuallyMix, SPU_struct *SPU, int length)
 	//BIAS gets ignored since our spu is still not bit perfect,
 	//and it doesnt matter for purposes of capture
 
-	//-----------DEBUG CODE
-	bool skipcap = false;
-	//-----------------
-
 	s32 samp0[2];
 	
 	//believe it or not, we are going to do this one sample at a time.
@@ -1394,23 +1390,17 @@ static void SPU_MixAudio_Advanced(bool actuallyMix, SPU_struct *SPU, int length)
 					s32 sample = cap.runtime.fifo.dequeue();
 					cap.runtime.fifo.enqueue(capout[capchan]);
 
-					//static FILE* fp = NULL;
-					//if(!fp) fp = fopen("d:\\capout.raw","wb");
-					//fwrite(&sample,2,1,fp);
-					
 					if(cap.bits8)
 					{
 						s8 sample8 = sample>>8;
-						if(skipcap) _MMU_write08<1,MMU_AT_DMA>(cap.runtime.curdad,0);
-						else _MMU_write08<1,MMU_AT_DMA>(cap.runtime.curdad,sample8);
+                  _MMU_write08<1,MMU_AT_DMA>(cap.runtime.curdad,sample8);
 						cap.runtime.curdad++;
 						multiplier = 4;
 					}
 					else
 					{
 						s16 sample16 = sample;
-						if(skipcap) _MMU_write16<1,MMU_AT_DMA>(cap.runtime.curdad,0);
-						else _MMU_write16<1,MMU_AT_DMA>(cap.runtime.curdad,sample16);
+                  _MMU_write16<1,MMU_AT_DMA>(cap.runtime.curdad,sample16);
 						cap.runtime.curdad+=2;
 						multiplier = 2;
 					}
