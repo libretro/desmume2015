@@ -1042,27 +1042,6 @@ static FORCEINLINE int TestForLoop(SPU_struct *SPU, channel_struct *chan, int sh
    return -1;
 }
 
-template<int CHANNELS> FORCEINLINE static void SPU_Mix(SPU_struct* SPU, channel_struct *chan, s32 data)
-{
-   data = spumuldiv7(data, chan->vol) >> volume_shift[chan->volumeDiv];
-
-	switch(CHANNELS)
-	{
-		case 0: /* MixL */
-         SPU->sndbuf[SPU->bufpos<<1]     += data;
-         break;
-		case 1: /* MixLR */
-         SPU->sndbuf[SPU->bufpos<<1]     += spumuldiv7(data, 127 - chan->pan);
-         SPU->sndbuf[(SPU->bufpos<<1)+1] += spumuldiv7(data, chan->pan);
-         break;
-		case 2: /* MixR */
-         SPU->sndbuf[(SPU->bufpos<<1)+1] += data;
-         break;
-	}
-
-	SPU->lastdata = data;
-}
-
 //WORK
 template<int FORMAT, int CHANNELS> 
 	FORCEINLINE static void ____SPU_ChanUpdate(SPU_struct* const SPU, channel_struct* const chan)
@@ -1105,7 +1084,24 @@ template<int FORMAT, int CHANNELS>
                   break;
             }
          }
-			SPU_Mix<CHANNELS>(SPU, chan, data);
+
+         data = spumuldiv7(data, chan->vol) >> volume_shift[chan->volumeDiv];
+
+         switch(CHANNELS)
+         {
+            case 0: /* MixL */
+               SPU->sndbuf[SPU->bufpos<<1]     += data;
+               break;
+            case 1: /* MixLR */
+               SPU->sndbuf[SPU->bufpos<<1]     += spumuldiv7(data, 127 - chan->pan);
+               SPU->sndbuf[(SPU->bufpos<<1)+1] += spumuldiv7(data, chan->pan);
+               break;
+            case 2: /* MixR */
+               SPU->sndbuf[(SPU->bufpos<<1)+1] += data;
+               break;
+         }
+
+         SPU->lastdata = data;
 		}
 
       // Minimum length (the sum of PNT+LEN) is 4 words (16 bytes), 
@@ -1179,11 +1175,6 @@ FORCEINLINE static void __SPU_ChanUpdate(const bool actuallyMix, SPU_struct* con
 	}
 }
 
-FORCEINLINE static void _SPU_ChanUpdate(const bool actuallyMix, SPU_struct* const SPU, channel_struct* const chan)
-{
-	__SPU_ChanUpdate(actuallyMix, SPU, chan);
-}
-
 //ENTERNEW
 static void SPU_MixAudio_Advanced(SPU_struct *SPU, int length)
 {
@@ -1241,7 +1232,7 @@ static void SPU_MixAudio_Advanced(SPU_struct *SPU, int length)
 				SPU->sndbuf[0] = SPU->sndbuf[1] = 0;
 
 				//get channel's next output sample.
-				_SPU_ChanUpdate(domix, SPU, chan);
+            __SPU_ChanUpdate(domix, SPU, chan);
 				chanout[i] = SPU->lastdata >> volume_shift[chan->volumeDiv];
 
 				//save the panned results
@@ -1400,7 +1391,7 @@ static void SPU_MixAudio(bool actuallyMix, SPU_struct *SPU, int length)
 	bool advanced = CommonSettings.spu_advanced ;
 
 	//branch here so that slow computers don't have to take the advanced (slower) codepath.
-	//it remainds to be seen exactly how much slower it is
+	//it remains to be seen exactly how much slower it is
 	//if it isnt much slower then we should refactor everything to be simpler, once it is working
 	if(advanced && SPU == SPU_core)
 		SPU_MixAudio_Advanced(SPU, length);
@@ -1418,7 +1409,7 @@ static void SPU_MixAudio(bool actuallyMix, SPU_struct *SPU, int length)
 			SPU->buflength = length;
 
 			// Mix audio
-			_SPU_ChanUpdate(actuallyMix, SPU, chan);
+         __SPU_ChanUpdate(actuallyMix, SPU, chan);
 		}
 	}
 
