@@ -813,14 +813,11 @@ void retro_reset (void)
     NDS_Reset();
 }
 
-extern unsigned retro_audio_frames;
-
 void retro_run (void)
 {
    struct LayoutData layout;
    bool updated                  = false;
    bool have_touch               = false;
-
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
    {
