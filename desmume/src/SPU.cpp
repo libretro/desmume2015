@@ -988,129 +988,58 @@ static FORCEINLINE s32 Interpolate(s32 a, s32 b, double ratio)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static FORCEINLINE void Fetch8BitData(channel_struct *chan, s32 *data)
-{
-	if (chan->sampcnt < 0)
-	{
-		*data = 0;
-		return;
-	}
-
-	u32 loc = sputrunc(chan->sampcnt);
-   *data = (s32)read_s8(chan->addr + loc)<< 8;
-}
-
-static FORCEINLINE void Fetch16BitData(const channel_struct * const chan, s32 *data)
-{
-	if (chan->sampcnt < 0)
-	{
-		*data = 0;
-		return;
-	}
-
-   *data = read16(chan->addr + sputrunc(chan->sampcnt)*2);
-}
-
 static FORCEINLINE void FetchADPCMData(channel_struct * const chan, s32 * const data)
 {
-	if (chan->sampcnt < 8)
-	{
-		*data = 0;
-		return;
-	}
+   const u32 endExclusive = sputrunc(chan->sampcnt+1);
+   for (u32 i = chan->lastsampcnt+1; i < endExclusive; i++)
+   {
+      const u32 shift = (i&1)<<2;
+      const u32 data4bit = ((u32)read08(chan->addr + (i>>1))) >> shift;
 
-	// No sense decoding, just return the last sample
-	if (chan->lastsampcnt != sputrunc(chan->sampcnt)){
+      const s32 diff = precalcdifftbl[chan->index][data4bit & 0xF];
+      chan->index = precalcindextbl[chan->index][data4bit & 0x7];
 
-		const u32 endExclusive = sputrunc(chan->sampcnt+1);
-		for (u32 i = chan->lastsampcnt+1; i < endExclusive; i++)
-		{
-			const u32 shift = (i&1)<<2;
-			const u32 data4bit = ((u32)read08(chan->addr + (i>>1))) >> shift;
+      chan->pcm16b_last = chan->pcm16b;
+      chan->pcm16b = MinMax(chan->pcm16b+diff, -0x8000, 0x7FFF);
 
-			const s32 diff = precalcdifftbl[chan->index][data4bit & 0xF];
-			chan->index = precalcindextbl[chan->index][data4bit & 0x7];
+      if(i == (chan->loopstart<<3)) {
+         if(chan->loop_index != K_ADPCM_LOOPING_RECOVERY_INDEX) printf("over-snagging\n");
+         chan->loop_pcm16b = chan->pcm16b;
+         chan->loop_index = chan->index;
+      }
+   }
 
-			chan->pcm16b_last = chan->pcm16b;
-			chan->pcm16b = MinMax(chan->pcm16b+diff, -0x8000, 0x7FFF);
-
-			if(i == (chan->loopstart<<3)) {
-				if(chan->loop_index != K_ADPCM_LOOPING_RECOVERY_INDEX) printf("over-snagging\n");
-				chan->loop_pcm16b = chan->pcm16b;
-				chan->loop_index = chan->index;
-			}
-		}
-
-		chan->lastsampcnt = sputrunc(chan->sampcnt);
-	}
+   chan->lastsampcnt = sputrunc(chan->sampcnt);
 
    *data = (s32)chan->pcm16b;
 }
 
 static FORCEINLINE void FetchPSGData(channel_struct *chan, s32 *data)
 {
-	if (chan->sampcnt < 0)
-	{
-		*data = 0;
-		return;
-	}
+   if(chan->lastsampcnt == sputrunc(chan->sampcnt))
+   {
+      *data = (s32)chan->psgnoise_last;
+      return;
+   }
 
-	if(chan->num < 8)
-	{
-		*data = 0;
-	}
-	else if(chan->num < 14)
-	{
-		*data = (s32)wavedutytbl[chan->waveduty][(sputrunc(chan->sampcnt)) & 0x7];
-	}
-	else
-	{
-		if(chan->lastsampcnt == sputrunc(chan->sampcnt))
-		{
-			*data = (s32)chan->psgnoise_last;
-			return;
-		}
+   u32 max = sputrunc(chan->sampcnt);
+   for(u32 i = chan->lastsampcnt; i < max; i++)
+   {
+      if(chan->x & 0x1)
+      {
+         chan->x = (chan->x >> 1) ^ 0x6000;
+         chan->psgnoise_last = -0x7FFF;
+      }
+      else
+      {
+         chan->x >>= 1;
+         chan->psgnoise_last = 0x7FFF;
+      }
+   }
 
-		u32 max = sputrunc(chan->sampcnt);
-		for(u32 i = chan->lastsampcnt; i < max; i++)
-		{
-			if(chan->x & 0x1)
-			{
-				chan->x = (chan->x >> 1) ^ 0x6000;
-				chan->psgnoise_last = -0x7FFF;
-			}
-			else
-			{
-				chan->x >>= 1;
-				chan->psgnoise_last = 0x7FFF;
-			}
-		}
+   chan->lastsampcnt = sputrunc(chan->sampcnt);
 
-		chan->lastsampcnt = sputrunc(chan->sampcnt);
-
-		*data = (s32)chan->psgnoise_last;
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-static FORCEINLINE void MixL(SPU_struct* SPU, channel_struct *chan, s32 data)
-{
-	data = spumuldiv7(data, chan->vol) >> volume_shift[chan->volumeDiv];
-	SPU->sndbuf[SPU->bufpos<<1] += data;
-}
-
-static FORCEINLINE void MixR(SPU_struct* SPU, channel_struct *chan, s32 data)
-{
-	data = spumuldiv7(data, chan->vol) >> volume_shift[chan->volumeDiv];
-	SPU->sndbuf[(SPU->bufpos<<1)+1] += data;
-}
-
-static FORCEINLINE void MixLR(SPU_struct* SPU, channel_struct *chan, s32 data)
-{
-	data = spumuldiv7(data, chan->vol) >> volume_shift[chan->volumeDiv];
-	SPU->sndbuf[SPU->bufpos<<1] += spumuldiv7(data, 127 - chan->pan);
-	SPU->sndbuf[(SPU->bufpos<<1)+1] += spumuldiv7(data, chan->pan);
+   *data = (s32)chan->psgnoise_last;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1153,9 +1082,9 @@ static FORCEINLINE void TestForLoop2(SPU_struct *SPU, channel_struct *chan)
 		// Do we loop? Or are we done?
 		if (chan->repeat == 1)
 		{
-			double step = (chan->double_totlength_shifted - (double)(chan->loopstart << 3));
-			
-			while (chan->sampcnt > chan->double_totlength_shifted) chan->sampcnt -= step;
+         const int shift = 3;
+         while (chan->sampcnt > chan->double_totlength_shifted)
+            chan->sampcnt -= chan->double_totlength_shifted - (double)(chan->loopstart << shift);
 
 			if(chan->loop_index == K_ADPCM_LOOPING_RECOVERY_INDEX)
 			{
@@ -1181,12 +1110,22 @@ static FORCEINLINE void TestForLoop2(SPU_struct *SPU, channel_struct *chan)
 
 template<int CHANNELS> FORCEINLINE static void SPU_Mix(SPU_struct* SPU, channel_struct *chan, s32 data)
 {
+   data = spumuldiv7(data, chan->vol) >> volume_shift[chan->volumeDiv];
+
 	switch(CHANNELS)
 	{
-		case 0: MixL(SPU, chan, data); break;
-		case 1: MixLR(SPU, chan, data); break;
-		case 2: MixR(SPU, chan, data); break;
+		case 0: /* MixL */
+         SPU->sndbuf[SPU->bufpos<<1]     += data;
+         break;
+		case 1: /* MixLR */
+         SPU->sndbuf[SPU->bufpos<<1]     += spumuldiv7(data, 127 - chan->pan);
+         SPU->sndbuf[(SPU->bufpos<<1)+1] += spumuldiv7(data, chan->pan);
+         break;
+		case 2: /* MixR */
+         SPU->sndbuf[(SPU->bufpos<<1)+1] += data;
+         break;
 	}
+
 	SPU->lastdata = data;
 }
 
@@ -1199,20 +1138,51 @@ template<int FORMAT, int CHANNELS>
 		if(CHANNELS != -1)
 		{
 			s32 data;
-			switch(FORMAT)
-			{
-				case 0: Fetch8BitData(chan, &data); break;
-				case 1: Fetch16BitData(chan, &data); break;
-				case 2: FetchADPCMData(chan, &data); break;
-				case 3: FetchPSGData(chan, &data); break;
-			}
+
+         if (chan->sampcnt < 0)
+            data = 0;
+         else
+         {
+            switch(FORMAT)
+            {
+               case 0: /* Fetch 8-bit data */
+                  data = (s32)read_s8(chan->addr + sputrunc(chan->sampcnt))<< 8;
+                  break;
+               case 1: /* Fetch 16-bit data */
+                  data = read16(chan->addr + sputrunc(chan->sampcnt)*2);
+                  break;
+               case 2:
+                  /* No sense decoding, just return the last sample */
+                  if (chan->lastsampcnt == sputrunc(chan->sampcnt))
+                     data = (s32)chan->pcm16b;
+                  else
+                     FetchADPCMData(chan, &data);
+                  break;
+               case 3:
+                  if(chan->num < 8)
+                     data = 0;
+                  else if(chan->num < 14)
+                     data = (s32)wavedutytbl[chan->waveduty][(sputrunc(chan->sampcnt)) & 0x7];
+                  else
+                     FetchPSGData(chan, &data);
+                  break;
+            }
+         }
 			SPU_Mix<CHANNELS>(SPU, chan, data);
 		}
 
-		switch(FORMAT) {
-			case 0: case 1: TestForLoop<FORMAT>(SPU, chan); break;
-			case 2: TestForLoop2(SPU, chan); break;
-			case 3: chan->sampcnt += chan->sampinc; break;
+		switch(FORMAT)
+      {
+			case 0:
+         case 1:
+            TestForLoop<FORMAT>(SPU, chan);
+            break;
+			case 2:
+            TestForLoop2(SPU, chan);
+            break;
+			case 3:
+            chan->sampcnt += chan->sampinc;
+            break;
 		}
 	}
 }
