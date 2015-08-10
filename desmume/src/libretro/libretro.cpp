@@ -113,12 +113,17 @@ static uint32_t frameIndex;
 static void SwapScreen(uint16_t *dst, const uint16_t *src, uint32_t pitch)
 {
    unsigned i, j;
+   uint32_t skip = pitch - GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+
    for(i = 0; i < GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT; i ++)
+   {
       for(j = 0; j < GPU_LR_FRAMEBUFFER_NATIVE_WIDTH; j ++)
       {
          uint16_t col = *src++;
          *dst++ = CONVERT_COLOR(col);
       }
+      dst += skip;
+   }
 }
 
 namespace
