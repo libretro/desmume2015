@@ -51,12 +51,6 @@
 
 #include "path.h"
 
-#ifdef HOST_WINDOWS
-#include "windows/main.h"
-#endif
-
-int lastSaveState = 0;		//Keeps track of last savestate used for quick save/load functions
-
 //void*v is actually a void** which will be indirected before reading
 //since this isnt supported right now, it is declared in here to make things compile
 #define SS_INDIRECT            0x80000000
@@ -66,8 +60,6 @@ u32 svn_rev = EMU_DESMUME_SUBVERSION_NUMERIC();
 s64 save_time = 0;
 NDS_SLOT1_TYPE slot1Type = NDS_SLOT1_RETAIL_AUTO;
 NDS_SLOT2_TYPE slot2Type = NDS_SLOT2_AUTO;
-
-savestates_t savestates[NB_STATES];
 
 #define SAVESTATE_VERSION       12
 static const char* magic = "DeSmuME SState\0";
@@ -615,8 +607,6 @@ static bool cp15_loadstate(EMUFILE* is, int size)
 	return true;
 }
 
-
-
 /* Format time and convert to string */
 static char * format_time(time_t cal_time)
 {
@@ -628,76 +618,6 @@ static char * format_time(time_t cal_time)
 
   return(str);
 }
-
-void clear_savestates()
-{
-  u8 i;
-  for( i = 0; i < NB_STATES; i++ )
-    savestates[i].exists = FALSE;
-}
-
-// Scan for existing savestates and update struct
-void scan_savestates()
-{
-  struct stat sbuf;
-  char filename[MAX_PATH+1];
-
-  clear_savestates();
-
-  for(int i = 0; i < NB_STATES; i++ )
-    {
-     path.getpathnoext(path.STATES, filename);
-	  
-	  if (strlen(filename) + strlen(".dst") + strlen("-2147483648") /* = biggest string for i */ >MAX_PATH) return ;
-      sprintf(filename+strlen(filename), ".ds%d", i);
-      if( stat(filename,&sbuf) == -1 ) continue;
-      savestates[i].exists = TRUE;
-      strncpy(savestates[i].date, format_time(sbuf.st_mtime),40);
-	  savestates[i].date[40-1] = '\0';
-    }
-
-  return ;
-}
-
-void savestate_slot(int num)
-{
-   struct stat sbuf;
-   char filename[MAX_PATH+1];
-
-	lastSaveState = num;		//Set last savestate used
-
-    path.getpathnoext(path.STATES, filename);
-
-   if (strlen(filename) + strlen(".dsx") + strlen("-2147483648") /* = biggest string for num */ >MAX_PATH) return ;
-   sprintf(filename+strlen(filename), ".ds%d", num);
-
-   if (!savestate_save(filename))
-	   return;
-
-   if (num >= 0 && num < NB_STATES)
-   {
-	   if (stat(filename,&sbuf) != -1)
-	   {
-		   savestates[num].exists = TRUE;
-		   strncpy(savestates[num].date, format_time(sbuf.st_mtime),40);
-		   savestates[num].date[40-1] = '\0';
-	   }
-   }
-}
-
-void loadstate_slot(int num)
-{
-   char filename[MAX_PATH];
-
-   lastSaveState = num;		//Set last savestate used
-
-    path.getpathnoext(path.STATES, filename);
-
-   if (strlen(filename) + strlen(".dsx") + strlen("-2147483648") /* = biggest string for num */ >MAX_PATH) return ;
-   sprintf(filename+strlen(filename), ".ds%d", num);
-   savestate_load(filename);
-}
-
 
 // note: guessSF is so we don't have to do a linear search through the SFORMAT array every time
 // in the (most common) case that we already know where the next entry is.
@@ -950,21 +870,6 @@ bool savestate_save(EMUFILE* outstream)
 	return true;
 }
 
-bool savestate_save (const char *file_name)
-{
-	EMUFILE_MEMORY ms;
-	size_t elems_written;
-	if(!savestate_save(&ms))
-		return false;
-	FILE* file = fopen(file_name,"wb");
-	if(file)
-	{
-		elems_written = fwrite(ms.buf(),1,ms.size(),file);
-		fclose(file);
-		return (elems_written == ms.size());
-	} else return false;
-}
-
 static void writechunks(EMUFILE* os) {
 
 	DateTime tm = DateTime::get_Now();
@@ -1156,75 +1061,4 @@ bool savestate_load(EMUFILE* is)
 
 
 	return true;
-}
-
-bool savestate_load(const char *file_name)
-{
-	EMUFILE_FILE f(file_name,"rb");
-	if(f.fail()) return false;
-
-	return savestate_load(&f);
-}
-
-static std::stack<EMUFILE_MEMORY*> rewindFreeList;
-static std::vector<EMUFILE_MEMORY*> rewindbuffer;
-
-int rewindstates = 16;
-int rewindinterval = 4;
-
-void rewindsave () {
-
-	if(currFrameCounter % rewindinterval)
-		return;
-
-	//printf("rewindsave"); printf("%d%s", currFrameCounter, "\n");
-
-	
-	EMUFILE_MEMORY *ms;
-	if(!rewindFreeList.empty()) {
-		ms = rewindFreeList.top();
-		rewindFreeList.pop();
-	} else {
-		ms = new EMUFILE_MEMORY(1024*1024*12);
-	}
-
-	if(!savestate_save(ms))
-		return;
-
-	rewindbuffer.push_back(ms);
-	
-	if((int)rewindbuffer.size() > rewindstates) {
-		delete *rewindbuffer.begin();
-		rewindbuffer.erase(rewindbuffer.begin());
-	}
-}
-
-void dorewind()
-{
-	if(currFrameCounter % rewindinterval)
-		return;
-
-	//printf("rewind\n");
-
-	int size = rewindbuffer.size();
-
-	if(size < 1) {
-		printf("rewind buffer empty\n");
-		return;
-	}
-
-	printf("%d", size);
-
-	EMUFILE_MEMORY* loadms = rewindbuffer[size-1];
-	loadms->fseek(32, SEEK_SET);
-
-	ReadStateChunks(loadms,loadms->size()-32);
-	loadstate();
-
-	if(rewindbuffer.size()>1)
-	{
-		rewindFreeList.push(loadms);
-		rewindbuffer.pop_back();
-	}
-
 }

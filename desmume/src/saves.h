@@ -24,15 +24,6 @@
 
 #define NB_STATES 10
 
-extern int lastSaveState;
-
-typedef struct 
-{
-  BOOL exists;
-  char date[40];
-} savestates_t;
-
-
 struct SFORMAT
 {
 	//a string description of the element
@@ -48,25 +39,12 @@ struct SFORMAT
 	void *v;
 };
 
-extern savestates_t savestates[NB_STATES];
-
-void clear_savestates();
-void scan_savestates();
 u8 sram_read (u32 address);
 void sram_write (u32 address, u8 value);
 int sram_load (const char *file_name);
 int sram_save (const char *file_name);
 
-bool savestate_load (const char *file_name);
-bool savestate_save (const char *file_name);
-
-void savestate_slot(int num);
-void loadstate_slot(int num);
-
 bool savestate_load(class EMUFILE* is);
 bool savestate_save(class EMUFILE* outstream);
-
-void dorewind();
-void rewindsave();
 
 #endif
