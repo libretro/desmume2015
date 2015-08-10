@@ -83,7 +83,6 @@ SOURCES_CXX += \
 	$(CORE_DIR)/texcache.cpp \
 	$(CORE_DIR)/rasterize.cpp \
 	$(CORE_DIR)/metaspu/metaspu.cpp \
-	$(CORE_DIR)/version.cpp \
 	$(CORE_DIR)/mic.cpp \
 	$(CORE_DIR)/driver.cpp \
 	$(CORE_DIR)/libretro/libretro.cpp \
@@ -91,7 +90,8 @@ SOURCES_CXX += \
 
 SOURCES_C += $(CORE_DIR)/utils/ConvertUTF.c \
 				 $(CORE_DIR)/fs-linux.c \
-				 $(CORE_DIR)/ROMReader.c
+				 $(CORE_DIR)/ROMReader.c \
+				 $(CORE_DIR)/version.c
 
 ifeq ($(DESMUME_JIT_ARM),1)
 SOURCES_CXX += \

@@ -15,16 +15,28 @@
 	along with the this software.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <string>
-#include "types.h"
+#ifndef _DESMUME_VERSION_H
+#define _DESMUME_VERSION_H
 
-extern const u8 DESMUME_VERSION_MAJOR;
-extern const u8 DESMUME_VERSION_MINOR;
-extern const u8 DESMUME_VERSION_BUILD;
+#include <stdint.h>
 
-u32 EMU_DESMUME_VERSION_NUMERIC();
-u32 EMU_DESMUME_SUBVERSION_NUMERIC();
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern const uint8_t DESMUME_VERSION_MAJOR;
+extern const uint8_t DESMUME_VERSION_MINOR;
+extern const uint8_t DESMUME_VERSION_BUILD;
+
+uint32_t EMU_DESMUME_VERSION_NUMERIC();
+uint32_t EMU_DESMUME_SUBVERSION_NUMERIC();
 const char* EMU_DESMUME_VERSION_STRING();
 const char* EMU_DESMUME_SUBVERSION_STRING();
 const char* EMU_DESMUME_NAME_AND_VERSION();
 const char* EMU_DESMUME_COMPILER_DETAIL();
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
