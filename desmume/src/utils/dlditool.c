@@ -60,6 +60,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+#include <boolean.h>
+
 #ifndef _MSC_VER
 #include <stdint.h>
 #include <unistd.h>
@@ -70,13 +72,6 @@ typedef int int32_t;
 #endif
 
 #include <sys/stat.h>
-
-namespace DLDI
-{
-
-//#ifndef bool
-// typedef enum {false = 0, true = !0} bool;
-//#endif
 
 typedef int32_t addr_t;
 typedef unsigned char data_t;
@@ -779,7 +774,7 @@ data_t r4_dldi[2276] =
 	0x00, 0x00, 0x00, 0x00
 };
 
-bool tryPatch(void* data, size_t size, unsigned int device)
+bool DLDI_tryPatch(void* data, size_t size, unsigned int device)
 {
 	// Find the DSDI reserved space in the file
 	addr_t patchOffset = quickFind ((data_t*)data, dldiMagicString, size, sizeof(dldiMagicString)/sizeof(char));
@@ -891,5 +886,3 @@ bool tryPatch(void* data, size_t size, unsigned int device)
 
 	return true;
 }
-
-} //namespace DLDI

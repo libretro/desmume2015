@@ -44,7 +44,6 @@ SOURCES_CXX += \
 	$(CORE_DIR)/utils/decrypt/header.cpp \
 	$(CORE_DIR)/utils/task.cpp \
 	$(CORE_DIR)/utils/vfat.cpp \
-	$(CORE_DIR)/utils/dlditool.cpp \
 	$(CORE_DIR)/utils/libfat/cache.cpp \
 	$(CORE_DIR)/utils/libfat/directory.cpp \
 	$(CORE_DIR)/utils/libfat/disc.cpp \
@@ -91,6 +90,7 @@ SOURCES_CXX += \
 SOURCES_C += $(CORE_DIR)/utils/ConvertUTF.c \
 				 $(CORE_DIR)/fs-linux.c \
 				 $(CORE_DIR)/ROMReader.c \
+				 $(CORE_DIR)/utils/dlditool.c \
 				 $(CORE_DIR)/version.c
 
 ifeq ($(DESMUME_JIT_ARM),1)

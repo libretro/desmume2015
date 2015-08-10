@@ -89,10 +89,7 @@ bool nds_debug_continuing[2];
 
 TSCalInfo TSCal;
 
-namespace DLDI
-{
-	bool tryPatch(void* data, size_t size, unsigned int device);
-}
+extern "C" bool DLDI_tryPatch(void* data, size_t size, unsigned int device);
 
 void Desmume_InitOnce()
 {
@@ -701,10 +698,10 @@ int NDS_LoadROM(const char *filename, const char *physicalName, const char *logi
 		if(!CommonSettings.loadToMemory)
 			msgbox->warn("Sorry.. right now, you can't use the default (stream rom from disk) with homebrew due to a bug with DLDI-autopatching");
 		if (slot1_GetCurrentType() == NDS_SLOT1_R4)
-			DLDI::tryPatch((void*)gameInfo.romdata, gameInfo.romsize, 1);
+			DLDI_tryPatch((void*)gameInfo.romdata, gameInfo.romsize, 1);
 		else
 			if (slot2_GetCurrentType() == NDS_SLOT2_CFLASH)
-				DLDI::tryPatch((void*)gameInfo.romdata, gameInfo.romsize, 0);
+				DLDI_tryPatch((void*)gameInfo.romdata, gameInfo.romsize, 0);
 
 	}
 
