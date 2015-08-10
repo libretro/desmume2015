@@ -201,9 +201,16 @@ static const u8 getvoltbl[] = {
 0x7C, 0x7D, 0x7E, 0x7F
 };
 
-TEMPLATE static u32 bios_nop()
+static u32 bios_nop_ARM9(void)
 {
-	LOG("SWI: ARM%c Unimplemented BIOS function %02X was used. R0:%08X, R1:%08X, R2:%08X\n", PROCNUM?'7':'9',
+	LOG("SWI: ARM%c Unimplemented BIOS function %02X was used. R0:%08X, R1:%08X, R2:%08X\n", '9',
+							(cpu->instruction)&0x1F, cpu->R[0], cpu->R[1], cpu->R[2]);
+	return 3;
+}
+
+static u32 bios_nop_ARM7(void)
+{
+	LOG("SWI: ARM%c Unimplemented BIOS function %02X was used. R0:%08X, R1:%08X, R2:%08X\n", '7',
 							(cpu->instruction)&0x1F, cpu->R[0], cpu->R[1], cpu->R[2]);
 	return 3;
 }
@@ -227,14 +234,21 @@ TEMPLATE static u32 WaitByLoop()
 	return elapsed;
 }
 
-TEMPLATE static u32 wait4IRQ()
+static u32 wait4IRQ_ARM9(void)
 {
-   	cpu->waitIRQ = TRUE;
-	cpu->halt_IE_and_IF = TRUE;
+   (&(NDS_ARM9))->waitIRQ = TRUE;
+	(&(NDS_ARM9))->halt_IE_and_IF = TRUE;
 	return 1;
 }
 
-TEMPLATE static u32 intrWaitARM()
+static u32 wait4IRQ_ARM7(void)
+{
+   (&(NDS_ARM7))->waitIRQ = TRUE;
+	(&(NDS_ARM7))->halt_IE_and_IF = TRUE;
+	return 1;
+}
+
+TEMPLATE static u32 intrWaitARM(void)
 {
 	//TODO - account for differences between arm7 and arm9 (according to gbatek, the "bug doesn't work")
 
@@ -309,21 +323,38 @@ TEMPLATE static u32 CustomHalt()
 	return 1;
 }
 
-TEMPLATE static u32 divide()
+static u32 divide_ARM9(void)
 {
-     s32 num = (s32)cpu->R[0];
-     s32 dnum = (s32)cpu->R[1];
-     
-     if(dnum==0) return 0;
-     
-	 s32 res = num / dnum;
-     cpu->R[0] = (u32)res;
-     cpu->R[1] = (u32)(num % dnum);
-     cpu->R[3] = (u32)abs(res);
+   s32 res;
+   s32 num  = (s32)(&(NDS_ARM9))->R[0];
+   s32 dnum = (s32)(&(NDS_ARM9))->R[1];
 
-	 //INFO("ARM%c: SWI 0x09 (divide): in num %i, dnum %i, out R0:%i, R1:%i, R3:%i\n", PROCNUM?'7':'9', num, dnum, cpu->R[0], cpu->R[1], cpu->R[3]);
+   if(dnum==0)
+      return 0;
 
-     return 6;
+   res = num / dnum;
+   (&(NDS_ARM9))->R[0] = (u32)res;
+   (&(NDS_ARM9))->R[1] = (u32)(num % dnum);
+   (&(NDS_ARM9))->R[3] = (u32)abs(res);
+
+   return 6;
+}
+
+static u32 divide_ARM7(void)
+{
+   s32 res;
+   s32 num  = (s32)(&(NDS_ARM7))->R[0];
+   s32 dnum = (s32)(&(NDS_ARM7))->R[1];
+
+   if(dnum==0)
+      return 0;
+
+   res = num / dnum;
+   (&(NDS_ARM7))->R[0] = (u32)res;
+   (&(NDS_ARM7))->R[1] = (u32)(num % dnum);
+   (&(NDS_ARM7))->R[3] = (u32)abs(res);
+
+   return 6;
 }
 
 TEMPLATE static u32 copy()
@@ -986,10 +1017,16 @@ TEMPLATE static u32 Diff16bitUnFilter()
 	return 1;
 }
 
-TEMPLATE static u32 bios_sqrt()
+static u32 bios_sqrt_ARM9(void)
 {
-     cpu->R[0] = (u32)sqrt((double)(cpu->R[0]));
-     return 1;
+   (&(NDS_ARM9))->R[0] = (u32)sqrt((double)((&(NDS_ARM9))->R[0]));
+   return 1;
+}
+
+static u32 bios_sqrt_ARM7(void)
+{
+   (&(NDS_ARM7))->R[0] = (u32)sqrt((double)((&(NDS_ARM9))->R[0]));
+   return 1;
 }
 
 //ARM9 only
@@ -1001,45 +1038,44 @@ TEMPLATE static u32 CustomPost()
 }
 
 //ARM7 only
-TEMPLATE static u32 getSineTab()
+static u32 getSineTab(void)
 {
-	//ds returns garbage according to gbatek, but we must protect ourselves
-	if(cpu->R[0] >= ARRAY_SIZE(getsinetbl))
-	{
-		printf("Invalid SWI getSineTab: %08X\n",cpu->R[0]);
-		return 1;
-	}
+   //ds returns garbage according to gbatek, but we must protect ourselves
+   if((&(NDS_ARM7))->R[0] >= ARRAY_SIZE(getsinetbl))
+   {
+      printf("Invalid SWI getSineTab: %08X\n", (&(NDS_ARM7))->R[0]);
+      return 1;
+   }
 
-
-	cpu->R[0] = getsinetbl[cpu->R[0]];
-	return 1;
+   (&(NDS_ARM7))->R[0] = getsinetbl[(&(NDS_ARM7))->R[0]];
+   return 1;
 }
 
 //ARM7 only
-TEMPLATE static u32 getPitchTab()
-{ 
-	//ds returns garbage according to gbatek, but we must protect ourselves
-	if(cpu->R[0] >= ARRAY_SIZE(getpitchtbl))
-	{
-		printf("Invalid SWI getPitchTab: %08X\n",cpu->R[0]);
-		return 1;
-	}
+static u32 getPitchTab(void)
+{
+   //ds returns garbage according to gbatek, but we must protect ourselves
+   if((&(NDS_ARM7))->R[0] >= ARRAY_SIZE(getpitchtbl))
+   {
+      printf("Invalid SWI getPitchTab: %08X\n",(&(NDS_ARM7))->R[0]);
+      return 1;
+   }
 
-	cpu->R[0] = getpitchtbl[cpu->R[0]];
-	return 1;
+   (&(NDS_ARM7))->R[0] = getpitchtbl[(&(NDS_ARM7))->R[0]];
+   return 1;
 }
 
 //ARM7 only
-TEMPLATE static u32 getVolumeTab()
-{ 
-	//ds returns garbage according to gbatek, but we must protect ourselves
-	if(cpu->R[0] >= ARRAY_SIZE(getvoltbl))
-	{
-		printf("Invalid SWI getVolumeTab: %08X\n",cpu->R[0]);
-		return 1;
-	}
-	cpu->R[0] = getvoltbl[cpu->R[0]];
-	return 1;
+static u32 getVolumeTab(void)
+{
+   //ds returns garbage according to gbatek, but we must protect ourselves
+   if((&(NDS_ARM7))->R[0] >= ARRAY_SIZE(getvoltbl))
+   {
+      printf("Invalid SWI getVolumeTab: %08X\n", (&(NDS_ARM7))->R[0]);
+      return 1;
+   }
+   (&(NDS_ARM7))->R[0] = getvoltbl[(&(NDS_ARM7))->R[0]];
+   return 1;
 }
 
 
@@ -1111,61 +1147,70 @@ TEMPLATE static u32 getCRC16()
 	return 1;
 }
 
-TEMPLATE static u32 isDebugger()
+static u32 isDebugger_ARM9(void)
 {
 	//gbatek has additional specifications which are not emulated here
 	if(nds.Is_DebugConsole())
-		cpu->R[0] = 1;
+		(&(NDS_ARM9))->R[0] = 1;
 	else
-		cpu->R[0] = 0;
+		(&(NDS_ARM9))->R[0] = 0;
+	return 1;
+}
+
+static u32 isDebugger_ARM7(void)
+{
+	//gbatek has additional specifications which are not emulated here
+	if(nds.Is_DebugConsole())
+		(&(NDS_ARM7))->R[0] = 1;
+	else
+		(&(NDS_ARM7))->R[0] = 0;
 	return 1;
 }
 
 //ARM7 only
-TEMPLATE static u32 SoundBias()
+static u32 SoundBias(void)
 {
 	u32 curBias = _MMU_read32<ARMCPU_ARM7>(0x04000504);
 	u32 newBias = (curBias == 0) ? 0x000:0x200;
 	u32 delay = (newBias > curBias) ? (newBias-curBias) : (curBias-newBias);
 
 	_MMU_write32<ARMCPU_ARM7>(0x04000504, newBias);
-	return cpu->R[1] * delay;
+	return (&(NDS_ARM7))->R[1] * delay;
 }
 
 //ARM7 only
-TEMPLATE static u32 getBootProcs()
+static u32 getBootProcs(void)
 {
-	cpu->R[0] = 0x00000A2E;
-	cpu->R[1] = 0x00002C3C;
-	cpu->R[3] = 0x000005FF;
+	(&(NDS_ARM7))->R[0] = 0x00000A2E;
+	(&(NDS_ARM7))->R[1] = 0x00002C3C;
+	(&(NDS_ARM7))->R[3] = 0x000005FF;
 	return 1;
 }
 
-TEMPLATE static u32 SoftReset()
+static u32 SoftReset(void)
 {
 	//not emulated yet
 	return 1;
 }
 
-
 u32 (* ARM_swi_tab[2][32])()={
 	{
-		SoftReset<ARMCPU_ARM9>,            // 0x00
-		bios_nop<ARMCPU_ARM9>,             // 0x01
-		bios_nop<ARMCPU_ARM9>,             // 0x02
+		SoftReset,                         // 0x00
+		bios_nop_ARM9,                     // 0x01
+		bios_nop_ARM9,                     // 0x02
 		WaitByLoop<ARMCPU_ARM9>,           // 0x03
 		intrWaitARM<ARMCPU_ARM9>,          // 0x04
 		waitVBlankARM<ARMCPU_ARM9>,        // 0x05
-		wait4IRQ<ARMCPU_ARM9>,             // 0x06
-		bios_nop<ARMCPU_ARM9>,             // 0x07
-		bios_nop<ARMCPU_ARM9>,             // 0x08
-		divide<ARMCPU_ARM9>,               // 0x09
-		bios_nop<ARMCPU_ARM9>,             // 0x0A
+		wait4IRQ_ARM9,                     /* 0x06 */
+		bios_nop_ARM9,                     // 0x07
+		bios_nop_ARM9,                     /* 0x08 */
+		divide_ARM9,                       /* 0x09 */
+		bios_nop_ARM9,                     // 0x0A
 		copy<ARMCPU_ARM9>,                 // 0x0B
 		fastCopy<ARMCPU_ARM9>,             // 0x0C
-		bios_sqrt<ARMCPU_ARM9>,            // 0x0D
+		bios_sqrt_ARM9,                    /* 0x0D */
 		getCRC16<ARMCPU_ARM9>,             // 0x0E
-		isDebugger<ARMCPU_ARM9>,           // 0x0F
+		isDebugger_ARM9,                   /* 0x0F */
 		BitUnPack<ARMCPU_ARM9>,            // 0x10
 		LZ77UnCompWram<ARMCPU_ARM9>,       // 0x11
 		LZ77UnCompVram<ARMCPU_ARM9>,       // 0x12
@@ -1173,48 +1218,48 @@ u32 (* ARM_swi_tab[2][32])()={
 		RLUnCompWram<ARMCPU_ARM9>,         // 0x14
 		RLUnCompVram<ARMCPU_ARM9>,         // 0x15
 		Diff8bitUnFilterWram<ARMCPU_ARM9>, // 0x16
-		bios_nop<ARMCPU_ARM9>,             // 0x17
+		bios_nop_ARM9,                     // 0x17
 		Diff16bitUnFilter<ARMCPU_ARM9>,    // 0x18
-		bios_nop<ARMCPU_ARM9>,             // 0x19
-		bios_nop<ARMCPU_ARM9>,             // 0x1A
-		bios_nop<ARMCPU_ARM9>,             // 0x1B
-		bios_nop<ARMCPU_ARM9>,             // 0x1C
-		bios_nop<ARMCPU_ARM9>,             // 0x1D
-		bios_nop<ARMCPU_ARM9>,             // 0x1E
-		CustomPost<ARMCPU_ARM9>,            // 0x1F
+		bios_nop_ARM9,                     // 0x19
+		bios_nop_ARM9,                     // 0x1A
+		bios_nop_ARM9,                     // 0x1B
+		bios_nop_ARM9,                     // 0x1C
+		bios_nop_ARM9,                     // 0x1D
+		bios_nop_ARM9,                     // 0x1E
+		CustomPost<ARMCPU_ARM9>,           // 0x1F
 	},
 	{
-		SoftReset<ARMCPU_ARM7>,            // 0x00
-		bios_nop<ARMCPU_ARM7>,             // 0x01
-		bios_nop<ARMCPU_ARM7>,             // 0x02
+		SoftReset,                         // 0x00
+		bios_nop_ARM7,                     // 0x01
+		bios_nop_ARM7,                     // 0x02
 		WaitByLoop<ARMCPU_ARM7>,           // 0x03
 		intrWaitARM<ARMCPU_ARM7>,          // 0x04
 		waitVBlankARM<ARMCPU_ARM7>,        // 0x05
-		wait4IRQ<ARMCPU_ARM7>,             // 0x06
+		wait4IRQ_ARM7,                     /* 0x06 */
 		sleep<ARMCPU_ARM7>,                // 0x07
-		SoundBias<ARMCPU_ARM7>,            // 0x08
-		divide<ARMCPU_ARM7>,               // 0x09
-		bios_nop<ARMCPU_ARM7>,             // 0x0A
+		SoundBias,                         /* 0x08 */
+		divide_ARM7,                       /* 0x09 */
+		bios_nop_ARM7,                     // 0x0A
 		copy<ARMCPU_ARM7>,                 // 0x0B
 		fastCopy<ARMCPU_ARM7>,             // 0x0C
-		bios_sqrt<ARMCPU_ARM7>,            // 0x0D
+		bios_sqrt_ARM7,                    /* 0x0D */
 		getCRC16<ARMCPU_ARM7>,             // 0x0E
-		isDebugger<ARMCPU_ARM7>,           // 0x0F
+		isDebugger_ARM7,                   /* 0x0F */
 		BitUnPack<ARMCPU_ARM7>,            // 0x10
 		LZ77UnCompWram<ARMCPU_ARM7>,       // 0x11
 		LZ77UnCompVram<ARMCPU_ARM7>,       // 0x12
 		UnCompHuffman<ARMCPU_ARM7>,        // 0x13
 		RLUnCompWram<ARMCPU_ARM7>,         // 0x14
 		RLUnCompVram<ARMCPU_ARM7>,         // 0x15
-		bios_nop<ARMCPU_ARM7>,             // 0x16
-		bios_nop<ARMCPU_ARM7>,             // 0x17
-		bios_nop<ARMCPU_ARM7>,             // 0x18
-		bios_nop<ARMCPU_ARM7>,             // 0x19
-		getSineTab<ARMCPU_ARM7>,           // 0x1A
-		getPitchTab<ARMCPU_ARM7>,          // 0x1B
-		getVolumeTab<ARMCPU_ARM7>,         // 0x1C
-		getBootProcs<ARMCPU_ARM7>,         // 0x1D
-		bios_nop<ARMCPU_ARM7>,             // 0x1E
+		bios_nop_ARM7,                     // 0x16
+		bios_nop_ARM7,                     // 0x17
+		bios_nop_ARM7,                     // 0x18
+		bios_nop_ARM7,                     // 0x19
+		getSineTab,                        /* 0x1A */
+		getPitchTab,                       /* 0x1B */
+		getVolumeTab,                      /* 0x1C */
+		getBootProcs,                      /* 0x1D */
+		bios_nop_ARM7,                     // 0x1E
 		CustomHalt<ARMCPU_ARM7>,           // 0x1F
 	}
 };
@@ -1263,7 +1308,7 @@ const char* ARM_swi_names[2][32] = {
 		"IntrWait",				// 0x04
 		"VBlankIntrWait",		// 0x05
 		"Halt",					// 0x06
-		"Sleep",				// 0x07
+		"Sleep",				   // 0x07
 		"SoundBias",			// 0x08
 		"Div",					// 0x09
 		BIOS_NOP,				// 0x0A
