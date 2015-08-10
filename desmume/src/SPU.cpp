@@ -355,91 +355,115 @@ void SPU_struct::KeyOn(int channel)
 
 u8 SPU_struct::ReadByte(u32 addr)
 {
-	u8 * channel_timer;
-	u8 * channel_loopstart;
+   u8 * channel_timer;
+   u8 * channel_loopstart;
 
-	u8 * sound_bias = (u8 *)regs.soundbias;
+   u8 * sound_bias = (u8 *)regs.soundbias;
 
-	u8 * cap0_dad = (u8 *)regs.cap[0].dad;
-	u8 * cap1_dad = (u8 *)regs.cap[1].dad;
-	u8 * cap0_len = (u8 *)regs.cap[0].len;
-	u8 * cap1_len = (u8 *)regs.cap[1].len;
+   u8 * cap0_dad = (u8 *)regs.cap[0].dad;
+   u8 * cap1_dad = (u8 *)regs.cap[1].dad;
+   u8 * cap0_len = (u8 *)regs.cap[0].len;
+   u8 * cap1_len = (u8 *)regs.cap[1].len;
 
-	//individual channel regs
-	if ((addr & 0x0F00) == 0x0400)
-	{
-		u32 chan_num = (addr >> 4) & 0xF;
-		channel_struct &thischan = channels[chan_num];
+   //individual channel regs
+   if ((addr & 0x0F00) == 0x0400)
+   {
+      u32 chan_num = (addr >> 4) & 0xF;
+      channel_struct &thischan = channels[chan_num];
 
-		channel_timer = (u8 *)thischan.timer;
-		channel_loopstart = (u8 *)thischan.loopstart;
-		switch (addr & 0xF)
-		{
-			case 0x0: return thischan.vol;
-			case 0x1: return (thischan.volumeDiv | (thischan.hold << 7));
-			case 0x2: return thischan.pan;
-			case 0x3: return (	thischan.waveduty
-								| (thischan.repeat << 3)
-								| (thischan.format << 5)
-								| ((thischan.status == CHANSTAT_PLAY)?0x80:0)
-								);
-			case 0x8: return channel_timer[0];
-			case 0x9: return channel_timer[1];
-			case 0xA: return channel_loopstart[0];
-			case 0xB: return channel_loopstart[1];
-		}
-		return 0;
-	}
+      channel_timer = (u8 *)thischan.timer;
+      channel_loopstart = (u8 *)thischan.loopstart;
+      switch (addr & 0xF)
+      {
+         case 0x0:
+            return thischan.vol;
+         case 0x1:
+            return (thischan.volumeDiv | (thischan.hold << 7));
+         case 0x2:
+            return thischan.pan;
+         case 0x3:
+            return (	thischan.waveduty
+                  | (thischan.repeat << 3)
+                  | (thischan.format << 5)
+                  | ((thischan.status == CHANSTAT_PLAY)?0x80:0)
+                  );
+         case 0x8:
+            return channel_timer[0];
+         case 0x9:
+            return channel_timer[1];
+         case 0xA:
+            return channel_loopstart[0];
+         case 0xB:
+            return channel_loopstart[1];
+      }
+      return 0;
+   }
 
-	switch(addr)
-	{
-		//SOUNDCNT
-		case 0x500: return regs.mastervol;
-		case 0x501: return (regs.ctl_left
-							| (regs.ctl_right << 2)
-							| (regs.ctl_ch1bypass << 4)
-							| (regs.ctl_ch3bypass << 5)
-							| (regs.masteren << 7)
-							);
+   switch(addr)
+   {
+      //SOUNDCNT
+      case 0x500:
+         return regs.mastervol;
+      case 0x501:
+         return (regs.ctl_left
+               | (regs.ctl_right << 2)
+               | (regs.ctl_ch1bypass << 4)
+               | (regs.ctl_ch3bypass << 5)
+               | (regs.masteren << 7)
+               );
 
-		//SOUNDBIAS
-		case 0x504: return sound_bias[0];
-		case 0x505: return sound_bias[1];
-	
-		//SNDCAP0CNT/SNDCAP1CNT
-		case 0x508:
-		case 0x509:
-		{
-			u32 which = (addr - 0x508);
-			return regs.cap[which].add
-				| (regs.cap[which].source << 1)
-				| (regs.cap[which].oneshot << 2)
-				| (regs.cap[which].bits8 << 3)
-				| (regs.cap[which].runtime.running << 7);
-		}	
+         //SOUNDBIAS
+      case 0x504:
+         return sound_bias[0];
+      case 0x505:
+         return sound_bias[1];
 
-		//SNDCAP0DAD
-		case 0x510: return cap0_dad[0];
-		case 0x511: return cap0_dad[1];
-		case 0x512: return cap0_dad[2];
-		case 0x513: return cap0_dad[3];
+         //SNDCAP0CNT/SNDCAP1CNT
+      case 0x508:
+      case 0x509:
+         {
+            u32 which = (addr - 0x508);
+            return regs.cap[which].add
+               | (regs.cap[which].source << 1)
+               | (regs.cap[which].oneshot << 2)
+               | (regs.cap[which].bits8 << 3)
+               | (regs.cap[which].runtime.running << 7);
+         }	
 
-		//SNDCAP0LEN
-		case 0x514: return cap0_len[0];
-		case 0x515: return cap0_len[1];
+         //SNDCAP0DAD
+      case 0x510:
+         return cap0_dad[0];
+      case 0x511:
+         return cap0_dad[1];
+      case 0x512:
+         return cap0_dad[2];
+      case 0x513:
+         return cap0_dad[3];
 
-		//SNDCAP1DAD
-		case 0x518: return cap1_dad[0];
-		case 0x519: return cap1_dad[1];
-		case 0x51A: return cap1_dad[2];
-		case 0x51B: return cap1_dad[3];
+         //SNDCAP0LEN
+      case 0x514:
+         return cap0_len[0];
+      case 0x515:
+         return cap0_len[1];
 
-		//SNDCAP1LEN
-		case 0x51C: return cap1_len[0];
-		case 0x51D: return cap1_len[1];
-	} //switch on address
+         //SNDCAP1DAD
+      case 0x518:
+         return cap1_dad[0];
+      case 0x519:
+         return cap1_dad[1];
+      case 0x51A:
+         return cap1_dad[2];
+      case 0x51B:
+         return cap1_dad[3];
 
-	return 0;
+         //SNDCAP1LEN
+      case 0x51C:
+         return cap1_len[0];
+      case 0x51D:
+         return cap1_len[1];
+   } //switch on address
+
+   return 0;
 }
 
 u16 SPU_struct::ReadWord(u32 addr)
