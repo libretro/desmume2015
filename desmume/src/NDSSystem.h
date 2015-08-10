@@ -430,7 +430,6 @@ const UserInput& NDS_getFinalUserInput();
 // this must be done after the raw user input is set
 // and before that input is sent to the game's memory.
 UserInput& NDS_getProcessingUserInput();
-bool NDS_isProcessingUserInput();
 // call once per frame to prepare input for processing 
 void NDS_beginProcessingInput();
 // call once per frame to copy the processed input to the final input

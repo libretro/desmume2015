@@ -2513,17 +2513,6 @@ static std::string MakeInputDisplayString(u16 pad, u16 padExt) {
 }
 
 
-buttonstruct<bool> Turbo;
-buttonstruct<int> TurboTime;
-buttonstruct<bool> AutoHold;
-
-void ClearAutoHold(void) {
-	
-	for (u32 i=0; i < ARRAY_SIZE(AutoHold.array); i++) {
-		AutoHold.array[i]=false;
-	}
-}
-
 //convert a 12.4 screen coordinate to an ADC value.
 //the desmume host system will track the screen coordinate, but the hardware should be receiving the raw ADC values.
 //so we'll need to use this to simulate the ADC values corresponding to the desired screen coords, based on the current TSC calibrations
@@ -2543,23 +2532,18 @@ u16 NDS_getADCTouchPosY(int scrY_lsl4)
 }
 
 static UserInput rawUserInput = {}; // requested input, generally what the user is physically pressing
-static UserInput intermediateUserInput = {}; // intermediate buffer for modifications (seperated from finalUserInput for safety reasons)
 static UserInput finalUserInput = {}; // what gets sent to the game and possibly recorded
-bool validToProcessInput = false;
 
 const UserInput& NDS_getRawUserInput()
 {
 	return rawUserInput;
 }
+
 UserInput& NDS_getProcessingUserInput()
 {
-	assert(validToProcessInput);
-	return intermediateUserInput;
+	return rawUserInput;
 }
-bool NDS_isProcessingUserInput()
-{
-	return validToProcessInput;
-}
+
 const UserInput& NDS_getFinalUserInput()
 {
 	return finalUserInput;
@@ -2591,37 +2575,31 @@ static void resetUserInput(UserInput& input)
 static void saveUserInput(EMUFILE* os)
 {
 	saveUserInput(os, finalUserInput);
-	saveUserInput(os, intermediateUserInput); // saved in case a savestate is made during input processing (which Lua could do if nothing else)
+	saveUserInput(os, rawUserInput); // saved in case a savestate is made during input processing (which Lua could do if nothing else)
+   bool validToProcessInput = true;
 	writebool(validToProcessInput, os);
 	for(int i = 0; i < 14; i++)
-		write32le(TurboTime.array[i], os); // saved to make autofire more tolerable to use with re-recording
+		write32le(0, os); // saved to make autofire more tolerable to use with re-recording
 }
 static bool loadUserInput(EMUFILE* is, int version)
 {
 	bool rv = true;
+   bool validToProcessInput = true;
 	rv &= loadUserInput(is, finalUserInput, version);
-	rv &= loadUserInput(is, intermediateUserInput, version);
+	rv &= loadUserInput(is, rawUserInput, version);
 	readbool(&validToProcessInput, is);
+   u32 j = 0;
 	for(int i = 0; i < 14; i++)
-		read32le((u32*)&TurboTime.array[i], is);
+		read32le((u32*)&j, is);
 	return rv;
 }
 static void resetUserInput()
 {
 	resetUserInput(finalUserInput);
-	resetUserInput(intermediateUserInput);
-}
-
-static inline void gotInputRequest()
-{
-	// nobody should set the raw input while we're processing the input.
-	// it might not screw anything up but it would be completely useless.
-	assert(!validToProcessInput);
 }
 
 void NDS_setPad(bool R,bool L,bool D,bool U,bool T,bool S,bool B,bool A,bool Y,bool X,bool W,bool E,bool G, bool F)
 {
-	gotInputRequest();
 	UserButtons& rawButtons = rawUserInput.buttons;
 	rawButtons.R = R;
 	rawButtons.L = L;
@@ -2640,7 +2618,6 @@ void NDS_setPad(bool R,bool L,bool D,bool U,bool T,bool S,bool B,bool A,bool Y,b
 }
 void NDS_setTouchPos(u16 x, u16 y, u16 scale)
 {
-	gotInputRequest();
 	rawUserInput.touch.touchX = (x/scale)<<4;
 	rawUserInput.touch.touchY = (y/scale)<<4;
 	rawUserInput.touch.isTouch = true;
@@ -2650,14 +2627,12 @@ void NDS_setTouchPos(u16 x, u16 y, u16 scale)
 
 void NDS_releaseTouch(void)
 { 
-	gotInputRequest();
 	rawUserInput.touch.touchX = 0;
 	rawUserInput.touch.touchY = 0;
 	rawUserInput.touch.isTouch = false;
 }
 void NDS_setMic(bool pressed)
 {
-	gotInputRequest();
 	rawUserInput.mic.micButtonPressed = (pressed ? TRUE : FALSE);
 }
 
@@ -2667,20 +2642,12 @@ static void NDS_applyFinalInput();
 
 void NDS_beginProcessingInput()
 {
-	// start off from the raw input
-	intermediateUserInput = rawUserInput;
-
-	// processing is valid now
-	validToProcessInput = true;
 }
 
 void NDS_endProcessingInput()
 {
 	// transfer the processed input
-	finalUserInput = intermediateUserInput;
-
-	// processing is invalid now
-	validToProcessInput = false;
+	finalUserInput = rawUserInput;
 
 	// use the final input for a few things right away
 	NDS_applyFinalInput();
@@ -2818,23 +2785,9 @@ void NDS_suspendProcessingInput(bool suspend)
 {
 	static int suspendCount = 0;
 	if(suspend)
-	{
-		// enter non-processing block
-		assert(validToProcessInput);
-		validToProcessInput = false;
 		suspendCount++;
-	}
 	else if(suspendCount)
-	{
-		// exit non-processing block
-		validToProcessInput = true;
 		suspendCount--;
-	}
-	else
-	{
-		// unwound past first time -> not processing
-		validToProcessInput = false;
-	}
 }
 
 void NDS_swapScreen()
