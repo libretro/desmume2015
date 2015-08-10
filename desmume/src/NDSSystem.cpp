@@ -73,7 +73,6 @@ PathInfo path;
 TCommonSettings CommonSettings;
 static BaseDriver _stub_driver;
 BaseDriver* driver = &_stub_driver;
-std::string InputDisplayString;
 
 static BOOL LidClosed = FALSE;
 static u8	countLid = 0;
@@ -2491,28 +2490,6 @@ void NDS_Reset()
 	initSchedule();
 }
 
-static std::string MakeInputDisplayString(u16 pad, const std::string* Buttons, int count) {
-    std::string s;
-    for (int x = 0; x < count; x++) {
-        if (pad & (1 << x))
-            s.append(Buttons[x].size(), ' '); 
-        else
-            s += Buttons[x];
-    }
-    return s;
-}
-
-static std::string MakeInputDisplayString(u16 pad, u16 padExt) {
-    const std::string Buttons[] = {"A", "B", "Sl", "St", "R", "L", "U", "D", "Rs", "Ls"};
-    const std::string Ext[] = {"X", "Y"};
-
-    std::string s = MakeInputDisplayString(pad, Ext, ARRAY_SIZE(Ext));
-    s += MakeInputDisplayString(padExt, Buttons, ARRAY_SIZE(Buttons));
-
-    return s;
-}
-
-
 //convert a 12.4 screen coordinate to an ADC value.
 //the desmume host system will track the screen coordinate, but the hardware should be receiving the raw ADC values.
 //so we'll need to use this to simulate the ADC values corresponding to the desired screen coords, based on the current TSC calibrations
@@ -2758,8 +2735,6 @@ static void NDS_applyFinalInput()
 	padExt |= (((u16 *)MMU.ARM7_REG)[0x136>>1] & 0x0070);
 	
 	((u16 *)MMU.ARM7_REG)[0x136>>1] = (u16)padExt;
-
-	InputDisplayString=MakeInputDisplayString(padExt, pad);
 
 	//put into the format we want for the movie system
 	//fRLDUTSBAYXWEg

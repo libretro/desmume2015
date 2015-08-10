@@ -602,26 +602,12 @@ extern struct TCommonSettings {
 		};
 	} showGpu;
 
-	struct _Hud {
-		_Hud() 
-			: ShowInputDisplay(false)
-			, ShowGraphicalInputDisplay(false)
-			, FpsDisplay(false)
-			, FrameCounterDisplay(false)
-			, ShowLagFrameCounter(false)
-			, ShowMicrophone(false)
-			, ShowRTC(false)
-		{}
-		bool ShowInputDisplay, ShowGraphicalInputDisplay, FpsDisplay, FrameCounterDisplay, ShowLagFrameCounter, ShowMicrophone, ShowRTC;
-	} hud;
-
 	std::string run_advanscene_import;
 
 } CommonSettings;
 
 void NDS_RunAdvansceneAutoImport();
 
-extern std::string InputDisplayString;
 extern int LagFrameFlag;
 extern int lastLag, TotalLagFrames;
 
