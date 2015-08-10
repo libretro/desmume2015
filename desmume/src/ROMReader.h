@@ -15,15 +15,20 @@
 	You should have received a copy of the GNU General Public License
 	along with the this software.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef _NDS_ROMREADER_H
+#define _NDS_ROMREADER_H
 
+#include <stdint.h>
 #include <string.h>
-
-#include "types.h"
 
 #define ROMREADER_DEFAULT -1
 #define ROMREADER_STD	0
 #define ROMREADER_GZIP	1
 #define ROMREADER_ZIP	2
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct
 {
@@ -31,11 +36,17 @@ typedef struct
 	const char * Name;
 	void * (*Init)(const char * filename);
 	void (*DeInit)(void * file);
-	u32 (*Size)(void * file);
+	uint32_t (*Size)(void * file);
 	int (*Seek)(void * file, int offset, int whence);
-	int (*Read)(void * file, void * buffer, u32 size);
+	int (*Read)(void * file, void * buffer, uint32_t size);
 } ROMReader_struct;
 
 extern ROMReader_struct STDROMReader;
 
 ROMReader_struct * ROMReaderInit(char ** filename);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

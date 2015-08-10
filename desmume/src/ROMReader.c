@@ -34,10 +34,10 @@ ROMReader_struct * ROMReaderInit(char ** filename)
 }
 
 void * STDROMReaderInit(const char * filename);
-void STDROMReaderDeInit(void *);
-u32 STDROMReaderSize(void *);
-int STDROMReaderSeek(void *, int, int);
-int STDROMReaderRead(void *, void *, u32);
+void STDROMReaderDeInit(void *a);
+uint32_t STDROMReaderSize(void *a);
+int STDROMReaderSeek(void *a, int b, int c);
+int STDROMReaderRead(void *a, void *b, uint32_t c);
 
 ROMReader_struct STDROMReader =
 {
@@ -72,9 +72,9 @@ void STDROMReaderDeInit(void * file)
 	fclose((FILE*)file);
 }
 
-u32 STDROMReaderSize(void * file)
+uint32_t STDROMReaderSize(void * file)
 {
-	u32 size;
+	uint32_t size;
 
 	if (!file) return 0 ;
 
@@ -91,7 +91,7 @@ int STDROMReaderSeek(void * file, int offset, int whence)
 	return fseek((FILE*)file, offset, whence);
 }
 
-int STDROMReaderRead(void * file, void * buffer, u32 size)
+int STDROMReaderRead(void * file, void * buffer, uint32_t size)
 {
 	if (!file) return 0 ;
 	return fread(buffer, 1, size, (FILE*)file);
