@@ -110,8 +110,7 @@ static const double samples_per_hline = (DESMUME_SAMPLE_RATE / 59.8261f) / 263.0
 
 static double samples = 0;
 
-template<typename T>
-static FORCEINLINE T MinMax(T val, T min, T max)
+static FORCEINLINE int MinMax(int val, int min, int max)
 {
 	if (val < min)
 		return min;
@@ -1152,18 +1151,6 @@ template<int FORMAT>
 		____SPU_ChanUpdate<FORMAT,1>(SPU,chan);
 }
 
-FORCEINLINE static void __SPU_ChanUpdate(const bool actuallyMix, SPU_struct* const SPU, channel_struct* const chan)
-{
-	switch(chan->format)
-	{
-		case 0: ___SPU_ChanUpdate<0>(actuallyMix, SPU, chan); break;
-		case 1: ___SPU_ChanUpdate<1>(actuallyMix, SPU, chan); break;
-		case 2: ___SPU_ChanUpdate<2>(actuallyMix, SPU, chan); break;
-		case 3: ___SPU_ChanUpdate<3>(actuallyMix, SPU, chan); break;
-		default: assert(false);
-	}
-}
-
 //ENTERNEW
 static void SPU_MixAudio_Advanced(SPU_struct *SPU, int length)
 {
@@ -1221,7 +1208,21 @@ static void SPU_MixAudio_Advanced(SPU_struct *SPU, int length)
 				SPU->sndbuf[0] = SPU->sndbuf[1] = 0;
 
 				//get channel's next output sample.
-            __SPU_ChanUpdate(domix, SPU, chan);
+            switch(chan->format)
+            {
+               case 0:
+                  ___SPU_ChanUpdate<0>(domix, SPU, chan);
+                  break;
+               case 1:
+                  ___SPU_ChanUpdate<1>(domix, SPU, chan);
+                  break;
+               case 2:
+                  ___SPU_ChanUpdate<2>(domix, SPU, chan);
+                  break;
+               case 3:
+                  ___SPU_ChanUpdate<3>(domix, SPU, chan);
+                  break;
+            }
 				chanout[i] = SPU->lastdata >> volume_shift[chan->volumeDiv];
 
 				//save the panned results
@@ -1366,15 +1367,18 @@ static void SPU_MixAudio_Advanced(SPU_struct *SPU, int length)
 //ENTER
 static void SPU_MixAudio(SPU_struct *SPU, int length)
 {
+   u8 vol;
+   bool advanced;
+
    memset(SPU->sndbuf, 0, length*4*2);
-   memset(SPU->outbuf, 0, length*2*2);
 
 	//we used to use master enable here, and do nothing if audio is disabled.
 	//now, master enable is emulated better..
 	//but for a speed optimization we will still do it
 	if(!SPU->regs.masteren) return;
 
-	bool advanced = CommonSettings.spu_advanced ;
+	vol        = SPU->regs.mastervol;
+	advanced   = CommonSettings.spu_advanced ;
 
 	//branch here so that slow computers don't have to take the advanced (slower) codepath.
 	//it remains to be seen exactly how much slower it is
@@ -1395,28 +1399,32 @@ static void SPU_MixAudio(SPU_struct *SPU, int length)
 			SPU->buflength = length;
 
 			// Mix audio
-         __SPU_ChanUpdate(true, SPU, chan);
+         switch(chan->format)
+         {
+            case 0:
+               ___SPU_ChanUpdate<0>(true, SPU, chan);
+               break;
+            case 1:
+               ___SPU_ChanUpdate<1>(true, SPU, chan);
+               break;
+            case 2:
+               ___SPU_ChanUpdate<2>(true, SPU, chan);
+               break;
+            case 3:
+               ___SPU_ChanUpdate<3>(true, SPU, chan);
+               break;
+         }
 		}
 	}
 
-	//we used to bail out if speakers were disabled.
-	//this is technically wrong. sound may still be captured, or something.
-	//in all likelihood, any game doing this probably master disabled the SPU also
-	//so, optimization of this case is probably not necessary.
-	//later, we'll just silence the output
-	bool speakers = T1ReadWord(MMU.ARM7_REG, 0x304) & 0x01;
-	u8 vol        = SPU->regs.mastervol;
 
 	// convert from 32-bit->16-bit
-	if(speakers)
+   for (int i = 0; i < length*2; i++)
    {
-		for (int i = 0; i < length*2; i++)
-		{
-			// Apply Master Volume
-			SPU->sndbuf[i] = spumuldiv7(SPU->sndbuf[i], vol);
-			s16 outsample = MinMax(SPU->sndbuf[i],-0x8000,0x7FFF);
-			SPU->outbuf[i] = outsample;
-		}
+      // Apply Master Volume
+      SPU->sndbuf[i] = SPU->sndbuf[i] * vol / 127;
+      s16 outsample = MinMax(SPU->sndbuf[i],-0x8000,0x7FFF);
+      SPU->outbuf[i] = outsample;
    }
 }
 

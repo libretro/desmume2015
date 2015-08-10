@@ -40,6 +40,7 @@ class EMUFILE;
 //who made these static? theyre used in multiple places.
 FORCEINLINE u32 sputrunc(float f) { return u32floor(f); }
 FORCEINLINE u32 sputrunc(double d) { return u32floor(d); }
+
 FORCEINLINE s32 spumuldiv7(s32 val, u8 multiplier) {
 	assert(multiplier <= 127);
 	return (multiplier == 127) ? val : ((val * multiplier) >> 7);
