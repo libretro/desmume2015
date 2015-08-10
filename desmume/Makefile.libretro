@@ -222,8 +222,8 @@ ifeq ($(X432R_CUSTOMRENDERER_ENABLED),1)
 endif
 
 OBJECTS		= $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
-CXXFLAGS	+= -D__LIBRETRO__ $(fpic) $(INCDIR)
-CFLAGS		+= -D__LIBRETRO__ $(fpic) $(INCDIR)
+CXXFLAGS	+= -std=gnu++03 -D__LIBRETRO__ $(fpic) $(INCDIR)
+CFLAGS		+= -std=gnu99 -D__LIBRETRO__ $(fpic) $(INCDIR)
 
 ifeq ($(platform), theos_ios)
 COMMON_FLAGS := -DIOS -DARM $(COMMON_DEFINES) $(INCFLAGS) -I$(THEOS_INCLUDE_PATH) -Wno-error
