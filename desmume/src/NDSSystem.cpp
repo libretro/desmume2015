@@ -86,10 +86,6 @@ using std::max;
 
 bool singleStep;
 bool nds_debug_continuing[2];
-int lagframecounter;
-int LagFrameFlag;
-int lastLag;
-int TotalLagFrames;
 
 TSCalInfo TSCal;
 
@@ -1822,8 +1818,6 @@ void NDS_debug_step()
 template<bool FORCE>
 void NDS_exec(s32 nb)
 {
-	LagFrameFlag=1;
-
 	sequencer.nds_vblankEnded = false;
 
 	nds.cpuloopIterationCount = 0;
@@ -1937,20 +1931,6 @@ void NDS_exec(s32 nb)
 		}
 	}
 
-	//DEBUG_statistics.printSequencerExecutionCounters();
-	//DEBUG_statistics.print();
-
-	//end of frame emulation housekeeping
-	if(LagFrameFlag)
-	{
-		lagframecounter++;
-		TotalLagFrames++;
-	}
-	else 
-	{
-		lastLag = lagframecounter;
-		lagframecounter = 0;
-	}
 	currFrameCounter++;
 	DEBUG_Notify.NextFrame();
 	if (cheats)
@@ -2400,10 +2380,6 @@ void NDS_Reset()
 	PrepareLogfiles();
 
    currFrameCounter = 0;
-   lagframecounter = 0;
-   LagFrameFlag = 0;
-   lastLag = 0;
-   TotalLagFrames = 0;
 
 	resetUserInput();
 

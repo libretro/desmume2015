@@ -4077,7 +4077,6 @@ u8 FASTCALL _MMU_ARM9_read08(u32 adr)
 			case REG_DISPA_DISP3DCNT+3: return readreg_DISP3DCNT(8,adr);
 
 			case REG_KEYINPUT:
-				LagFrameFlag=0;
 				break;
 		}
 	}
@@ -4180,7 +4179,6 @@ u16 FASTCALL _MMU_ARM9_read16(u32 adr)
 			case REG_DISPA_DISP3DCNT+2: return readreg_DISP3DCNT(16,adr);
 
 			case REG_KEYINPUT:
-				LagFrameFlag=0;
 				break;
 
 			//fog table: write only
@@ -4332,7 +4330,6 @@ u32 FASTCALL _MMU_ARM9_read32(u32 adr)
 			case REG_DISPA_DISP3DCNT: return readreg_DISP3DCNT(32,adr);
 
 			case REG_KEYINPUT:
-				LagFrameFlag=0;
 				break;
 		}
 		return T1ReadLong_guaranteedAligned(MMU.MMU_MEM[ARMCPU_ARM9][adr>>20], adr & MMU.MMU_MASK[ARMCPU_ARM9][adr>>20]);
@@ -4875,7 +4872,6 @@ u16 FASTCALL _MMU_ARM7_read16(u32 adr)
 			case REG_KEYINPUT:
 				//here is an example of what not to do:
 				//since the arm7 polls this (and EXTKEYIN) every frame, we shouldnt count this as an input check
-				//LagFrameFlag=0;
 				break;
 
 			case REG_EXTKEYIN:

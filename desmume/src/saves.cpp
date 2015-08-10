@@ -284,7 +284,7 @@ SFORMAT SF_MMU[]={
 
 SFORMAT SF_MOVIE[]={
 	{ "FRAC", 4, 1, &currFrameCounter},
-	{ "LAGC", 4, 1, &TotalLagFrames},
+	{ "LAGC", 4, 1, &currFrameCounter},
 	{ 0 }
 };
 
