@@ -296,9 +296,50 @@ static void check_variables(bool first_boot)
 
       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       {
-         GPU_LR_FRAMEBUFFER_NATIVE_WIDTH = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * atoi(var.value);
-         GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * atoi(var.value);
-         scale = atoi(var.value);
+         char *pch;
+         char str[100];
+         snprintf(str, sizeof(str), "%s", var.value);
+
+         pch = strtok(str, "x");
+         if (pch)
+            GPU_LR_FRAMEBUFFER_NATIVE_WIDTH = strtoul(pch, NULL, 0);
+         pch = strtok(NULL, "x");
+         if (pch)
+            GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT = strtoul(pch, NULL, 0);
+
+         switch (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH)
+         {
+            case 256:
+               scale = 1;
+               break;
+            case 512:
+               scale = 2;
+               break;
+            case 768:
+               scale = 3;
+               break;
+            case 1024:
+               scale = 4;
+               break;
+            case 1280:
+               scale = 5;
+               break;
+            case 1536:
+               scale = 6;
+               break;
+            case 1792:
+               scale = 7;
+               break;
+            case 2048:
+               scale = 8;
+               break;
+            case 2304:
+               scale = 9;
+               break;
+            case 2560:
+               scale = 10;
+               break;
+         }
       }
    }
  
@@ -622,7 +663,7 @@ void retro_set_environment(retro_environment_t cb)
 
    static const retro_variable values[] =
    {
-      { "desmume_internal_resolution", "Internal resolution (restart); 1|2|3|4|5|6|7|8|9|10" },
+      { "desmume_internal_resolution", "Internal resolution (restart); 256x192|512x384|768x576|1024x768|1280x960|1536x1152|1792x1344|2048x1536|2304x1728|2560x1920" },
       { "desmume_num_cores", "CPU cores; 1|2|3|4" },
 #ifdef HAVE_JIT
       { "desmume_cpu_mode", "CPU mode; jit|interpreter" },
