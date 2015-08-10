@@ -885,7 +885,9 @@ struct TSequenceItem_GXFIFO : public TSequenceItem
 
 	FORCEINLINE void exec()
 	{
+#ifndef NDEBUG
 		IF_DEVELOPER(DEBUG_statistics.sequencerExecutionCounters[4]++);
+#endif
 		while(isTriggered()) {
 			enabled = false;
 			gfx3d_execute3D();
@@ -918,7 +920,9 @@ template<int procnum, int num> struct TSequenceItem_Timer : public TSequenceItem
 
 	FORCEINLINE void exec()
 	{
+#ifndef NDEBUG
 		IF_DEVELOPER(DEBUG_statistics.sequencerExecutionCounters[13+procnum*4+num]++);
+#endif
 		u8* regs = procnum==0?MMU.ARM9_REG:MMU.ARM7_REG;
 		bool first = true;
 		//we'll need to check chained timers..
@@ -986,7 +990,9 @@ template<int procnum, int chan> struct TSequenceItem_DMA : public TSequenceItem
 
 	FORCEINLINE void exec()
 	{
+#ifndef NDEBUG
 		IF_DEVELOPER(DEBUG_statistics.sequencerExecutionCounters[5+procnum*4+chan]++);
+#endif
 
 		//if (nds.freezeBus) return;
 
@@ -1042,7 +1048,9 @@ struct TSequenceItem_divider : public TSequenceItem
 
 	void exec()
 	{
+#ifndef NDEBUG
 		IF_DEVELOPER(DEBUG_statistics.sequencerExecutionCounters[2]++);
+#endif
 		MMU_new.div.busy = 0;
 #ifdef HOST_64 
 		T1WriteQuad(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2A0, MMU.divResult);
@@ -1074,7 +1082,9 @@ struct TSequenceItem_sqrtunit : public TSequenceItem
 
 	FORCEINLINE void exec()
 	{
+#ifndef NDEBUG
 		IF_DEVELOPER(DEBUG_statistics.sequencerExecutionCounters[3]++);
+#endif
 		MMU_new.sqrt.busy = 0;
 		T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2B4, MMU.sqrtResult);
 		MMU.sqrtRunning = FALSE;
@@ -1225,15 +1235,6 @@ void Sequencer::init()
 	wifi.enabled = false;
 	#endif
 }
-
-//this isnt helping much right now. work on it later
-//#include "utils/task.h"
-//Task taskSubGpu(true);
-//void* renderSubScreen(void*)
-//{
-//	GPU_RenderLine(&SubScreen, nds.VCount, SkipCur2DFrame);
-//	return NULL;
-//}
 
 static void execHardware_hblank()
 {
@@ -1407,36 +1408,36 @@ static void execHardware_hstart()
 		gfx3d_VBlankEndSignal(frameSkipper.ShouldSkip3D());
 	}
 
-	if(nds.VCount==263)
-	{
-		//when the vcount hits 263 it rolls over to 0
-		nds.VCount=0;
-	}
-	if(nds.VCount==262)
-	{
-		//when the vcount hits 262, vblank ends (oam pre-renders by one scanline)
-		execHardware_hstart_vblankEnd();
-	}
-	else if(nds.VCount==192)
-	{
-		//turn on vblank status bit
-		T1WriteWord(MMU.ARM9_REG, 4, T1ReadWord(MMU.ARM9_REG, 4) | 1);
-		T1WriteWord(MMU.ARM7_REG, 4, T1ReadWord(MMU.ARM7_REG, 4) | 1);
+   switch (nds.VCount)
+   {
+      case 263:
+         //when the vcount hits 263 it rolls over to 0
+         nds.VCount=0;
+         break;
+      case 262:
+         //when the vcount hits 262, vblank ends (oam pre-renders by one scanline)
+         execHardware_hstart_vblankEnd();
+         break;
+      case 192:
+         //turn on vblank status bit
+         T1WriteWord(MMU.ARM9_REG, 4, T1ReadWord(MMU.ARM9_REG, 4) | 1);
+         T1WriteWord(MMU.ARM7_REG, 4, T1ReadWord(MMU.ARM7_REG, 4) | 1);
 
-		//check whether we'll need to fire vblank irqs
-		if(T1ReadWord(MMU.ARM9_REG, 4) & 0x8) MMU.reg_IF_pending[ARMCPU_ARM9] |= (1<<IRQ_BIT_LCD_VBLANK);
-		if(T1ReadWord(MMU.ARM7_REG, 4) & 0x8) MMU.reg_IF_pending[ARMCPU_ARM7] |= (1<<IRQ_BIT_LCD_VBLANK);
+         //check whether we'll need to fire vblank irqs
+         if(T1ReadWord(MMU.ARM9_REG, 4) & 0x8) MMU.reg_IF_pending[ARMCPU_ARM9] |= (1<<IRQ_BIT_LCD_VBLANK);
+         if(T1ReadWord(MMU.ARM7_REG, 4) & 0x8) MMU.reg_IF_pending[ARMCPU_ARM7] |= (1<<IRQ_BIT_LCD_VBLANK);
 
-		//this is important for the character select in Dragon Ball Kai - Ultimate Butouden
-		//it seems if you allow the 3d to begin before the vblank, then it will get interrupted and not complete.
-		//the game needs to pick up the gxstat reg busy as clear after it finishes processing vblank.
-		//therefore, this can't happen until sometime after vblank.
-		//devil survivor 2 will have screens get stuck if this is on any other scanline.
-		//obviously 192 is the right choice.
-		gfx3d_VBlankSignal();
-		//this isnt important for any known game, but it would be nice to prove it.
-		NDS_RescheduleGXFIFO(392*2);
-	}
+         //this is important for the character select in Dragon Ball Kai - Ultimate Butouden
+         //it seems if you allow the 3d to begin before the vblank, then it will get interrupted and not complete.
+         //the game needs to pick up the gxstat reg busy as clear after it finishes processing vblank.
+         //therefore, this can't happen until sometime after vblank.
+         //devil survivor 2 will have screens get stuck if this is on any other scanline.
+         //obviously 192 is the right choice.
+         gfx3d_VBlankSignal();
+         //this isnt important for any known game, but it would be nice to prove it.
+         NDS_RescheduleGXFIFO(392*2);
+         break;
+   }
 
 	//write the new vcount
 	T1WriteWord(MMU.ARM9_REG, 6, nds.VCount);
@@ -1467,7 +1468,9 @@ static void execHardware_hstart()
 
 void NDS_Reschedule()
 {
+#ifndef NDEBUG
 	IF_DEVELOPER(if(!sequencer.reschedule) DEBUG_statistics.sequencerExecutionCounters[0]++;);
+#endif
 	sequencer.reschedule = true;
 }
 
@@ -1530,8 +1533,9 @@ void Sequencer::execHardware()
 {
 	if(dispcnt.isTriggered())
 	{
-
+#ifndef NDEBUG
 		IF_DEVELOPER(DEBUG_statistics.sequencerExecutionCounters[1]++);
+#endif
 
 		switch(dispcnt.param)
 		{
@@ -1822,7 +1826,9 @@ void NDS_exec(s32 nb)
 
 	nds.cpuloopIterationCount = 0;
 
+#ifndef NDEBUG
 	IF_DEVELOPER(for(int i=0;i<32;i++) DEBUG_statistics.sequencerExecutionCounters[i] = 0);
+#endif
 
 	if(nds.sleeping)
 	{
@@ -1932,7 +1938,9 @@ void NDS_exec(s32 nb)
 	}
 
 	currFrameCounter++;
+#ifndef NDEBUG
 	DEBUG_Notify.NextFrame();
+#endif
 	if (cheats)
 		cheats->process();
 }
@@ -2210,7 +2218,9 @@ bool NDS_FakeBoot()
 {
 	NDS_header * header = NDS_getROMHeader();
 
-	//DEBUG_reset();
+#ifndef NDEBUG
+	DEBUG_reset();
+#endif
 
 	if (!header) return false;
 
