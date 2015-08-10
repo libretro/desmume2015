@@ -87,11 +87,11 @@ SOURCES_CXX += \
 	$(CORE_DIR)/version.cpp \
 	$(CORE_DIR)/mic.cpp \
 	$(CORE_DIR)/driver.cpp \
-	$(CORE_DIR)/fs-linux.cpp \
 	$(CORE_DIR)/libretro/libretro.cpp \
 	$(CORE_DIR)/libretro/scrc32.cpp
 
-SOURCES_C += $(CORE_DIR)/utils/ConvertUTF.c
+SOURCES_C += $(CORE_DIR)/utils/ConvertUTF.c \
+				 $(CORE_DIR)/fs-linux.c
 
 ifeq ($(DESMUME_JIT_ARM),1)
 SOURCES_CXX += \
