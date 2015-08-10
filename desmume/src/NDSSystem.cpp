@@ -1719,13 +1719,13 @@ static const int kIrqWait = 4000;
 template<bool doarm9, bool doarm7>
 static FORCEINLINE s32 minarmtime(s32 arm9, s32 arm7)
 {
-	if(doarm9)
-		if(doarm7)
-			return min(arm9,arm7);
-		else
-			return arm9;
-	else
-		return arm7;
+   if(doarm9)
+   {
+      if(doarm7)
+         return min(arm9,arm7);
+      return arm9;
+   }
+   return arm7;
 }
 
 #ifdef HAVE_JIT
@@ -1836,9 +1836,7 @@ void NDS_exec(s32 nb)
 		//I think the arm7 program analyzes the system and may decide not to wake up
 		//if it is dissatisfied with the conditions
 		if((MMU.reg_IE[1] & MMU.gen_IF<1>()))
-		{
 			nds.sleeping = FALSE;
-		}
 	}
 	else
 	{
