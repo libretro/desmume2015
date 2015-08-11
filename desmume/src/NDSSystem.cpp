@@ -1253,6 +1253,7 @@ static void execHardware_hblank()
 		triggerDma(EDMAMode_HBlank);
 	}
 
+#if 0
 	if(nds.VCount==262)
 	{
 		//we need to trigger one last hblank dma since 
@@ -1267,6 +1268,7 @@ static void execHardware_hblank()
 		//BUT! this was removed in order to make glitches in megaman zero collection (mmz 4 1st level) work.
 		//and, it seems that it is no longer necessary in nsmb. perhaps something else fixed it
 	}
+#endif
 
 
 	//turn on hblank status bit
@@ -1551,7 +1553,7 @@ void Sequencer::execHardware()
 			break;
 			
 		case ESI_DISPCNT_HDraw:
-			execHardware_hdraw();
+			//execHardware_hdraw();
 			//duration of non-blanking period is ~1606 clocks (gbatek agrees) [but says its different on arm7]
 			//im gonna call this 267 dots = 267*6=1602
 			//so, this event lasts 267 dots minus the 8 dot preroll
@@ -1635,9 +1637,9 @@ bool nds_loadstate(EMUFILE* is, int size)
 	return temp;
 }
 
+#ifdef LOG_ARM9
 FORCEINLINE void arm9log()
 {
-#ifdef LOG_ARM9
 	if(dolog)
 	{
 		char dasmbuf[4096];
@@ -1669,12 +1671,12 @@ FORCEINLINE void arm9log()
 			NDS_ARM9.R[8],  NDS_ARM9.R[9],  NDS_ARM9.R[10],  NDS_ARM9.R[11],  NDS_ARM9.R[12],  NDS_ARM9.R[13],  NDS_ARM9.R[14],  NDS_ARM9.R[15]);  
 #endif
 	}
-#endif
 }
+#endif
 
+#ifdef LOG_ARM7
 FORCEINLINE void arm7log()
 {
-#ifdef LOG_ARM7
 	if(dolog)
 	{
 		char dasmbuf[4096];
@@ -1705,8 +1707,8 @@ FORCEINLINE void arm7log()
 			NDS_ARM7.R[8],  NDS_ARM7.R[9],  NDS_ARM7.R[10],  NDS_ARM7.R[11],  NDS_ARM7.R[12],  NDS_ARM7.R[13],  NDS_ARM7.R[14],  NDS_ARM7.R[15]);
 #endif
 	}
-#endif
 }
+#endif
 
 //these have not been tuned very well yet.
 static const int kMaxWork = 4000;
@@ -1740,8 +1742,12 @@ static /*donotinline*/ std::pair<s32,s32> armInnerLoop(
 		{
 			if(!NDS_ARM9.waitIRQ&&!nds.freezeBus)
 			{
+#ifdef LOG_ARM9
 				arm9log();
+#endif
+#ifdef DEBUG
 				debug();
+#endif
 #ifdef HAVE_JIT
 				arm9 += armcpu_exec<ARMCPU_ARM9,jit>();
 #else
@@ -1763,7 +1769,9 @@ static /*donotinline*/ std::pair<s32,s32> armInnerLoop(
 		{
 			if(!NDS_ARM7.waitIRQ&&!nds.freezeBus)
 			{
+#ifdef LOG_ARM7
 				arm7log();
+#endif
 #ifdef HAVE_JIT
 				arm7 += (armcpu_exec<ARMCPU_ARM7,jit>()<<1);
 #else
