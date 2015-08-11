@@ -26,7 +26,6 @@ retro_environment_t environ_cb = NULL;
 volatile bool execute = false;
 
 static int delay_timer = 0;
-static int current_screen = 1;
 static bool quick_switch_enable = false;
 static bool mouse_enable = false;
 static int pointer_device = 0;
@@ -46,16 +45,7 @@ unsigned scale = 1;
 
 #define NDS_MAX_SCREEN_GAP               100
 
-#define LAYOUT_TOP_BOTTOM                 0
-#define LAYOUT_BOTTOM_TOP                 1
-#define LAYOUT_LEFT_RIGHT                 2
-#define LAYOUT_RIGHT_LEFT                 3
-#define LAYOUT_TOP_ONLY                   4
-#define LAYOUT_BOTTOM_ONLY                5
-#define LAYOUT_QUICK_SWITCH               6
-
-static int current_layout = LAYOUT_TOP_BOTTOM;
-
+int current_layout = LAYOUT_TOP_BOTTOM;
 
 struct LayoutData
 {
@@ -235,19 +225,6 @@ static void get_layout_params(unsigned id, uint16_t *src, LayoutData *layout)
 
          layout->draw_screen2 = true;
          break;
-      case LAYOUT_QUICK_SWITCH:
-         if (src)
-         {
-            layout->dst    = src;
-            layout->dst2   = (uint16_t*)(src + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT);
-         }
-         layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
-         layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
-         layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
-         layout->touch_x= 0;
-         layout->touch_y= GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
-
-         break;
    }
 }
 
@@ -265,23 +242,6 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->timing.sample_rate = 44100.0;
 }
 
-
-static void QuickSwap(void)
-{
-    if(quick_switch_enable)
-    {
-       if(current_screen == 1)
-       {
-         current_layout = LAYOUT_BOTTOM_ONLY;
-           current_screen = 2;
-       }
-       else
-       {
-         current_layout = LAYOUT_TOP_ONLY;
-           current_screen = 1;
-       }
-    }
-}
 
 static void MicrophoneToggle(void)
 {
@@ -387,38 +347,38 @@ static void check_variables(bool first_boot)
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-      static int old_layout_id      = -1;
-      unsigned new_layout_id        = 0;
+       static int old_layout_id      = -1;
+       unsigned new_layout_id        = 0;
 
-      quick_switch_enable = false;
+       quick_switch_enable = false;
 
-        if (!strcmp(var.value, "top/bottom"))
-         new_layout_id = LAYOUT_TOP_BOTTOM;
-      else if (!strcmp(var.value, "bottom/top"))
-         new_layout_id = LAYOUT_BOTTOM_TOP;
-      else if (!strcmp(var.value, "left/right"))
-         new_layout_id = LAYOUT_LEFT_RIGHT;
-      else if (!strcmp(var.value, "right/left"))
-         new_layout_id = LAYOUT_RIGHT_LEFT;
-      else if (!strcmp(var.value, "top only"))
-         new_layout_id = LAYOUT_TOP_ONLY;
-      else if (!strcmp(var.value, "bottom only"))
-         new_layout_id = LAYOUT_BOTTOM_ONLY;
-      else if (!strcmp(var.value, "quick switch"))
-      {
-         new_layout_id = LAYOUT_QUICK_SWITCH;
-         quick_switch_enable = true;
-      }
 
-      if (old_layout_id != new_layout_id)
-      {
-         old_layout_id = new_layout_id;
-         current_layout = new_layout_id;
-      }
+       if (!strcmp(var.value, "top/bottom"))
+          new_layout_id = LAYOUT_TOP_BOTTOM;
+       else if (!strcmp(var.value, "bottom/top"))
+          new_layout_id = LAYOUT_BOTTOM_TOP;
+       else if (!strcmp(var.value, "left/right"))
+          new_layout_id = LAYOUT_LEFT_RIGHT;
+       else if (!strcmp(var.value, "right/left"))
+          new_layout_id = LAYOUT_RIGHT_LEFT;
+       else if (!strcmp(var.value, "top only"))
+          new_layout_id = LAYOUT_TOP_ONLY;
+       else if (!strcmp(var.value, "bottom only"))
+          new_layout_id = LAYOUT_BOTTOM_ONLY;
+       else if (!strcmp(var.value, "quick switch"))
+       {
+          new_layout_id = LAYOUT_TOP_ONLY;
+          quick_switch_enable = true;
+       }
+
+       if (old_layout_id != new_layout_id)
+       {
+          old_layout_id = new_layout_id;
+          current_layout = new_layout_id;
+       }
     }
-   else
-      quick_switch_enable = false;
-
+    else
+       quick_switch_enable = false;
 
     var.key = "desmume_pointer_mouse";
 
@@ -1003,7 +963,15 @@ void retro_run (void)
 
    if(input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) && quick_switch_enable && delay_timer == 0)
    {
-      QuickSwap();
+      switch (current_layout)
+      {
+         case LAYOUT_TOP_ONLY:
+            current_layout = LAYOUT_BOTTOM_ONLY;
+            break;
+         case LAYOUT_BOTTOM_ONLY:
+            current_layout = LAYOUT_TOP_ONLY;
+            break;
+      }
       delay_timer++;
    }
 
@@ -1028,19 +996,6 @@ void retro_run (void)
 
    if (!skipped)
    {
-      if (current_layout == LAYOUT_QUICK_SWITCH)
-      {
-         switch (current_screen)
-         {
-            case 1:
-               layout.draw_screen1 = true;
-               break;
-            case 2:
-               layout.draw_screen2 = true;
-               break;
-         }
-      }
-
       if (layout.draw_screen1)
          SwapScreen (layout.dst,  &GPU_screen[0], layout.pitch);
       if (layout.draw_screen2)

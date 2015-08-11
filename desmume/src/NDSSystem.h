@@ -29,6 +29,13 @@ class BaseDriver;
 class CFIRMWARE;
 class EMUFILE;
 
+#define LAYOUT_TOP_BOTTOM                 0
+#define LAYOUT_BOTTOM_TOP                 1
+#define LAYOUT_LEFT_RIGHT                 2
+#define LAYOUT_RIGHT_LEFT                 3
+#define LAYOUT_TOP_ONLY                   4
+#define LAYOUT_BOTTOM_ONLY                5
+
 template<typename Type>
 struct buttonstruct {
 	union {
