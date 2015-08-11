@@ -38,7 +38,9 @@
 //-----------------------------------------------------------------------------
 TEMPLATE static  u32 FASTCALL OP_UND_THUMB(const u32 i)
 {
+#ifdef DEBUG
 	INFO("THUMB%c: Undefined instruction: 0x%08X (%s) PC=0x%08X\n", cpu->proc_ID?'7':'9', cpu->instruction, decodeIntruction(true, cpu->instruction), cpu->instruct_adr);
+#endif
 	TRAPUNDEF(cpu);
 	return 1;
 }
@@ -1071,6 +1073,7 @@ TEMPLATE static  u32 FASTCALL OP_B_COND(const u32 i)
 
 TEMPLATE static  u32 FASTCALL OP_B_UNCOND(const u32 i)
 {
+#ifdef DEBUG
 	//nocash message detection
 	const u16 last = _MMU_read16<PROCNUM,MMU_AT_DEBUG>(cpu->instruct_adr-2);
 	const u16 next = _MMU_read16<PROCNUM,MMU_AT_DEBUG>(cpu->instruct_adr+2);
@@ -1079,6 +1082,7 @@ TEMPLATE static  u32 FASTCALL OP_B_UNCOND(const u32 i)
 	{
 		NocashMessage(cpu,6);
 	}
+#endif
 
 	cpu->R[15] += (SIGNEEXT_IMM11(i)<<1);
 	cpu->next_instruction = cpu->R[15];

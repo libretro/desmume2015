@@ -121,7 +121,9 @@ void mmu_log_debug_ARM9(u32 adr, const char *fmt, ...)
 		_vsnprintf(msg,511,fmt,list);
 	va_end(list);
 
+#ifdef DEBUG
 	INFO("MMU ARM9 0x%08X: %s\n", adr, msg);
+#endif
 }
 
 void mmu_log_debug_ARM7(u32 adr, const char *fmt, ...)
@@ -145,7 +147,9 @@ void mmu_log_debug_ARM7(u32 adr, const char *fmt, ...)
 		_vsnprintf(msg,511,fmt,list);
 	va_end(list);
 
+#ifdef DEBUG
 	INFO("MMU ARM7 0x%08X: %s\n", adr, msg);
+#endif
 
 }
 #else
@@ -537,7 +541,9 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 			case 0: //LCDC
 				vramConfiguration.banks[bank].purpose = VramConfiguration::LCDC;
 				MMU_vram_lcdc(bank);
+#ifdef DEBUG
 				if(ofs != 0) PROGINFO("Bank %i: MST %i OFS %i\n", mst, ofs);
+#endif
 				break;
 			case 1: //ABG
 				vramConfiguration.banks[bank].purpose = VramConfiguration::ABG;
@@ -551,7 +557,10 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 					MMU_vram_arm9(bank,VRAM_PAGE_AOBJ+ofs*8);
 					break;
 				default:
+#ifdef DEBUG
 					PROGINFO("Unsupported ofs setting %d for engine A OBJ vram bank %c\n", ofs, 'A'+bank);
+#endif
+               break;
 				}
 				break;
 			case 3: //texture
@@ -571,7 +580,9 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 			case 0: //LCDC
 				vramConfiguration.banks[bank].purpose = VramConfiguration::LCDC;
 				MMU_vram_lcdc(bank);
+#ifdef DEBUG
 				if(ofs != 0) PROGINFO("Bank %i: MST %i OFS %i\n", mst, ofs);
+#endif
 				break;
 			case 1: //ABG
 				vramConfiguration.banks[bank].purpose = VramConfiguration::ABG;
@@ -588,7 +599,10 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 					vram_arm7_map[ofs] = vram_bank_info[bank].page_addr;
 					break;
 				default:
+#ifdef DEBUG
 					PROGINFO("Unsupported ofs setting %d for arm7 vram bank %c\n", ofs, 'A'+bank);
+#endif
+               break;
 				}
 
 				break;
@@ -604,7 +618,9 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 					vramConfiguration.banks[bank].purpose = VramConfiguration::BOBJ;
 					MMU_vram_arm9(bank,VRAM_PAGE_BOBJ); //BOBJ
 				}
+#ifdef DEBUG
 				if(ofs != 0) PROGINFO("Bank %i: MST %i OFS %i\n", mst, ofs);
+#endif
 				break;
 			default: goto unsupported_mst;
 			}
@@ -612,7 +628,9 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 
 		case VRAM_BANK_E:
 			mst = VRAMBankCnt & 7;
+#ifdef DEBUG
 			if(((VRAMBankCnt>>3)&3) != 0) PROGINFO("Bank %i: MST %i OFS %i\n", mst, ofs);
+#endif
 			switch(mst) {
 			case 0: //LCDC
 				vramConfiguration.banks[bank].purpose = VramConfiguration::LCDC;
@@ -655,7 +673,9 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 			case 0: //LCDC
 				vramConfiguration.banks[bank].purpose = VramConfiguration::LCDC;
 				MMU_vram_lcdc(bank);
+#ifdef DEBUG
 				if(ofs != 0) PROGINFO("Bank %i: MST %i OFS %i\n", mst, ofs);
+#endif
 				break;
 			case 1: //ABG
 				vramConfiguration.banks[bank].purpose = VramConfiguration::ABG;
@@ -681,7 +701,9 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 					break;
 				default:
 					vramConfiguration.banks[bank].purpose = VramConfiguration::INVALID;
+#ifdef DEBUG
 					PROGINFO("Unsupported ofs setting %d for engine A bgextpal vram bank %c\n", ofs, 'A'+bank);
+#endif
 					break;
 				}
 				break;
@@ -689,7 +711,9 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 				vramConfiguration.banks[bank].purpose = VramConfiguration::AOBJEXTPAL;
 				MMU.ObjExtPal[0][0] = MMU_vram_physical(vram_bank_info[bank].page_addr);
 				MMU.ObjExtPal[0][1] = MMU.ObjExtPal[0][1] + ADDRESS_STEP_8KB;
+#ifdef DEBUG
 				if(ofs != 0) PROGINFO("Bank %i: MST %i OFS %i\n", mst, ofs);
+#endif
 				break;
 			default: goto unsupported_mst;
 			}
@@ -698,7 +722,9 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 
 		case VRAM_BANK_H:
 			mst = VRAMBankCnt & 3;
+#ifdef DEBUG
 			if(((VRAMBankCnt>>3)&3) != 0) PROGINFO("Bank %i: MST %i OFS %i\n", mst, ofs);
+#endif
 			switch(mst)
 			{
 			case 0: //LCDC
@@ -723,7 +749,9 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 
 		case VRAM_BANK_I:
 			mst = VRAMBankCnt & 3;
+#ifdef DEBUG
 			if(((VRAMBankCnt>>3)&3) != 0) PROGINFO("Bank %i: MST %i OFS %i\n", mst, ofs);
+#endif
 			switch(mst)
 			{
 			case 0: //LCDC
@@ -758,7 +786,9 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 
 unsupported_mst:
 	vramConfiguration.banks[bank].purpose = VramConfiguration::INVALID;
+#ifdef DEBUG
 	PROGINFO("Unsupported mst setting %d for vram bank %c\n", mst, 'A'+bank);
+#endif
 }
 
 void MMU_VRAM_unmap_all()
@@ -933,11 +963,15 @@ void MMU_Init(void)
 	
 	slot1_Init();
 	slot2_Init();
+
+   bool mic_inited = Mic_Init();
 	
-	if(Mic_Init() == FALSE)
+#ifdef DEBUG
+	if(mic_inited == FALSE)
 		INFO("Microphone init failed.\n");
 	else
 		INFO("Microphone successfully inited.\n");
+#endif
 } 
 
 void MMU_DeInit(void) {

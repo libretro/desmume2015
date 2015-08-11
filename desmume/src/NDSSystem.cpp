@@ -637,6 +637,7 @@ int NDS_LoadROM(const char *filename, const char *physicalName, const char *logi
 		gameInfo.chipID |= (0x00 << 24);
 	}
 
+#ifdef DEBUG
 	INFO("\nROM game code: %c%c%c%c\n", gameInfo.header.gameCode[0], gameInfo.header.gameCode[1], gameInfo.header.gameCode[2], gameInfo.header.gameCode[3]);
 	if (gameInfo.crc)
 		INFO("ROM crc: %08X\n", gameInfo.crc);
@@ -648,6 +649,7 @@ int NDS_LoadROM(const char *filename, const char *physicalName, const char *logi
 		if (gameInfo.isDSiEnhanced()) INFO("ROM DSi Enhanced\n");
 	}
 	INFO("ROM developer: %s\n", ((gameInfo.header.makerCode == 0) && gameInfo.isHomebrew())?"Homebrew":getDeveloperNameByID(gameInfo.header.makerCode).c_str());
+#endif
 
 	buf[0] = gameInfo.header.gameCode[0];
 	buf[1] = gameInfo.header.gameCode[1];
@@ -1991,7 +1993,9 @@ static void PrepareBiosARM7()
 
 	if(NDS_ARM7.BIOS_loaded)
 	{
+#ifdef DEBUG
 		INFO("ARM7 BIOS load: %s.\n", NDS_ARM7.BIOS_loaded?"OK":"FAILED");
+#endif
 	}
 	else
 	{
@@ -2046,7 +2050,9 @@ static void PrepareBiosARM9()
 
 	if(NDS_ARM9.BIOS_loaded) 
 	{
+#ifdef DEBUG
 		INFO("ARM9 BIOS load: %s.\n", NDS_ARM9.BIOS_loaded?"OK":"FAILED");
+#endif
 	} 
 	else 
 	{
