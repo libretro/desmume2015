@@ -1367,11 +1367,10 @@ static void execHardware_hstart_irq()
 	//allowing the vcount to register as 192 occasionally (maybe about 1 out of 28 frames)
 	//the actual length of the delay is in execHardware() where the events are scheduled
 	sequencer.reschedule = true;
+
+   //when the vcount hits 192, vblank begins
 	if(nds.VCount==192)
-	{
-		//when the vcount hits 192, vblank begins
 		execHardware_hstart_vblankStart();
-	}
 
 	execHardware_hstart_vcount_irq();
 }
@@ -1380,22 +1379,23 @@ static void execHardware_hstart()
 {
 	nds.VCount++;
 
-	//end of 3d vblank
-	//this should be 214, but we are going to be generous for games with tight timing
-	//they shouldnt be changing any textures at 262 but they might accidentally still be at 214
-	//so..
-	if((CommonSettings.rigorous_timing && nds.VCount==214) || (!CommonSettings.rigorous_timing && nds.VCount==262))
-	{
-		gfx3d_VBlankEndSignal(frameSkipper.ShouldSkip3D());
-	}
-
    switch (nds.VCount)
    {
+      case 214:
+         if (CommonSettings.rigorous_timing)
+            gfx3d_VBlankEndSignal(frameSkipper.ShouldSkip3D());
+         break;
       case 263:
          //when the vcount hits 263 it rolls over to 0
          nds.VCount=0;
          break;
       case 262:
+         //this should be 214, but we are going to be generous for games with tight timing
+         //they shouldnt be changing any textures at 262 but they might accidentally still be at 214
+         //so..
+         if (!CommonSettings.rigorous_timing)
+            gfx3d_VBlankEndSignal(frameSkipper.ShouldSkip3D());
+
          //when the vcount hits 262, vblank ends (oam pre-renders by one scanline)
          execHardware_hstart_vblankEnd();
          break;
