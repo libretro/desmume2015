@@ -607,18 +607,6 @@ static bool cp15_loadstate(EMUFILE* is, int size)
 	return true;
 }
 
-/* Format time and convert to string */
-static char * format_time(time_t cal_time)
-{
-  struct tm *time_struct;
-  static char str[64];
-
-  time_struct=localtime(&cal_time);
-  strftime(str, sizeof str, "%d-%b-%Y %H:%M:%S", time_struct);
-
-  return(str);
-}
-
 // note: guessSF is so we don't have to do a linear search through the SFORMAT array every time
 // in the (most common) case that we already know where the next entry is.
 static const SFORMAT *CheckS(const SFORMAT *guessSF, const SFORMAT *firstSF, u32 size, u32 count, char *desc)

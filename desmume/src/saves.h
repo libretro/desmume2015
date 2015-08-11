@@ -41,9 +41,6 @@ struct SFORMAT
 
 u8 sram_read (u32 address);
 void sram_write (u32 address, u8 value);
-int sram_load (const char *file_name);
-int sram_save (const char *file_name);
-
 bool savestate_load(class EMUFILE* is);
 bool savestate_save(class EMUFILE* outstream);
 
