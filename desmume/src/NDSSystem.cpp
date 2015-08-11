@@ -41,7 +41,9 @@ extern unsigned long crc32(unsigned long, const unsigned char*,unsigned int);
 #include "debug.h"
 #include "cheatSystem.h"
 #include "movie.h"
+#ifdef DEBUG
 #include "Disassembler.h"
+#endif
 #include "FIFO.h"
 #include "readwrite.h"
 #include "registers.h"

@@ -28,8 +28,8 @@
 #include "bios.h"
 #ifdef DEBUG
 #include "debug.h"
-#endif
 #include "Disassembler.h"
+#endif
 #include "NDSSystem.h"
 #include "MMU_timing.h"
 #ifdef HAVE_JIT

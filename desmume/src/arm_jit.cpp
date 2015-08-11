@@ -34,7 +34,9 @@
 #include "armcpu.h"
 #include "instructions.h"
 #include "instruction_attributes.h"
+#ifdef DEBUG
 #include "Disassembler.h"
+#endif
 #include "MMU.h"
 #include "MMU_timing.h"
 #include "utils/AsmJit/AsmJit.h"
