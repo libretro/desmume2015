@@ -186,16 +186,11 @@ void SPU_SetVolume(int volume)
 {
 }
 
-static s16 postProcessBuffer[735 * 2 * sizeof(s16)];
-static unsigned postProcessBufferPtr;
-
 void SPU_Reset(void)
 {
 	int i;
 
 	SPU_core->reset();
-   memset(postProcessBuffer, 0, 735 * 2 * sizeof(s16));
-   postProcessBufferPtr = 0;
 
 	//zero - 09-apr-2010: this concerns me, regarding savestate synch.
 	//After 0.9.6, lets experiment with removing it and just properly zapping the spu instead
@@ -211,7 +206,7 @@ void SPU_Reset(void)
 void SPU_struct::reset()
 {
 	memset(sndbuf,0,bufsize*2*4);
-	memset(outbuf,0,bufsize*2*2);
+   memset(outbuf,0,768*2*sizeof(s16));
 
 	memset((void *)channels, 0, sizeof(channel_struct) * 16);
 
@@ -227,11 +222,12 @@ SPU_struct::SPU_struct(int buffersize)
 	: bufpos(0)
 	, buflength(0)
 	, sndbuf(0)
-	, outbuf(0)
+   , outbuf(0)
+   , outbufptr(0)
 	, bufsize(buffersize)
 {
 	sndbuf = new s32[buffersize*2];
-	outbuf = new s16[buffersize*2];
+   outbuf = new s16[768*2];
 	reset();
 }
 
@@ -1438,7 +1434,7 @@ static void SPU_MixAudio(SPU_struct *SPU, int length)
       // Apply Master Volume
       SPU->sndbuf[i] = SPU->sndbuf[i] * vol / 127;
       s16 outsample = MinMax(SPU->sndbuf[i],-0x8000,0x7FFF);
-      SPU->outbuf[i] = outsample;
+      SPU->outbuf[SPU->outbufptr++] = outsample;
    }
 }
 
@@ -1452,26 +1448,19 @@ int spu_core_samples = 0;
 
 void SPU_Emulate_core()
 {
-   unsigned i, j;
-
 	samples += samples_per_hline;
 	spu_core_samples = (int)(samples);
 	samples -= spu_core_samples;
 	
 	SPU_MixAudio(SPU_core, spu_core_samples);
-
-   for (i = 0, j = 0; i < spu_core_samples; i++)
-   {
-      postProcessBuffer[postProcessBufferPtr++] = SPU_core->outbuf[j++];
-      postProcessBuffer[postProcessBufferPtr++] = SPU_core->outbuf[j++];
-   }
 }
 
 void SPU_Emulate_user(bool mix)
 {
-   audio_batch_cb(postProcessBuffer, 735);
-   memset(postProcessBuffer, 0, 735 * 2 * sizeof(s16));
-   postProcessBufferPtr = 0;
+   // FIXME: sometimes outbufptr > 735*2, figure out what to do with the extra samples
+   audio_batch_cb(SPU_core->outbuf, 735);
+   memset(SPU_core->outbuf, 0, 735 * 2 * sizeof(s16));
+   SPU_core->outbufptr = 0;
 }
 
 void spu_savestate(EMUFILE* os)

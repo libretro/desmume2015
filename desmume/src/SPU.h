@@ -140,6 +140,7 @@ public:
    s32 *sndbuf;
    s32 lastdata; //the last sample that a channel generated
    s16 *outbuf;
+   u32 outbufptr;
    u32 bufsize;
    channel_struct channels[16];
 
