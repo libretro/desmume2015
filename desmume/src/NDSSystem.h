@@ -61,12 +61,14 @@ struct buttonstruct {
 	};
 };
 
-extern buttonstruct<bool> Turbo;
-extern buttonstruct<int> TurboTime;
-extern buttonstruct<bool> AutoHold;
 extern volatile bool execute;
 extern BOOL click;
 
+#if defined(LOG_ARM9) || defined(LOG_ARM7)
+void emu_halt();
+#else
+#define emu_halt() (execute = false)
+#endif
 /*
  * The firmware language values
  */
@@ -149,8 +151,9 @@ struct NDS_header
 };
 #include "PACKED_END.h"
 
+#ifdef DEBUG
 extern void debug();
-void emu_halt();
+#endif
 
 extern u64 nds_timer;
 void NDS_Reschedule();
@@ -619,8 +622,6 @@ extern int LagFrameFlag;
 extern int lastLag, TotalLagFrames;
 
 void MovieSRAM();
-
-void ClearAutoHold(void);
 
 bool ValidateSlot2Access(u32 procnum, u32 demandSRAMSpeed, u32 demand1stROMSpeed, u32 demand2ndROMSpeed, int clockbits);
 

@@ -210,9 +210,7 @@ NDS_header* NDS_getROMHeader(void)
 	return newHeader;
 } 
 
-
-
-
+#ifdef DEBUG
 void debug()
 {
 	//if(NDS_ARM9.R[15]==0x020520DC) emu_halt();
@@ -244,23 +242,8 @@ void debug()
 	//if(NDS_ARM9.instruction==0) emu_halt();
 	//if((NDS_ARM9.R[15]>>28)) emu_halt();
 }
-
-#if 0 /* not used */
-//http://www.aggregate.org/MAGIC/#Population%20Count%20(Ones%20Count)
-static u32 ones32(u32 x)
-{
-	/* 32-bit recursive reduction using SWAR...
-	but first step is mapping 2-bit values
-	into sum of 2 1-bit values in sneaky way
-	*/
-	x -= ((x >> 1) & 0x55555555);
-	x = (((x >> 2) & 0x33333333) + (x & 0x33333333));
-	x = (((x >> 4) + x) & 0x0f0f0f0f);
-	x += (x >> 8);
-	x += (x >> 16);
-	return(x & 0x0000003f);
-}
 #endif
+
 
 RomBanner::RomBanner(bool defaultInit)
 {
@@ -2387,7 +2370,6 @@ bool NDS_FakeBoot()
 	return true;
 }
 
-bool _HACK_DONT_STOPMOVIE = false;
 void NDS_Reset()
 {
 	PrepareLogfiles();
@@ -2603,29 +2585,6 @@ void NDS_setMic(bool pressed)
 }
 
 
-static void NDS_applyFinalInput();
-
-
-void NDS_beginProcessingInput()
-{
-}
-
-void NDS_endProcessingInput()
-{
-	// transfer the processed input
-	finalUserInput = rawUserInput;
-
-	// use the final input for a few things right away
-	NDS_applyFinalInput();
-}
-
-
-
-
-
-
-
-
 static void NDS_applyFinalInput()
 {
 	const UserInput& input = NDS_getFinalUserInput();
@@ -2745,6 +2704,19 @@ static void NDS_applyFinalInput()
 }
 
 
+void NDS_beginProcessingInput()
+{
+}
+
+void NDS_endProcessingInput()
+{
+	// transfer the processed input
+	finalUserInput = rawUserInput;
+
+	// use the final input for a few things right away
+	NDS_applyFinalInput();
+}
+
 void NDS_suspendProcessingInput(bool suspend)
 {
 	static int suspendCount = 0;
@@ -2761,8 +2733,9 @@ void NDS_swapScreen()
 	SubScreen.offset = tmp;
 }
 
-
-void emu_halt() {
+#if defined(LOG_ARM9) || defined(LOG_ARM7)
+void emu_halt()
+{
 	//printf("halting emu: ARM9 PC=%08X/%08X, ARM7 PC=%08X/%08X\n", NDS_ARM9.R[15], NDS_ARM9.instruct_adr, NDS_ARM7.R[15], NDS_ARM7.instruct_adr);
 	execute = false;
 #ifdef LOG_ARM9
@@ -2785,6 +2758,7 @@ void emu_halt() {
 	}
 #endif
 }
+#endif
 
 //returns true if exmemcnt specifies satisfactory parameters for the device, which calls this function
 bool ValidateSlot2Access(u32 procnum, u32 demandSRAMSpeed, u32 demand1stROMSpeed, u32 demand2ndROMSpeed, int clockbits)

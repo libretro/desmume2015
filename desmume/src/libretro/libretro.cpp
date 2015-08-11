@@ -931,7 +931,7 @@ void retro_run (void)
       NDS_releaseTouch();
 
    // BUTTONS
-   NDS_beginProcessingInput();
+   //NDS_beginProcessingInput();
 
    NDS_setPad(
          input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT),
