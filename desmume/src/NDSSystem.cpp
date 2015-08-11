@@ -165,7 +165,6 @@ int NDS_Init()
 	WIFI_Init() ;
 
 	cheats = new CHEATS();
-	cheatSearch = new CHEATSEARCH();
 
 	return 0;
 }
@@ -182,9 +181,6 @@ void NDS_DeInit(void)
 	delete cheats;
 	cheats = NULL;
 	
-	delete cheatSearch;
-	cheatSearch = NULL;
-
 #ifdef HAVE_JIT
 	arm_jit_close();
 #endif
@@ -601,9 +597,6 @@ int NDS_LoadROM(const char *filename, const char *physicalName, const char *logi
 	ret = rom_init_path(filename, physicalName, logicalFilename);
 	if (ret < 1)
 		return ret;
-
-	if (cheatSearch)
-		cheatSearch->close();
 
 	//check whether this rom is any kind of valid
 	if(!CheckValidRom((u8*)&gameInfo.header, gameInfo.secureArea))

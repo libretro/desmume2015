@@ -86,39 +86,11 @@ public:
 	u32		getSize();
 	size_t	getActiveCount();
 	void	setDescription(const char *description, u32 pos);
-	BOOL	save();
-	BOOL	load();
 	void	process();
 	void	getXXcodeString(CHEATS_LIST cheat, char *res_buf);
 	
 	static BOOL XXCodeFromString(CHEATS_LIST *cheatItem, const std::string codeString);
 	static BOOL XXCodeFromString(CHEATS_LIST *cheatItem, const char *codeString);
-};
-
-class CHEATSEARCH
-{
-private:
-	u8	*statMem;
-	u8	*mem;
-	u32	amount;
-	u32	lastRecord;
-
-	u32	_type;
-	u32	_size;
-	u32	_sign;
-
-public:
-	CHEATSEARCH()
-			: statMem(0), mem(0), amount(0), lastRecord(0), _type(0), _size(0), _sign(0) 
-	{}
-	~CHEATSEARCH() { close(); }
-	BOOL start(u8 type, u8 size, u8 sign);
-	BOOL close();
-	u32 search(u32 val);
-	u32 search(u8 comp);
-	u32 getAmount();
-	BOOL getList(u32 *address, u32 *curVal);
-	void getListReset();
 };
 
 enum CHEATS_DB_TYPE
@@ -193,6 +165,4 @@ public:
 };
 
 extern CHEATS *cheats;
-extern CHEATSEARCH *cheatSearch;
-
 
