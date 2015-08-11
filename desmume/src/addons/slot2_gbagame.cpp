@@ -279,7 +279,9 @@ private:
 			gbaFlash.cmd = 0;
 			return;
 		}
+#ifdef DEBUG
 		INFO("GBAgame: Flash: write unknown atn 0x%08X = 0x%02X\n", adr, val);
+#endif
 	}
 
 	u8 gbaReadFlash(u32 adr)
@@ -306,7 +308,9 @@ private:
 			break;
 
 			default:
+#ifdef DEBUG
 				INFO("GBAgame: Flash: read - unknown command at 0x%08X = 0x%02X\n", adr, gbaFlash.cmd);
+#endif
 			break;
 		}
 

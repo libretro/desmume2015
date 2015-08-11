@@ -329,7 +329,9 @@ bool CFIRMWARE::unpack()
 
 	if (size == 512*1024)
 	{
+#ifdef DEBUG
 		INFO("ERROR: 32Mbit (512Kb) firmware not supported\n");
+#endif
 		return false;
 	}
 
@@ -394,7 +396,9 @@ bool CFIRMWARE::unpack()
 
 	if (crc16_mine != header.part12_boot_crc16)
 	{
+#ifdef DEBUG
 		INFO("Firmware: ERROR: the boot code CRC16 (0x%04X) doesn't match the value in the firmware header (0x%04X)", crc16_mine, header.part12_boot_crc16);
+#endif
 		delete [] tmp_data9;
 		delete [] tmp_data7;
 		delete [] data; data = NULL;
@@ -422,6 +426,7 @@ bool CFIRMWARE::unpack()
 	if (data[0x17C] != 0xFF)
 		patched = true;
 
+#ifdef DEBUG
 	INFO("Firmware:\n");
 	INFO("- path: %s\n", CommonSettings.Firmware);
 	INFO("- size: %i bytes (%i Mbit)\n", size, size/1024/8);
@@ -439,6 +444,7 @@ bool CFIRMWARE::unpack()
 	INFO("   * ARM7 unpacked size:         0x%08X (%i) bytes\n", size7, size7);
 	INFO("\n");
 	INFO("   * Data/GFX address:           0x%08X\n", part5addr);
+#endif
 
 	if (patched)
 	{
@@ -493,6 +499,7 @@ bool CFIRMWARE::unpack()
 		delete [] tmp_data7;
 		delete [] tmp_data9;
 
+#ifdef DEBUG
 		INFO("\nFlashme:\n");
 		INFO("- header: \n");
 		INFO("   * ARM9 boot code address:     0x%08X\n", part1addr);
@@ -502,6 +509,7 @@ bool CFIRMWARE::unpack()
 		INFO("   * ARM7 boot code address:     0x%08X\n", part2addr);
 		INFO("   * ARM7 boot code RAM address: 0x%08X\n", ARM7bootAddr);
 		INFO("   * ARM7 unpacked size:         0x%08X (%i) bytes\n", size7, size7);
+#endif
 	}
 
 	memcpy(MMU.fw.data, data, size);

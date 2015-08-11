@@ -26,7 +26,9 @@
 #include "instructions.h"
 #include "cp15.h"
 #include "bios.h"
+#ifdef DEBUG
 #include "debug.h"
+#endif
 #include "Disassembler.h"
 #include "NDSSystem.h"
 #include "MMU_timing.h"

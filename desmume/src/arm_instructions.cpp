@@ -28,7 +28,9 @@
 //#define UNTESTEDOPCODEDEBUG
 #include "instructions.h"
 #include "cp15.h"
+#ifdef DEBUG
 #include "debug.h"
+#endif
 #include "MMU.h"
 #include "armcpu.h"
 #include "NDSSystem.h"
@@ -3110,6 +3112,7 @@ TEMPLATE static u32 FASTCALL  OP_BLX_REG(const u32 i)
 
 TEMPLATE static u32 FASTCALL OP_B(const u32 i)
 {
+#ifdef DEBUG
 	static const u32 mov_r12_r12 = 0xE1A0C00C;
 	const u32 last = _MMU_read32<PROCNUM,MMU_AT_DEBUG>(cpu->instruct_adr-4);
 	if(last == mov_r12_r12)
@@ -3118,6 +3121,7 @@ TEMPLATE static u32 FASTCALL OP_B(const u32 i)
 		if(next == 0x6464)
 			NocashMessage(cpu, 8);
 	}
+#endif
 
 	u32 off = SIGNEXTEND_24(i);
 	if(CONDITION(i)==0xF)
@@ -6121,8 +6125,10 @@ TEMPLATE static u32 FASTCALL  OP_MCR(const u32 i)
 	{
 		//emu_halt();
 		//INFO("Stopped (OP_MCR) \n");
+#ifdef DEBUG
 		INFO("ARM%c: MCR P%i, 0, R%i, C%i, C%i, %i, %i (don't allocated coprocessor)\n", 
 			PROCNUM?'7':'9', cpnum, REG_POS(i, 12), REG_POS(i, 16), REG_POS(i, 0), (i>>21)&0x7, (i>>5)&0x7);
+#endif
 		return 2;
 	}
 
@@ -6141,8 +6147,10 @@ TEMPLATE static u32 FASTCALL  OP_MRC(const u32 i)
 	{
 		//emu_halt();
 		//INFO("Stopped (OP_MRC) \n");
+#ifdef DEBUG
 		INFO("ARM%c: MRC P%i, 0, R%i, C%i, C%i, %i, %i (don't allocated coprocessor)\n", 
 			PROCNUM?'7':'9', cpnum, REG_POS(i, 12), REG_POS(i, 16), REG_POS(i, 0), (i>>21)&0x7, (i>>5)&0x7);
+#endif
 		return 2;
 	}
 
@@ -6182,7 +6190,9 @@ TEMPLATE static u32 FASTCALL  OP_SWI(const u32 i)
 	//ideas-style debug prints (execute this SWI with the null terminated string address in R0)
 	if(swinum==0xFC) 
 	{
+#ifdef DEBUG
 		IdeasLog(cpu);
+#endif
 		return 0;
 	}
 

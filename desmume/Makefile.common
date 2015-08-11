@@ -12,7 +12,6 @@ SOURCES_CXX += \
 	$(CORE_DIR)/bios.cpp \
 	$(CORE_DIR)/cp15.cpp \
 	$(CORE_DIR)/common.cpp \
-	$(CORE_DIR)/debug.cpp \
 	$(CORE_DIR)/Disassembler.cpp \
 	$(CORE_DIR)/emufile.cpp \
 	$(CORE_DIR)/encrypt.cpp \
@@ -96,6 +95,10 @@ ifeq ($(DESMUME_JIT_ARM),1)
 SOURCES_CXX += \
 	$(CORE_DIR)/libretro/arm_arm/arm_gen.cpp \
 	$(CORE_DIR)/libretro/arm_arm/arm_jit.cpp
+endif
+
+ifeq ($(DEBUG),1)
+SOURCES_CXX += $(CORE_DIR)/debug.cpp
 endif
 
 ifeq ($(DESMUME_JIT),1)

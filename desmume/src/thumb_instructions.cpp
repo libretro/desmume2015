@@ -23,7 +23,9 @@
 #include <assert.h>
 
 #include "bios.h"
+#ifdef DEBUG
 #include "debug.h"
+#endif
 #include "MMU.h"
 #include "NDSSystem.h"
 #include "MMU_timing.h"
@@ -1018,7 +1020,9 @@ TEMPLATE static  u32 FASTCALL OP_SWI_THUMB(const u32 i)
 
 	//ideas-style debug prints (execute this SWI with the null terminated string address in R0)
 	if(swinum==0xFC) {
+#ifdef DEBUG
 		IdeasLog(cpu);
+#endif
 		return 0;
 	}
 

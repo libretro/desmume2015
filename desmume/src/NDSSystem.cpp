@@ -45,7 +45,9 @@ extern unsigned long crc32(unsigned long, const unsigned char*,unsigned int);
 #include "FIFO.h"
 #include "readwrite.h"
 #include "registers.h"
+#ifdef DEBUG
 #include "debug.h"
+#endif
 #include "driver.h"
 #include "firmware.h"
 #include "version.h"

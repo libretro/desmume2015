@@ -22,7 +22,9 @@
 #include "common.h"
 #include "mem.h"
 #include "MMU.h"
+#ifdef DEBUG
 #include "debug.h"
+#endif
 #include "utils/xstring.h"
 
 #ifndef _MSC_VER 
@@ -406,7 +408,11 @@ void CHEATS::ARparser(CHEATS_LIST& list)
 					_MMU_write08<ARMCPU_ARM9,MMU_AT_DEBUG>(hi+t, tmp);
 				}
 			break;
-			default: PROGINFO("AR: ERROR unknown command 0x%2X at %08X:%08X\n", type, hi, lo); break;
+			default:
+#ifdef DEBUG
+         PROGINFO("AR: ERROR unknown command 0x%2X at %08X:%08X\n", type, hi, lo);
+#endif
+         break;
 		}
 	}
 }
@@ -663,7 +669,9 @@ BOOL CHEATS::load()
 	u32				last = 0;
 	u32				line = 0;
 	
+#ifdef DEBUG
 	INFO("Load cheats: %s\n", filename);
+#endif
 	clear();
 	last = 0; line = 0;
 	while (!feof(flist))
@@ -694,7 +702,9 @@ BOOL CHEATS::load()
 		// TODO: CB not supported
 		if (tmp_cht.type == 3)
 		{
+#ifdef DEBUG
 			INFO("Cheats: Codebreaker code no supported at line %i\n", line);
+#endif
 			continue;
 		}
 		
@@ -703,7 +713,9 @@ BOOL CHEATS::load()
 		
 		if (codeStr.empty() || (codeStr.length() % 16 != 0))
 		{
+#ifdef DEBUG
 			INFO("Cheats: Syntax error at line %i\n", line);
+#endif
 			continue;
 		}
 
@@ -718,7 +730,9 @@ BOOL CHEATS::load()
 		tmp_cht.num = codeStr.length() / 16;
 		if ((tmp_cht.type == 0) && (tmp_cht.num > 1))
 		{
+#ifdef DEBUG
 			INFO("Cheats: Too many values for internal cheat\n", line);
+#endif
 			continue;
 		}
 		for (int i = 0; i < tmp_cht.num; i++)
@@ -746,7 +760,9 @@ BOOL CHEATS::load()
 	buf = NULL;
 
 	fclose(flist);
+#ifdef DEBUG
 	INFO("Added %i cheat codes\n", list.size());
+#endif
 	
 	return TRUE;
 }

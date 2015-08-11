@@ -57,8 +57,10 @@ public:
 	{
 		img = slot1_GetFatImage();
 
+#ifdef DEBUG
 		if(!img)
 			INFO("slot1 fat not successfully mounted\n");
+#endif
 
 		protocol.reset(this);
 		protocol.chipId = 0xFC2;

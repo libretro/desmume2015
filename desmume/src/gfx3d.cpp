@@ -1423,10 +1423,12 @@ static void gfx3d_glVertex_rel(s32 v)
 
 static void gfx3d_glPolygonAttrib (u32 val)
 {
+#if 0
 	if(inBegin) {
 		//PROGINFO("Set polyattr in the middle of a begin/end pair.\n  (This won't be activated until the next begin)\n");
 		//TODO - we need some some similar checking for teximageparam etc.
 	}
+#endif
 	polyAttrPending = val;
 	GFX_DELAY(1);
 }
@@ -1822,7 +1824,9 @@ u32 gfx3d_glGetPosRes(const size_t index)
 #ifdef _3D_LOG_EXEC
 static void log3D(u8 cmd, u32 param)
 {
+#ifdef DEBUG
 	INFO("3D command 0x%02X: ", cmd);
+#endif
 	switch (cmd)
 		{
 			case 0x10:		// MTX_MODE - Set Matrix Mode (W)
@@ -1937,7 +1941,9 @@ static void log3D(u8 cmd, u32 param)
 				printf("VEC_TEST(%08X)", param);
 			break;
 			default:
+#ifdef DEBUG
 				INFO("!!! Unknown(%08X)", param);
+#endif
 			break;
 		}
 		printf("\t\t(FIFO size %i)\n", gxFIFO.size);
@@ -2064,7 +2070,9 @@ static void gfx3d_execute(u8 cmd, u32 param)
 			gfx3d_glVecTest(param);
 		break;
 		default:
+#ifdef DEBUG
 			INFO("Unknown execute FIFO 3D command 0x%02X with param 0x%08X\n", cmd, param);
+#endif
 		break;
 	}
 }
@@ -2397,7 +2405,9 @@ void gfx3d_sendCommand(u32 cmd, u32 param)
 			GFX_FIFOsend(cmd, param);
 		break;
 		default:
+#ifdef DEBUG
 			INFO("Unknown 3D command %03X with param 0x%08X (directport)\n", cmd, param);
+#endif
 			break;
 	}
 }
