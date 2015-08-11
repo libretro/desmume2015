@@ -56,16 +56,12 @@ static inline s8 read_s8(u32 addr) { return (s8)_MMU_read08<ARMCPU_ARM7,MMU_AT_D
 	#define FORCEINLINE
 //#endif
 
-//static ISynchronizingAudioBuffer* synchronizer = metaspu_construct(ESynchMethod_Z);
-static ISynchronizingAudioBuffer* synchronizer = metaspu_construct(ESynchMethod_N);
-
 SPU_struct *SPU_core = 0;
 int SPU_currentCoreNum = SNDCORE_DUMMY;
 static int volume = 100;
 
 
 static size_t buffersize = 0;
-static ESynchMethod synchmethod = ESynchMethod_N;
 
 //const int shift = (FORMAT == 0 ? 2 : 1);
 static const int format_shift[] = { 2, 1, 3, 0 };
@@ -128,8 +124,6 @@ int SPU_ChangeSoundCore(int coreid, int buffersize)
 
 	::buffersize = buffersize;
 
-	SPU_SetSynchMode(synchmethod);
-
 	return 0;
 }
 
@@ -182,14 +176,6 @@ void SPU_CloneUser()
 
 void SPU_SetSynchMode(int method)
 {
-	if(synchmethod != (ESynchMethod)method)
-	{
-		synchmethod = (ESynchMethod)method;
-		delete synchronizer;
-		//grr does this need to be locked? spu might need a lock method
-		  // or maybe not, maybe the platform-specific code that calls this function can deal with it.
-		synchronizer = metaspu_construct(synchmethod);
-	}
 }
 
 void SPU_ClearOutputBuffer()
@@ -200,12 +186,16 @@ void SPU_SetVolume(int volume)
 {
 }
 
+static s16 postProcessBuffer[735 * 2 * sizeof(s16)];
+static unsigned postProcessBufferPtr;
 
 void SPU_Reset(void)
 {
 	int i;
 
 	SPU_core->reset();
+   memset(postProcessBuffer, 0, 735 * 2 * sizeof(s16));
+   postProcessBufferPtr = 0;
 
 	//zero - 09-apr-2010: this concerns me, regarding savestate synch.
 	//After 0.9.6, lets experiment with removing it and just properly zapping the spu instead
@@ -1462,23 +1452,26 @@ int spu_core_samples = 0;
 
 void SPU_Emulate_core()
 {
+   unsigned i, j;
+
 	samples += samples_per_hline;
 	spu_core_samples = (int)(samples);
 	samples -= spu_core_samples;
 	
 	SPU_MixAudio(SPU_core, spu_core_samples);
-	
-   synchronizer->enqueue_samples(SPU_core->outbuf, spu_core_samples);
+
+   for (i = 0, j = 0; i < spu_core_samples; i++)
+   {
+      postProcessBuffer[postProcessBufferPtr++] = SPU_core->outbuf[j++];
+      postProcessBuffer[postProcessBufferPtr++] = SPU_core->outbuf[j++];
+   }
 }
 
 void SPU_Emulate_user(bool mix)
 {
-	static s16 postProcessBuffer[735 * 2 * sizeof(s16)];
-	
-   synchronizer->output_samples(postProcessBuffer, 735);
-
-   if (audio_batch_cb)
-      audio_batch_cb(postProcessBuffer, 735);
+   audio_batch_cb(postProcessBuffer, 735);
+   memset(postProcessBuffer, 0, 735 * 2 * sizeof(s16));
+   postProcessBufferPtr = 0;
 }
 
 void spu_savestate(EMUFILE* os)

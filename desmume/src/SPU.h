@@ -26,7 +26,6 @@
 
 #include "types.h"
 #include "matrix.h"
-#include "metaspu/metaspu.h"
 
 class EMUFILE;
 
