@@ -476,7 +476,7 @@ void NDS_SetupDefaultFirmware();
 
 //void execHardware_doAllDma(EDMAMode modeNum);
 
-template<bool FORCE> void NDS_exec(s32 nb = 560190<<1);
+void NDS_exec(s32 nb = 560190<<1);
 
 extern int lagframecounter;
 

@@ -991,7 +991,7 @@ void retro_run (void)
    if (skipped)
       NDS_SkipNextFrame();
 
-   NDS_exec<false>();
+   NDS_exec();
    SPU_Emulate_user();
 
    if (!skipped)

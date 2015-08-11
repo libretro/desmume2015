@@ -1807,7 +1807,6 @@ void NDS_debug_step()
 	singleStep = true;
 }
 
-template<bool FORCE>
 void NDS_exec(s32 nb)
 {
 	sequencer.nds_vblankEnded = false;
@@ -2788,7 +2787,3 @@ bool ValidateSlot2Access(u32 procnum, u32 demandSRAMSpeed, u32 demand1stROMSpeed
 
 	return true;
 }
-
-//these templates needed to be instantiated manually
-template void NDS_exec<FALSE>(s32 nb);
-template void NDS_exec<TRUE>(s32 nb);
