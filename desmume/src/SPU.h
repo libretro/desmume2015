@@ -45,52 +45,38 @@ FORCEINLINE s32 spumuldiv7(s32 val, u8 multiplier) {
 	return (multiplier == 127) ? val : ((val * multiplier) >> 7);
 }
 
-struct SoundInterface_struct
-{
-   int id;
-   const char *Name;
-   int (*Init)(int buffersize);
-   void (*DeInit)();
-   void (*UpdateAudio)(s16 *buffer, u32 num_samples);
-   u32 (*GetAudioSpace)();
-   void (*MuteAudio)();
-   void (*UnMuteAudio)();
-   void (*SetVolume)(int volume);
-   void (*ClearBuffer)();
-};
-
 extern int SPU_currentCoreNum;
 
 struct channel_struct
 {
-	channel_struct() :	num(0),
-						vol(0),
-						volumeDiv(0),
-						hold(0),
-						pan(0),
-						waveduty(0),
-						repeat(0),
-						format(0),
-						keyon(0),
-						status(0),
-						addr(0),
-						timer(0),
-						loopstart(0),
-						length(0),
-						totlength(0),
-						double_totlength_shifted(0.0),
-						sampcnt(0.0),
-						sampinc(0.0),
-						lastsampcnt(0),
-						pcm16b(0),
-						pcm16b_last(0),
-						loop_pcm16b(0),
-						index(0),
-						loop_index(0),
-						x(0),
-						psgnoise_last(0)
-	{}
-	u32 num;
+   channel_struct() :	num(0),
+   vol(0),
+   volumeDiv(0),
+   hold(0),
+   pan(0),
+   waveduty(0),
+   repeat(0),
+   format(0),
+   keyon(0),
+   status(0),
+   addr(0),
+   timer(0),
+   loopstart(0),
+   length(0),
+   totlength(0),
+   double_totlength_shifted(0.0),
+   sampcnt(0.0),
+   sampinc(0.0),
+   lastsampcnt(0),
+   pcm16b(0),
+   pcm16b_last(0),
+   loop_pcm16b(0),
+   index(0),
+   loop_index(0),
+   x(0),
+   psgnoise_last(0)
+   {}
+   u32 num;
    u8 vol;
    u8 volumeDiv;
    u8 hold;
@@ -214,7 +200,6 @@ extern SPU_struct *SPU_core;
 extern int spu_core_samples;
 
 int SPU_ChangeSoundCore(int coreid, int buffersize);
-SoundInterface_struct *SPU_SoundCore();
 
 void SPU_ReInit(bool fakeBoot = false);
 int SPU_Init(int coreid, int buffersize);
