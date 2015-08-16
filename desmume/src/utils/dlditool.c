@@ -774,27 +774,27 @@ data_t r4_dldi[2276] =
 	0x00, 0x00, 0x00, 0x00
 };
 
-bool DLDI_tryPatch(void* data, size_t size, unsigned int device)
+int DLDI_tryPatch(void* data, size_t size, unsigned int device)
 {
 	// Find the DSDI reserved space in the file
 	addr_t patchOffset = quickFind ((data_t*)data, dldiMagicString, size, sizeof(dldiMagicString)/sizeof(char));
 
 	//no DLDI section
 	if (patchOffset < 0)
-		return false;
+		return 0;
 
 	data_t *pDH = device == 0?mpcf_dldi:r4_dldi;
 	data_t *pAH = (data_t*)data + patchOffset;
 
 	if (pDH[DO_driverSize] > pAH[DO_allocatedSpace]) {
 		printf ("Not enough space for patch. Available %d bytes, need %d bytes\n", ( 1 << pAH[DO_allocatedSpace]), ( 1 << pDH[DO_driverSize]) );
-		return false;
+		return 0;
 	}
 
 	if(memcmp(&pAH[DO_friendlyName],"Default (No interface)",22))
 	{
 		printf("Would have been a candidate for auto-patch DLDI, but there was already a patch installed.");
-		return false;
+		return 0;
 	}
 
 	//----should be able to patch OK-----
@@ -884,5 +884,5 @@ bool DLDI_tryPatch(void* data, size_t size, unsigned int device)
 		memset (&pAH[readAddr(pDH, DO_bss_start) - ddmemStart] , 0, readAddr(pDH, DO_bss_end) - readAddr(pDH, DO_bss_start));
 	}
 
-	return true;
+	return 1;
 }

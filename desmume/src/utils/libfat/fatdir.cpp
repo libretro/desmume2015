@@ -40,7 +40,9 @@
 #endif
 
 #if defined(_WIN32) && !defined(_MSC_VER)
+#ifndef ENOTSUP
 #define ENOTSUP 134
+#endif
 #endif
 
 #include "fatdir.h"
