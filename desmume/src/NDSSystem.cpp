@@ -93,13 +93,7 @@ bool nds_debug_continuing[2];
 
 TSCalInfo TSCal;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-int DLDI_tryPatch(void* data, size_t size, unsigned int device);
-#ifdef __cplusplus
-}
-#endif
+extern "C" int DLDI_tryPatch(void* data, size_t size, unsigned int device);
 
 void Desmume_InitOnce()
 {
