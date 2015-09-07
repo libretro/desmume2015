@@ -38,7 +38,6 @@
 
 #include "armcpu.h"
 #include "common.h"
-#include "debug.h"
 #include "driver.h"
 #include "emufile.h"
 #include "matrix.h"
@@ -53,12 +52,6 @@
 #include "readwrite.h"
 #include "FIFO.h"
 #include "movie.h" //only for currframecounter which really ought to be moved into the core emu....
-
-//#define _SHOW_VTX_COUNTERS	// show polygon/vertex counters on screen
-#ifdef _SHOW_VTX_COUNTERS
-u32 max_polys, max_verts;
-#include "GPU_OSD.h"
-#endif
 
 
 /*
@@ -322,8 +315,8 @@ static float normalTable[1024];
 #define fix10_2float(v) (((float)((s32)(v))) / (float)(1<<9))
 
 // Color buffer that is filled by the 3D renderer and is read by the GPU engine.
-FragmentColor *gfx3d_colorRGBA6665 = NULL;
-u16 *gfx3d_colorRGBA5551 = NULL;
+static FragmentColor *_gfx3d_colorRGBA6665 = NULL;
+static u16 *_gfx3d_colorRGBA5551 = NULL;
 
 // Matrix stack handling
 CACHE_ALIGN MatrixStack	mtxStack[4] = {
@@ -574,22 +567,12 @@ void gfx3d_deinit()
 	free(vertlists);
 	vertlists = NULL;
 	vertlist = NULL;
-	
-	free_aligned(gfx3d_colorRGBA6665);
-	gfx3d_colorRGBA6665 = NULL;
-	
-	free_aligned(gfx3d_colorRGBA5551);
-	gfx3d_colorRGBA5551 = NULL;
 }
 
 void gfx3d_reset()
 {
 	CurrentRenderer->RenderFinish();
 	
-#ifdef _SHOW_VTX_COUNTERS
-	max_polys = max_verts = 0;
-#endif
-
 	reconstruct(&gfx3d);
 	delete viewer3d_state;
 	viewer3d_state = new Viewer3d_State();
@@ -1262,25 +1245,24 @@ static void gfx3d_glNormal(s32 v)
 
 	//apply lighting model
 	u8 diffuse[3] = {
-      (u8)( dsDiffuse        & 0x1F),
-      (u8)((dsDiffuse >>  5) & 0x1F),
-      (u8)((dsDiffuse >> 10) & 0x1F) };
+		(u8)( dsDiffuse        & 0x1F),
+		(u8)((dsDiffuse >>  5) & 0x1F),
+		(u8)((dsDiffuse >> 10) & 0x1F) };
 
 	u8 ambient[3] = {
-      (u8)( dsAmbient        & 0x1F),
-      (u8)((dsAmbient >>  5) & 0x1F),
-      (u8)((dsAmbient >> 10) & 0x1F) };
-
+		(u8)( dsAmbient        & 0x1F),
+		(u8)((dsAmbient >>  5) & 0x1F),
+		(u8)((dsAmbient >> 10) & 0x1F) };
 
 	u8 emission[3] = {
-      (u8)( dsEmission        & 0x1F),
-      (u8)((dsEmission >>  5) & 0x1F),
-      (u8)((dsEmission >> 10) & 0x1F) };
+		(u8)( dsEmission        & 0x1F),
+		(u8)((dsEmission >>  5) & 0x1F),
+		(u8)((dsEmission >> 10) & 0x1F) };
 
 	u8 specular[3] = {
-      (u8)( dsSpecular        & 0x1F),
-      (u8)((dsSpecular >>  5) & 0x1F),
-      (u8)((dsSpecular >> 10) & 0x1F) };
+		(u8)( dsSpecular        & 0x1F),
+		(u8)((dsSpecular >>  5) & 0x1F),
+		(u8)((dsSpecular >> 10) & 0x1F) };
 
 	int vertexColor[3] = { emission[0], emission[1], emission[2] };
 
@@ -1289,9 +1271,9 @@ static void gfx3d_glNormal(s32 v)
 		if (!((lightMask>>i)&1)) continue;
 
 		u8 _lightColor[3] = {
-         (u8)( lightColor[i]        & 0x1F),
-         (u8)((lightColor[i] >> 5)  & 0x1F),
-         (u8)((lightColor[i] >> 10) & 0x1F) };
+			(u8)( lightColor[i]        & 0x1F),
+			(u8)((lightColor[i] >> 5)  & 0x1F),
+			(u8)((lightColor[i] >> 10) & 0x1F) };
 
 		//This formula is the one used by the DS
 		//Reference : http://nocash.emubase.de/gbatek.htm#ds3dpolygonlightparameters
@@ -1424,12 +1406,6 @@ static void gfx3d_glVertex_rel(s32 v)
 
 static void gfx3d_glPolygonAttrib (u32 val)
 {
-#if 0
-	if(inBegin) {
-		//PROGINFO("Set polyattr in the middle of a begin/end pair.\n  (This won't be activated until the next begin)\n");
-		//TODO - we need some some similar checking for teximageparam etc.
-	}
-#endif
 	polyAttrPending = val;
 	GFX_DELAY(1);
 }
@@ -1553,17 +1529,6 @@ static BOOL gfx3d_glBoxTest(u32 v)
 
 	MMU_new.gxstat.tb = 0;		// clear busy
 	GFX_DELAY(103);
-
-#if 0
-	INFO("BoxTEST: x %f y %f width %f height %f depth %f\n", 
-				BTcoords[0], BTcoords[1], BTcoords[2], BTcoords[3], BTcoords[4], BTcoords[5]);
-	/*for (int i = 0; i < 16; i++)
-	{
-		INFO("mtx1[%i] = %f ", i, mtxCurrent[1][i]);
-		if ((i+1) % 4 == 0) INFO("\n");
-	}
-	INFO("\n");*/
-#endif
 
 	//(crafted to be clear, not fast.)
 
@@ -1821,141 +1786,8 @@ u32 gfx3d_glGetPosRes(const size_t index)
 	return (u32)(PTcoords[index] * 4096.0f);
 }
 
-//#define _3D_LOG_EXEC
-#ifdef _3D_LOG_EXEC
-static void log3D(u8 cmd, u32 param)
-{
-#ifdef DEBUG
-	INFO("3D command 0x%02X: ", cmd);
-#endif
-	switch (cmd)
-		{
-			case 0x10:		// MTX_MODE - Set Matrix Mode (W)
-				printf("MTX_MODE(%08X)", param);
-			break;
-			case 0x11:		// MTX_PUSH - Push Current Matrix on Stack (W)
-				printf("MTX_PUSH()\t");
-			break;
-			case 0x12:		// MTX_POP - Pop Current Matrix from Stack (W)
-				printf("MTX_POP(%08X)", param);
-			break;
-			case 0x13:		// MTX_STORE - Store Current Matrix on Stack (W)
-				printf("MTX_STORE(%08X)", param);
-			break;
-			case 0x14:		// MTX_RESTORE - Restore Current Matrix from Stack (W)
-				printf("MTX_RESTORE(%08X)", param);
-			break;
-			case 0x15:		// MTX_IDENTITY - Load Unit Matrix to Current Matrix (W)
-				printf("MTX_IDENTIFY()\t");
-			break;
-			case 0x16:		// MTX_LOAD_4x4 - Load 4x4 Matrix to Current Matrix (W)
-				printf("MTX_LOAD_4x4(%08X)", param);
-			break;
-			case 0x17:		// MTX_LOAD_4x3 - Load 4x3 Matrix to Current Matrix (W)
-				printf("MTX_LOAD_4x3(%08X)", param);
-			break;
-			case 0x18:		// MTX_MULT_4x4 - Multiply Current Matrix by 4x4 Matrix (W)
-				printf("MTX_MULT_4x4(%08X)", param);
-			break;
-			case 0x19:		// MTX_MULT_4x3 - Multiply Current Matrix by 4x3 Matrix (W)
-				printf("MTX_MULT_4x3(%08X)", param);
-			break;
-			case 0x1A:		// MTX_MULT_3x3 - Multiply Current Matrix by 3x3 Matrix (W)
-				printf("MTX_MULT_3x3(%08X)", param);
-			break;
-			case 0x1B:		// MTX_SCALE - Multiply Current Matrix by Scale Matrix (W)
-				printf("MTX_SCALE(%08X)", param);
-			break;
-			case 0x1C:		// MTX_TRANS - Mult. Curr. Matrix by Translation Matrix (W)
-				printf("MTX_TRANS(%08X)", param);
-			break;
-			case 0x20:		// COLOR - Directly Set Vertex Color (W)
-				printf("COLOR(%08X)", param);
-			break;
-			case 0x21:		// NORMAL - Set Normal Vector (W)
-				printf("NORMAL(%08X)", param);
-			break;
-			case 0x22:		// TEXCOORD - Set Texture Coordinates (W)
-				printf("TEXCOORD(%08X)", param);
-			break;
-			case 0x23:		// VTX_16 - Set Vertex XYZ Coordinates (W)
-				printf("VTX_16(%08X)", param);
-			break;
-			case 0x24:		// VTX_10 - Set Vertex XYZ Coordinates (W)
-				printf("VTX_10(%08X)", param);
-			break;
-			case 0x25:		// VTX_XY - Set Vertex XY Coordinates (W)
-				printf("VTX_XY(%08X)", param);
-			break;
-			case 0x26:		// VTX_XZ - Set Vertex XZ Coordinates (W)
-				printf("VTX_XZ(%08X)", param);
-			break;
-			case 0x27:		// VTX_YZ - Set Vertex YZ Coordinates (W)
-				printf("VTX_YZ(%08X)", param);
-			break;
-			case 0x28:		// VTX_DIFF - Set Relative Vertex Coordinates (W)
-				printf("VTX_DIFF(%08X)", param);
-			break;
-			case 0x29:		// POLYGON_ATTR - Set Polygon Attributes (W)
-				printf("POLYGON_ATTR(%08X)", param);
-			break;
-			case 0x2A:		// TEXIMAGE_PARAM - Set Texture Parameters (W)
-				printf("TEXIMAGE_PARAM(%08X)", param);
-			break;
-			case 0x2B:		// PLTT_BASE - Set Texture Palette Base Address (W)
-				printf("PLTT_BASE(%08X)", param);
-			break;
-			case 0x30:		// DIF_AMB - MaterialColor0 - Diffuse/Ambient Reflect. (W)
-				printf("DIF_AMB(%08X)", param);
-			break;
-			case 0x31:		// SPE_EMI - MaterialColor1 - Specular Ref. & Emission (W)
-				printf("SPE_EMI(%08X)", param);
-			break;
-			case 0x32:		// LIGHT_VECTOR - Set Light's Directional Vector (W)
-				printf("LIGHT_VECTOR(%08X)", param);
-			break;
-			case 0x33:		// LIGHT_COLOR - Set Light Color (W)
-				printf("LIGHT_COLOR(%08X)", param);
-			break;
-			case 0x34:		// SHININESS - Specular Reflection Shininess Table (W)
-				printf("SHININESS(%08X)", param);
-			break;
-			case 0x40:		// BEGIN_VTXS - Start of Vertex List (W)
-				printf("BEGIN_VTXS(%08X)", param);
-			break;
-			case 0x41:		// END_VTXS - End of Vertex List (W)
-				printf("END_VTXS()\t");
-			break;
-			case 0x50:		// SWAP_BUFFERS - Swap Rendering Engine Buffer (W)
-				printf("SWAP_BUFFERS(%08X)", param);
-			break;
-			case 0x60:		// VIEWPORT - Set Viewport (W)
-				printf("VIEWPORT(%08X)", param);
-			break;
-			case 0x70:		// BOX_TEST - Test if Cuboid Sits inside View Volume (W)
-				printf("BOX_TEST(%08X)", param);
-			break;
-			case 0x71:		// POS_TEST - Set Position Coordinates for Test (W)
-				printf("POS_TEST(%08X)", param);
-			break;
-			case 0x72:		// VEC_TEST - Set Directional Vector for Test (W)
-				printf("VEC_TEST(%08X)", param);
-			break;
-			default:
-#ifdef DEBUG
-				INFO("!!! Unknown(%08X)", param);
-#endif
-			break;
-		}
-		printf("\t\t(FIFO size %i)\n", gxFIFO.size);
-}
-#endif
-
 static void gfx3d_execute(u8 cmd, u32 param)
 {
-#ifdef _3D_LOG_EXEC
-	log3D(cmd, param);
-#endif
 
 	switch (cmd)
 	{
@@ -2071,9 +1903,6 @@ static void gfx3d_execute(u8 cmd, u32 param)
 			gfx3d_glVecTest(param);
 		break;
 		default:
-#ifdef DEBUG
-			INFO("Unknown execute FIFO 3D command 0x%02X with param 0x%08X\n", cmd, param);
-#endif
 		break;
 	}
 }
@@ -2128,7 +1957,7 @@ void gfx3d_glFlush(u32 v)
 #if 0
 	if (isSwapBuffers)
 	{
-		INFO("Error: swapBuffers already use\n");
+		printf("Error: swapBuffers already use\n");
 	}
 #endif
 	
@@ -2226,12 +2055,6 @@ static void gfx3d_doFlush()
 	gfx3d.state.activeFlushCommand = gfx3d.state.pendingFlushCommand;
 
 	const size_t polycount = polylist->count;
-#ifdef _SHOW_VTX_COUNTERS
-	max_polys = max((u32)polycount, max_polys);
-	max_verts = max((u32)vertlist->count, max_verts);
-	osd->addFixed(180, 20, "%i/%i", polycount, vertlist->count);		// current
-	osd->addFixed(180, 35, "%i/%i", max_polys, max_verts);		// max
-#endif
 
 	//find the min and max y values for each poly.
 	//TODO - this could be a small waste of time if we are manual sorting the translucent polys
@@ -2334,14 +2157,12 @@ void gfx3d_VBlankEndSignal(bool skipFrame)
 
 	if (!CommonSettings.showGpu.main)
 	{
-      memset(gfx3d_colorRGBA6665, 0, GPU->GetCustomFramebufferWidth() * GPU->GetCustomFramebufferHeight() * sizeof(FragmentColor));
+		memset(_gfx3d_colorRGBA6665, 0, GPU->GetCustomFramebufferWidth() * GPU->GetCustomFramebufferHeight() * sizeof(FragmentColor));
 		return;
 	}
 	
 	CurrentRenderer->Render(gfx3d);
 }
-
-//#define _3D_LOG
 
 void gfx3d_sendCommandToFIFO(u32 val)
 {
@@ -2355,10 +2176,6 @@ void gfx3d_sendCommand(u32 cmd, u32 param)
 	cmd = (cmd & 0x01FF) >> 2;
 
 	//printf("gxFIFO: send 0x%02X: val=0x%08X, size=%03i (direct)\n", cmd, param, gxFIFO.size);
-
-#ifdef _3D_LOG
-	INFO("gxFIFO: send 0x%02X: val=0x%08X, pipe %02i, fifo %03i (direct)\n", cmd, param, gxPIPE.tail, gxFIFO.tail);
-#endif
 
 	switch (cmd)
 	{
@@ -2406,9 +2223,7 @@ void gfx3d_sendCommand(u32 cmd, u32 param)
 			GFX_FIFOsend(cmd, param);
 		break;
 		default:
-#ifdef DEBUG
-			INFO("Unknown 3D command %03X with param 0x%08X (directport)\n", cmd, param);
-#endif
+			//printf("Unknown 3D command %03X with param 0x%08X (directport)\n", cmd, param);
 			break;
 	}
 }
@@ -2447,19 +2262,6 @@ void gfx3d_glGetLightColor(const size_t index, u32 &dst)
 {
 	dst = lightColor[index];
 }
-
-const FragmentColor* gfx3d_GetLineDataRGBA6665(const size_t line)
-{
-	CurrentRenderer->RenderFinish();
-   return (gfx3d_colorRGBA6665 + (line * GPU->GetCustomFramebufferWidth()));
-}
-
-const u16* gfx3d_GetLineDataRGBA5551(const size_t line)
-{
-	CurrentRenderer->RenderFinish();
-   return (gfx3d_colorRGBA5551 + (line * GPU->GetCustomFramebufferWidth()));
-}
-
 
 //http://www.opengl.org/documentation/specs/version1.1/glspec1.1/node17.html
 //talks about the state required to process verts in quadlists etc. helpful ideas.
@@ -2547,9 +2349,15 @@ SFORMAT SF_GFX3D[]={
 	{ "GTVC", 4, 1, &tempVertInfo.count},
 	{ "GTVM", 4, 4, tempVertInfo.map},
 	{ "GTVF", 4, 1, &tempVertInfo.first},
-	{ "G3CX", 1, 4*GPU_FRAMEBUFFER_NATIVE_WIDTH*GPU_FRAMEBUFFER_NATIVE_HEIGHT, gfx3d_colorRGBA6665},
+	{ "G3CX", 1, 4*GPU_FRAMEBUFFER_NATIVE_WIDTH*GPU_FRAMEBUFFER_NATIVE_HEIGHT, _gfx3d_colorRGBA6665},
 	{ 0 }
 };
+
+void gfx3d_Update3DFramebuffers(FragmentColor *framebufferRGBA6665, u16 *framebufferRGBA5551)
+{
+	_gfx3d_colorRGBA6665 = framebufferRGBA6665;
+	_gfx3d_colorRGBA5551 = framebufferRGBA5551;
+}
 
 //-------------savestate
 void gfx3d_savestate(EMUFILE* os)
