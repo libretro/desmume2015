@@ -135,9 +135,6 @@ int NDS_Init()
 	//got to print this somewhere..
 	printf("%s\n", EMU_DESMUME_NAME_AND_VERSION());
 
-	if (Screen_Init() != 0)
-		return -1;
-
 	{
 		char	buf[MAX_PATH];
 		memset(buf, 0, MAX_PATH);
@@ -158,6 +155,11 @@ int NDS_Init()
 	NDS_ARM7.SetBaseMemoryInterface(&arm7_base_memory_iface);
 	NDS_ARM7.SetBaseMemoryInterfaceData(NULL);
 	NDS_ARM7.ResetMemoryInterfaceToBase();
+
+   if (GPU != NULL)
+		delete GPU;
+	
+	GPU = new GPUSubsystem;
 	
 	if (SPU_Init(SNDCORE_DUMMY, 740) != 0)
 		return -1;
@@ -173,7 +175,10 @@ void NDS_DeInit(void)
 {
 	gameInfo.closeROM();
 	SPU_DeInit();
-	Screen_DeInit();
+
+   delete GPU;
+   GPU = NULL;
+
 	MMU_DeInit();
 
 	WIFI_DeInit();
@@ -735,7 +740,9 @@ public:
 	}
 	void Advance()
 	{
-		bool capturing = (MainScreen.gpu->dispCapCnt.enabled || (MainScreen.gpu->dispCapCnt.val & 0x80000000));
+      const GPUEngineBase *mainEngine = GPU->GetEngineMain();
+		bool capturing = (mainEngine->dispCapCnt.enabled || (mainEngine->dispCapCnt.val & 0x80000000));
+
 
 		if(capturing && consecutiveNonCaptures > 30)
 		{
@@ -746,7 +753,7 @@ public:
 			SkipNext2DFrame = false;
 			nextSkip = false;
 		}
-      else if((lastDisplayTarget != MainScreen.gpu->GetDisplayByID()) && lastSkip && !skipped)
+      else if((lastDisplayTarget != mainEngine->GetDisplayByID()) && lastSkip && !skipped)
 		{
 			// if we're switching from not skipping to skipping
 			// and the screens are also switching around this frame,
@@ -761,7 +768,7 @@ public:
 		else if(!(consecutiveNonCaptures > 9000)) // arbitrary cap to avoid eventual wrap
 			consecutiveNonCaptures++;
 
-      lastDisplayTarget = MainScreen.gpu->GetDisplayByID();
+      lastDisplayTarget = mainEngine->GetDisplayByID();
 		lastSkip = skipped;
 		skipped = nextSkip;
 		nextSkip = false;
@@ -1223,10 +1230,7 @@ static void execHardware_hblank()
 	//scroll regs for the next scanline
 	if(nds.VCount<192)
 	{
-		//taskSubGpu.execute(renderSubScreen,NULL);
-		GPU_RenderLine(&MainScreen, nds.VCount, frameSkipper.ShouldSkip2D());
-		GPU_RenderLine(&SubScreen, nds.VCount, frameSkipper.ShouldSkip2D());
-		//taskSubGpu.finish();
+      GPU->RenderLine(nds.VCount, frameSkipper.ShouldSkip2D());
 
 		//trigger hblank dmas
 		//but notice, we do that just after we finished drawing the line
@@ -1277,10 +1281,10 @@ static void execHardware_hstart_vblankEnd()
 	//some emulation housekeeping
 	frameSkipper.Advance();
 
-	if (GPU_GetWillAutoBlitNativeToCustomBuffer())
+   if (GPU->GetWillAutoBlitNativeToCustomBuffer())
 	{
-		MainScreen.gpu->BlitNativeToCustomFramebuffer();
-		SubScreen.gpu->BlitNativeToCustomFramebuffer();
+		GPU->GetEngineMain()->BlitNativeToCustomFramebuffer();
+		GPU->GetEngineSub()->BlitNativeToCustomFramebuffer();
 	}
 }
 
@@ -2456,7 +2460,7 @@ void NDS_Reset()
 	// Init calibration info
 	memcpy(&TSCal, firmware->getTouchCalibrate(), sizeof(TSCalInfo));
 
-	Screen_Reset();
+   GPU->Reset();
 
 	WIFI_Reset();
 	memcpy(FW_Mac, (MMU.fw.data + 0x36), 6);
@@ -2735,15 +2739,15 @@ void NDS_suspendProcessingInput(bool suspend)
 
 void NDS_swapScreen()
 {
-   if (MainDisplay.GetEngineID() == GPUCOREID_MAIN)
+   if (GPU->GetDisplayMain()->GetEngineID() == GPUCOREID_MAIN)
    {
-      MainDisplay.SetEngineByID(GPUCOREID_SUB);
-      TouchDisplay.SetEngineByID(GPUCOREID_MAIN);
+      GPU->GetDisplayMain()->SetEngineByID(GPUCOREID_SUB);
+		GPU->GetDisplayTouch()->SetEngineByID(GPUCOREID_MAIN);
    }
    else
    {
-      MainDisplay.SetEngineByID(GPUCOREID_MAIN);
-      TouchDisplay.SetEngineByID(GPUCOREID_SUB);
+      GPU->GetDisplayMain()->SetEngineByID(GPUCOREID_MAIN);
+		GPU->GetDisplayTouch()->SetEngineByID(GPUCOREID_SUB);
    }
 }
 

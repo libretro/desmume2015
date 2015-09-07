@@ -37,6 +37,8 @@ static int nds_screen_gap = 0;
 
 static uint16_t *screen_buf;
 
+extern GPUSubsystem *GPU;
+
 int currFrameCounter;
 
 unsigned GPU_LR_FRAMEBUFFER_NATIVE_WIDTH  = 256;
@@ -983,11 +985,13 @@ void retro_run (void)
 
    if (!skipped)
    {
+      u16 *screen = GPU->GetCustomFramebuffer();
       if (layout.draw_screen1)
-         SwapScreen (layout.dst,  &GPU_screen[0], layout.pitch);
+         SwapScreen (layout.dst,  screen, layout.pitch);
       if (layout.draw_screen2)
       {
-         SwapScreen (layout.dst2, &GPU_screen[GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT], layout.pitch);
+         screen = GPU->GetCustomFramebuffer() + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+         SwapScreen (layout.dst2, screen, layout.pitch);
          DrawPointer(layout.dst2, layout.pitch);
       }
    }
