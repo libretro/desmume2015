@@ -746,7 +746,7 @@ public:
 			SkipNext2DFrame = false;
 			nextSkip = false;
 		}
-		else if(lastOffset != MainScreen.offset && lastSkip && !skipped)
+		else if((lastDisplayTarget != MainScreen.gpu->targetDisplayID) && lastSkip && !skipped)
 		{
 			// if we're switching from not skipping to skipping
 			// and the screens are also switching around this frame,
@@ -760,8 +760,8 @@ public:
 			consecutiveNonCaptures = 0;
 		else if(!(consecutiveNonCaptures > 9000)) // arbitrary cap to avoid eventual wrap
 			consecutiveNonCaptures++;
-		lastLastOffset = lastOffset;
-		lastOffset = MainScreen.offset;
+
+      lastDisplayTarget = MainScreen.gpu->targetDisplayID;
 		lastSkip = skipped;
 		skipped = nextSkip;
 		nextSkip = false;
@@ -783,7 +783,7 @@ public:
 		nextSkip = false;
 		skipped = false;
 		lastSkip = false;
-		lastOffset = 0;
+      lastDisplayTarget = NDSDisplayID_Main;
 		SkipCur2DFrame = false;
 		SkipCur3DFrame = false;
 		SkipNext2DFrame = false;
@@ -793,8 +793,7 @@ private:
 	bool nextSkip;
 	bool skipped;
 	bool lastSkip;
-	int lastOffset;
-	int lastLastOffset;
+   NDSDisplayID lastDisplayTarget;
 	int consecutiveNonCaptures;
 	bool SkipCur2DFrame;
 	bool SkipCur3DFrame;
@@ -2730,9 +2729,16 @@ void NDS_suspendProcessingInput(bool suspend)
 
 void NDS_swapScreen()
 {
-	u16 tmp = MainScreen.offset;
-	MainScreen.offset = SubScreen.offset;
-	SubScreen.offset = tmp;
+   if (MainDisplay.GetEngineID() == GPUCOREID_MAIN)
+   {
+      MainDisplay.SetEngineByID(GPUCOREID_SUB);
+      TouchDisplay.SetEngineByID(GPUCOREID_MAIN);
+   }
+   else
+   {
+      MainDisplay.SetEngineByID(GPUCOREID_MAIN);
+      TouchDisplay.SetEngineByID(GPUCOREID_SUB);
+   }
 }
 
 #if defined(LOG_ARM9) || defined(LOG_ARM7)
