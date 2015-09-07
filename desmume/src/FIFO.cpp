@@ -326,3 +326,9 @@ u32 DISP_FIFOrecv()
 		disp_fifo.head = 0;
 	return (val);
 }
+
+void DISP_FIFOreset()
+{
+	disp_fifo.head = 0;
+	disp_fifo.tail = 0;
+}
