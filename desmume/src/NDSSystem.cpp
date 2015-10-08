@@ -1282,10 +1282,10 @@ static void execHardware_hstart_vblankEnd()
 	//some emulation housekeeping
 	frameSkipper.Advance();
 
-   if (GPU->GetWillAutoBlitNativeToCustomBuffer())
+   if (GPU->GetWillAutoResolveToCustomBuffer())
 	{
-		GPU->GetEngineMain()->BlitNativeToCustomFramebuffer();
-		GPU->GetEngineSub()->BlitNativeToCustomFramebuffer();
+		GPU->GetEngineMain()->ResolveToCustomFramebuffer();
+		GPU->GetEngineSub()->ResolveToCustomFramebuffer();
 	}
 }
 
