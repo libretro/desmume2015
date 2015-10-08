@@ -648,6 +648,22 @@ void GPUEngineBase::ParseReg_BGnCNT()
 	this->_ResortBGLayers();
 }
 
+template <GPULayerID LAYERID>
+void GPUEngineBase::ParseReg_BGnHOFS()
+{
+	const IOREG_BGnHOFS &BGnHOFS = this->_IORegisterMap->BGnOFS[LAYERID].BGnHOFS;
+	this->_BGLayer[LAYERID].BGnHOFS = BGnHOFS;
+	this->_BGLayer[LAYERID].xOffset = LOCAL_TO_LE_16(BGnHOFS.value);
+}
+
+template <GPULayerID LAYERID>
+void GPUEngineBase::ParseReg_BGnVOFS()
+{
+	const IOREG_BGnVOFS &BGnVOFS = this->_IORegisterMap->BGnOFS[LAYERID].BGnVOFS;
+	this->_BGLayer[LAYERID].BGnVOFS = BGnVOFS;
+	this->_BGLayer[LAYERID].yOffset = LOCAL_TO_LE_16(BGnVOFS.value);
+}
+
 template<GPULayerID LAYERID>
 void GPUEngineBase::ParseReg_BGnX()
 {
@@ -688,11 +704,11 @@ void GPUEngineBase::_RenderLine_Clear(const u16 clearColor, const u16 l, u16 *ds
 	{
 		if (BLDCNT.ColorEffect == ColorEffect_IncreaseBrightness)
 		{
-			dstClearColor = LE_TO_LOCAL_16(this->_currentFadeInColors[clearColor]);
+			dstClearColor = this->_currentFadeInColors[clearColor];
 		}
 		else if (BLDCNT.ColorEffect == ColorEffect_DecreaseBrightness)
 		{
-			dstClearColor = LE_TO_LOCAL_16(this->_currentFadeOutColors[clearColor]);
+			dstClearColor = this->_currentFadeOutColors[clearColor];
 		}
 	}
 	
@@ -1489,9 +1505,7 @@ void GPUEngineBase::_LineText(u16 *dstColorLine, const u16 lineIndex)
 	}
 	else
 	{
-		const u16 hofs = this->_IORegisterMap->BGnOFS[LAYERID].BGnHOFS.Offset;
-		const u16 vofs = this->_IORegisterMap->BGnOFS[LAYERID].BGnVOFS.Offset;
-		this->_RenderLine_TextBG<LAYERID, ISDEBUGRENDER, MOSAIC, ISCUSTOMRENDERINGNEEDED>(dstColorLine, lineIndex, hofs, lineIndex + vofs, 256);
+		this->_RenderLine_TextBG<LAYERID, ISDEBUGRENDER, MOSAIC, ISCUSTOMRENDERINGNEEDED>(dstColorLine, lineIndex, this->_BGLayer[LAYERID].xOffset, lineIndex + this->_BGLayer[LAYERID].yOffset, 256);
 	}
 }
 
@@ -1775,7 +1789,7 @@ void GPUEngineBase::_SpriteRenderPerform(const u16 lineIndex, u16 *dst, u8 *dst_
 	
 	for (size_t i = 0; i < 128; i++)
 	{
-		const OAMAttributes &spriteInfo = this->_oamList[i];
+		OAMAttributes spriteInfo = this->_oamList[i];
 
 		//for each sprite:
 		if (cost >= 2130)
@@ -1792,6 +1806,10 @@ void GPUEngineBase::_SpriteRenderPerform(const u16 lineIndex, u16 *dst, u8 *dst_
 		if (spriteInfo.RotScale == 0 && spriteInfo.Disable != 0)
 			continue;
 		
+		// Must explicitly convert endianness with attributes 1 and 2.
+		spriteInfo.attr[1] = LOCAL_TO_LE_16(spriteInfo.attr[1]);
+		spriteInfo.attr[2] = LOCAL_TO_LE_16(spriteInfo.attr[2]);
+		
 		const OBJMode objMode = (OBJMode)spriteInfo.Mode;
 
 		SpriteSize sprSize;
@@ -1801,13 +1819,11 @@ void GPUEngineBase::_SpriteRenderPerform(const u16 lineIndex, u16 *dst, u8 *dst_
 		s32 y;
 		s32 lg;
 		s32 xdir;
-		u8 prio;
+		u8 prio = spriteInfo.Priority;
 		u16 *pal;
 		u8 *src;
 		u32 srcadr;
-
-		prio = spriteInfo.Priority;
-
+		
 		if (spriteInfo.RotScale != 0)
 		{
 			s32		fieldX, fieldY, auxX, auxY, realX, realY, offset;
@@ -1901,15 +1917,14 @@ void GPUEngineBase::_SpriteRenderPerform(const u16 lineIndex, u16 *dst, u8 *dst_
 
 						if (colour && (prio < prioTab[sprX]))
 						{ 
-							dst[sprX] = pal[colour];
+							dst[sprX] = LE_TO_LOCAL_16(pal[colour]);
 							dst_alpha[sprX] = 0xFF;
 							typeTab[sprX] = objMode;
 							prioTab[sprX] = prio;
 						}
 					}
 
-					//  Add the rotation/scale coeficients, here the rotation/scaling
-					// is performed
+					// Add the rotation/scale coefficients, here the rotation/scaling is performed
 					realX += dx;
 					realY += dy;
 				}
@@ -1954,8 +1969,7 @@ void GPUEngineBase::_SpriteRenderPerform(const u16 lineIndex, u16 *dst, u8 *dst_
 						}
 					}
 
-					//  Add the rotation/scale coeficients, here the rotation/scaling
-					// is performed
+					// Add the rotation/scale coefficients, here the rotation/scaling is performed
 					realX += dx;
 					realY += dy;
 				}
@@ -2009,8 +2023,7 @@ void GPUEngineBase::_SpriteRenderPerform(const u16 lineIndex, u16 *dst, u8 *dst_
 						}
 					}
 
-					//  Add the rotation/scale coeficients, here the rotation/scaling
-					// is performed
+					// Add the rotation/scale coeficients, here the rotation/scaling  is performed
 					realX += dx;
 					realY += dy;
 				}
@@ -2537,6 +2550,15 @@ void GPUEngineBase::ParseAllRegisters()
 	// No need to call ParseReg_BGnCNT<GPUEngineID, GPULayerID>(), since it is
 	// already called by ParseReg_DISPCNT().
 	
+	this->ParseReg_BGnHOFS<GPULayerID_BG0>();
+	this->ParseReg_BGnHOFS<GPULayerID_BG1>();
+	this->ParseReg_BGnHOFS<GPULayerID_BG2>();
+	this->ParseReg_BGnHOFS<GPULayerID_BG3>();
+	this->ParseReg_BGnVOFS<GPULayerID_BG0>();
+	this->ParseReg_BGnVOFS<GPULayerID_BG1>();
+	this->ParseReg_BGnVOFS<GPULayerID_BG2>();
+	this->ParseReg_BGnVOFS<GPULayerID_BG3>();
+	
 	this->ParseReg_BGnX<GPULayerID_BG2>();
 	this->ParseReg_BGnY<GPULayerID_BG2>();
 	this->ParseReg_BGnX<GPULayerID_BG3>();
@@ -2824,7 +2846,7 @@ void GPUEngineA::_RenderLine_Layer(const u16 l, u16 *dstColorLine, const size_t 
 						const NDSDisplayInfo &dispInfo = GPU->GetDisplayInfo();
 						const float customWidthScale = (float)dispInfo.customWidth / (float)GPU_FRAMEBUFFER_NATIVE_WIDTH;
 						const FragmentColor *srcLine = this->_3DFramebufferRGBA6665 + (dstLineIndex * dispInfo.customWidth);
-						const u16 hofs = (u16)( ((float)this->_IORegisterMap->BGnOFS[GPULayerID_BG0].BGnHOFS.Offset * customWidthScale) + 0.5f );
+						const u16 hofs = (u16)( ((float)this->_BGLayer[GPULayerID_BG0].xOffset * customWidthScale) + 0.5f );
 						u16 *dstColorLinePtr = dstColorLine;
 						u8 *layerIDLine = this->_dstLayerID;
 						
@@ -4330,6 +4352,16 @@ template void GPUEngineBase::ParseReg_BGnCNT<GPUEngineID_Sub, GPULayerID_BG0>();
 template void GPUEngineBase::ParseReg_BGnCNT<GPUEngineID_Sub, GPULayerID_BG1>();
 template void GPUEngineBase::ParseReg_BGnCNT<GPUEngineID_Sub, GPULayerID_BG2>();
 template void GPUEngineBase::ParseReg_BGnCNT<GPUEngineID_Sub, GPULayerID_BG3>();
+
+template void GPUEngineBase::ParseReg_BGnHOFS<GPULayerID_BG0>();
+template void GPUEngineBase::ParseReg_BGnHOFS<GPULayerID_BG1>();
+template void GPUEngineBase::ParseReg_BGnHOFS<GPULayerID_BG2>();
+template void GPUEngineBase::ParseReg_BGnHOFS<GPULayerID_BG3>();
+
+template void GPUEngineBase::ParseReg_BGnVOFS<GPULayerID_BG0>();
+template void GPUEngineBase::ParseReg_BGnVOFS<GPULayerID_BG1>();
+template void GPUEngineBase::ParseReg_BGnVOFS<GPULayerID_BG2>();
+template void GPUEngineBase::ParseReg_BGnVOFS<GPULayerID_BG3>();
 
 template void GPUEngineBase::ParseReg_WINnH<0>();
 template void GPUEngineBase::ParseReg_WINnH<1>();
