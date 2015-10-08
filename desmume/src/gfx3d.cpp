@@ -341,15 +341,15 @@ static u8 MM3x3ind = 0;
 
 // Data for vertex submission
 static CACHE_ALIGN s16		s16coord[4] = {0, 0, 0, 0};
-static char		coordind = 0;
+static u8 coordind = 0;
 static PolygonPrimitiveType vtxFormat = GFX3D_TRIANGLES;
 static BOOL inBegin = FALSE;
 
 // Data for basic transforms
 static CACHE_ALIGN s32	trans[4] = {0, 0, 0, 0};
-static int		transind = 0;
+static u8		transind = 0;
 static CACHE_ALIGN s32	scale[4] = {0, 0, 0, 0};
-static int		scaleind = 0;
+static u8		scaleind = 0;
 static u32 viewport = 0;
 
 //various other registers
@@ -372,15 +372,13 @@ static u32 polyAttr=0,textureFormat=0, texturePalette=0, polyAttrPending=0;
 //the current vertex color, 5bit values
 static u8 colorRGB[4] = { 31,31,31,31 };
 
-u32 control = 0;
-
 //light state:
 static u32 lightColor[4] = {0,0,0,0};
 static s32 lightDirection[4] = {0,0,0,0};
 //material state:
 static u16 dsDiffuse, dsAmbient, dsSpecular, dsEmission;
 //used for indexing the shininess table during parameters to shininess command
-static int shininessInd = 0;
+static u8 shininessInd = 0;
 
 
 //-----------cached things:
@@ -406,18 +404,18 @@ VERTLIST* vertlists = NULL;
 VERTLIST* vertlist = NULL;
 int			polygonListCompleted = 0;
 
-int listTwiddle = 1;
-int triStripToggle;
+static int listTwiddle = 1;
+static u8 triStripToggle;
 
 //list-building state
 struct tmpVertInfo
 {
 	//the number of verts registered in this list
-	int count;
+	s32 count;
 	//indices to the main vert list
-	int map[4];
+	s32 map[4];
 	//indicates that the first poly in a list has been completed
-	bool first;
+	BOOL first;
 } tempVertInfo;
 
 
@@ -548,12 +546,12 @@ void gfx3d_init()
 		vertlist = &vertlists[0];
 	}
 	
-	gfx3d.state.fogDensityTable = MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0360;
-	gfx3d.state.edgeMarkColorTable = (u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0330);
+	gfx3d.state.savedDISP3DCNT.value = 0;
+	gfx3d.state.fogDensityTable = MMU.ARM9_REG+0x0360;
+	gfx3d.state.edgeMarkColorTable = (u16 *)(MMU.ARM9_REG+0x0330);
 	
 	makeTables();
 	Render3D_Init();
-	gfx3d_reset();
 }
 
 void gfx3d_deinit()
@@ -579,7 +577,6 @@ void gfx3d_reset()
 	
 	gxf_hardware.reset();
 
-	control = 0;
 	drawPending = FALSE;
 	flushPending = FALSE;
 	memset(polylists, 0, sizeof(POLYLIST)*2);
@@ -1335,8 +1332,8 @@ static void gfx3d_glTexCoord(s32 val)
 	if (texCoordinateTransform == 1)
 	{
 		//dragon quest 4 overworld will test this
-		last_s = (s32)(((s64)(_s<<12) * mtxCurrent[3][0] + (s64)(_t<<12) * mtxCurrent[3][4] + ((s64)mtxCurrent[3][8]<<12) + ((s64)mtxCurrent[3][12]<<12))>>24);
-		last_t = (s32)(((s64)(_s<<12) * mtxCurrent[3][1] + (s64)(_t<<12) * mtxCurrent[3][5] + ((s64)mtxCurrent[3][9]<<12) + ((s64)mtxCurrent[3][13]<<12))>>24);
+		last_s = (s32) (( (s64)_s * mtxCurrent[3][0] + (s64)_t * mtxCurrent[3][4] + (s64)mtxCurrent[3][8] + (s64)mtxCurrent[3][12])>>12);
+		last_t = (s32) (( (s64)_s * mtxCurrent[3][1] + (s64)_t * mtxCurrent[3][5] + (s64)mtxCurrent[3][9] + (s64)mtxCurrent[3][13])>>12);
 	}
 	else if(texCoordinateTransform == 0)
 	{
@@ -2026,17 +2023,6 @@ static void gfx3d_doFlush()
 	gfx3d.vertlist = vertlist;
 
 	//and also our current render state
-	if (BIT1(control)) gfx3d.state.shading = GFX3D_State::HIGHLIGHT;
-	else gfx3d.state.shading = GFX3D_State::TOON;
-	gfx3d.state.enableTexturing = BIT0(control);
-	gfx3d.state.enableAlphaTest = BIT2(control);
-	gfx3d.state.enableAlphaBlending = BIT3(control);
-	gfx3d.state.enableAntialiasing = BIT4(control);
-	gfx3d.state.enableEdgeMarking = BIT5(control);
-	gfx3d.state.enableFogAlphaOnly = BIT6(control);
-	gfx3d.state.enableFog = BIT7(control);
-	gfx3d.state.enableClearImage = BIT14(control);
-	gfx3d.state.fogShift = (control>>8)&0xF;
 	gfx3d.state.sortmode = BIT0(gfx3d.state.activeFlushCommand);
 	gfx3d.state.wbuffer = BIT1(gfx3d.state.activeFlushCommand);
 
@@ -2228,13 +2214,6 @@ void gfx3d_sendCommand(u32 cmd, u32 param)
 	}
 }
 
-
-
-void gfx3d_Control(u32 v)
-{
-	control = v;
-}
-
 //--------------
 //other misc stuff
 void gfx3d_glGetMatrix(const MatrixMode m_mode, int index, float *dst)
@@ -2268,7 +2247,7 @@ void gfx3d_glGetLightColor(const size_t index, u32 &dst)
 //consider building a little state structure that looks exactly like this describes
 
 SFORMAT SF_GFX3D[]={
-	{ "GCTL", 4, 1, &control}, // no longer regenerated indirectly, see comment in loadstate()
+	{ "GCTL", 4, 1, &gfx3d.state.savedDISP3DCNT},
 	{ "GPAT", 4, 1, &polyAttr},
 	{ "GPAP", 4, 1, &polyAttrPending},
 	{ "GINB", 4, 1, &inBegin},
@@ -2282,7 +2261,7 @@ SFORMAT SF_GFX3D[]={
 	{ "MM4I", 1, 1, &MM4x4ind},
 	{ "MM3I", 1, 1, &MM4x3ind},
 	{ "MMxI", 1, 1, &MM3x3ind},
-	{ "GSCO", 4, 1, s16coord},
+	{ "GSCO", 2, 4, s16coord},
 	{ "GCOI", 1, 1, &coordind},
 	{ "GVFM", 4, 1, &vtxFormat},
 	{ "GTRN", 4, 4, trans},
@@ -2341,11 +2320,11 @@ SFORMAT SF_GFX3D[]={
 	{ "GSFO", 4, 1, &gfx3d.state.fogOffset},
 	{ "GST4", 2, 32, gfx3d.state.u16ToonTable},
 	{ "GSSU", 1, 128, &gfx3d.state.shininessTable[0]},
-	{ "GSSI", 4, 1, &shininessInd},
+	{ "GSSI", 1, 1, &shininessInd},
 	{ "GSAF", 4, 1, &gfx3d.state.activeFlushCommand},
 	{ "GSPF", 4, 1, &gfx3d.state.pendingFlushCommand},
 	//------------------------
-	{ "GTST", 4, 1, &triStripToggle},
+	{ "GTST", 1, 1, &triStripToggle},
 	{ "GTVC", 4, 1, &tempVertInfo.count},
 	{ "GTVM", 4, 4, tempVertInfo.map},
 	{ "GTVF", 4, 1, &tempVertInfo.first},
@@ -2407,7 +2386,9 @@ bool gfx3d_loadstate(EMUFILE* is, int size)
 	listTwiddle = 0;
 	polylist = &polylists[listTwiddle];
 	vertlist = &vertlists[listTwiddle];
-
+	
+	gfx3d_parseCurrentDISP3DCNT();
+	
 	if (version >= 1)
 	{
 		OSREAD(vertlist->count);
@@ -2445,6 +2426,35 @@ bool gfx3d_loadstate(EMUFILE* is, int size)
 	}
 
 	return true;
+}
+
+void gfx3d_parseCurrentDISP3DCNT()
+{
+	const IOREG_DISP3DCNT &DISP3DCNT = gfx3d.state.savedDISP3DCNT;
+	
+	gfx3d.state.enableTexturing		= (DISP3DCNT.EnableTexMapping != 0);
+	gfx3d.state.shading				=  DISP3DCNT.PolygonShading;
+	gfx3d.state.enableAlphaTest		= (DISP3DCNT.EnableAlphaTest != 0);
+	gfx3d.state.enableAlphaBlending	= (DISP3DCNT.EnableAlphaBlending != 0);
+	gfx3d.state.enableAntialiasing	= (DISP3DCNT.EnableAntiAliasing != 0);
+	gfx3d.state.enableEdgeMarking	= (DISP3DCNT.EnableEdgeMarking != 0);
+	gfx3d.state.enableFogAlphaOnly	= (DISP3DCNT.FogOnlyAlpha != 0);
+	gfx3d.state.enableFog			= (DISP3DCNT.EnableFog != 0);
+	gfx3d.state.fogShift			=  DISP3DCNT.FogShiftSHR;
+	gfx3d.state.enableClearImage	= (DISP3DCNT.RearPlaneMode != 0);
+}
+
+void ParseReg_DISP3DCNT()
+{
+	const IOREG_DISP3DCNT &DISP3DCNT = GPU->GetEngineMain()->GetIORegisterMap().DISP3DCNT;
+	
+	if (gfx3d.state.savedDISP3DCNT.value == DISP3DCNT.value)
+	{
+		return;
+	}
+	
+	gfx3d.state.savedDISP3DCNT.value = DISP3DCNT.value;
+	gfx3d_parseCurrentDISP3DCNT();
 }
 
 //-------------------

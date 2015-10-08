@@ -530,7 +530,7 @@ public:
 			{
 				const FragmentColor toonColor = this->_softRender->toonColor32LUT[src.r >> 1];
 				
-				if (gfx3d.renderState.shading == GFX3D_State::HIGHLIGHT)
+				if (gfx3d.renderState.shading == PolygonShadingMode_Highlight)
 				{
 					// Tested in the "Shadows of Almia" logo in the Pokemon Ranger: Shadows of Almia title screen.
 					// Also tested in Advance Wars: Dual Strike and Advance Wars: Days of Ruin when tiles highlight
@@ -1933,6 +1933,7 @@ Render3DError SoftRasterizerRenderer::Render(const GFX3D &engine)
 {
 	Render3DError error = RENDER3DERROR_NOERR;
 	
+	GPU->GetEventHandler()->DidRender3DBegin();
 	error = this->BeginRender(engine);
 	if (error != RENDER3DERROR_NOERR)
 	{
@@ -1970,6 +1971,7 @@ Render3DError SoftRasterizerRenderer::RenderFinish()
 {
 	if (!this->_renderGeometryNeedsFinish)
 	{
+		GPU->GetEventHandler()->DidRender3DEnd();
 		return RENDER3DERROR_NOERR;
 	}
 	
@@ -2005,6 +2007,7 @@ Render3DError SoftRasterizerRenderer::RenderFinish()
 	
    this->FlushFramebuffer(GPU->GetEngineMain()->Get3DFramebufferRGBA6665(), GPU->GetEngineMain()->Get3DFramebufferRGBA5551());
 	
+	GPU->GetEventHandler()->DidRender3DEnd();
 	return RENDER3DERROR_NOERR;
 }
 

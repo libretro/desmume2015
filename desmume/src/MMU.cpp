@@ -300,7 +300,7 @@ struct TVramBankInfo {
 	u8 page_addr, num_pages;
 };
 
-static const TVramBankInfo vram_bank_info[VRAM_BANKS] = {
+static const TVramBankInfo vram_bank_info[VRAM_BANK_COUNT] = {
 	{0,8},
 	{8,8},
 	{16,8},
@@ -478,7 +478,7 @@ std::string VramConfiguration::describePurpose(Purpose p) {
 
 std::string VramConfiguration::describe() {
 	std::stringstream ret;
-	for(int i=0;i<VRAM_BANKS;i++) {
+	for(int i=0;i<VRAM_BANK_COUNT;i++) {
 		ret << (char)(i+'A') << ": " << banks[i].ofs << " " << describePurpose(banks[i].purpose) << std::endl;
 	}
 	return ret.str();
@@ -509,48 +509,47 @@ static inline u8* MMU_vram_physical(const int page)
 	return MMU.ARM9_LCD + (page*ADDRESS_STEP_16KB);
 }
 
-//todo - templateize
-static inline void MMU_VRAMmapRefreshBank(const int bank)
+template <VRAMBankID VRAMBANK>
+static inline void MMU_VRAMmapRefreshBank()
 {
-	int block = bank;
-	if(bank >= VRAM_BANK_H) block++;
-
-	u8 VRAMBankCnt = T1ReadByte(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x240 + block);
+	const size_t block = (VRAMBANK >= VRAM_BANK_H) ? VRAMBANK + 1 : VRAMBANK;
+	
+	VRAMCNT VRAMBankCnt;
+	VRAMBankCnt.value = T1ReadByte(MMU.ARM9_REG, 0x240 + block);
 	
 	//do nothing if the bank isnt enabled
-	u8 en = VRAMBankCnt & 0x80;
-	if(!en) return;
+	if(VRAMBankCnt.Enable == 0) return;
 
-	int mst,ofs=0;
-	switch(bank) {
+	switch(VRAMBANK) {
 		case VRAM_BANK_A:
 		case VRAM_BANK_B:
-			mst = VRAMBankCnt & 3;
-			ofs = (VRAMBankCnt>>3) & 3;
-			switch(mst)
+			assert(VRAMBankCnt.MST == VRAMBankCnt.MST_ABHI);
+			switch(VRAMBankCnt.MST_ABHI)
 			{
 			case 0: //LCDC
-				vramConfiguration.banks[bank].purpose = VramConfiguration::LCDC;
-				MMU_vram_lcdc(bank);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::LCDC;
+				MMU_vram_lcdc(VRAMBANK);
+//				if(VRAMBankCnt.OFS != 0) PROGINFO("Bank %i: MST %i OFS %i\n", VRAMBankCnt.MST_ABHI, VRAMBankCnt.OFS);
 				break;
 			case 1: //ABG
-				vramConfiguration.banks[bank].purpose = VramConfiguration::ABG;
-				MMU_vram_arm9(bank,VRAM_PAGE_ABG+ofs*8);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::ABG;
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_ABG+VRAMBankCnt.OFS*8);
 				break;
 			case 2: //AOBJ
-				vramConfiguration.banks[bank].purpose = VramConfiguration::AOBJ;
-				switch(ofs) {
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::AOBJ;
+				switch(VRAMBankCnt.OFS) {
 				case 0:
 				case 1:
-					MMU_vram_arm9(bank,VRAM_PAGE_AOBJ+ofs*8);
+					MMU_vram_arm9(VRAMBANK,VRAM_PAGE_AOBJ+VRAMBankCnt.OFS*8);
 					break;
 				default:
-               break;
+					break;
+//					PROGINFO("Unsupported ofs setting %d for engine A OBJ vram bank %c\n", VRAMBankCnt.OFS, 'A'+VRAMBANK);
 				}
 				break;
 			case 3: //texture
-				vramConfiguration.banks[bank].purpose = VramConfiguration::TEX;
-				MMU.texInfo.textureSlotAddr[ofs] = MMU_vram_physical(vram_bank_info[bank].page_addr);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::TEX;
+				MMU.texInfo.textureSlotAddr[VRAMBankCnt.OFS] = MMU_vram_physical(vram_bank_info[VRAMBANK].page_addr);
 				break;
 			default: goto unsupported_mst;
 			}
@@ -558,75 +557,76 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 
 		case VRAM_BANK_C:
 		case VRAM_BANK_D:
-			mst = VRAMBankCnt & 7;
-			ofs = (VRAMBankCnt>>3) & 3;
-			switch(mst)
+			switch(VRAMBankCnt.MST)
 			{
 			case 0: //LCDC
-				vramConfiguration.banks[bank].purpose = VramConfiguration::LCDC;
-				MMU_vram_lcdc(bank);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::LCDC;
+				MMU_vram_lcdc(VRAMBANK);
+//				if(VRAMBankCnt.OFS != 0) PROGINFO("Bank %i: MST %i OFS %i\n", VRAMBankCnt.MST, VRAMBankCnt.OFS);
 				break;
 			case 1: //ABG
-				vramConfiguration.banks[bank].purpose = VramConfiguration::ABG;
-				MMU_vram_arm9(bank,VRAM_PAGE_ABG+ofs*8);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::ABG;
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_ABG+VRAMBankCnt.OFS*8);
 				break;
 			case 2: //arm7
-				vramConfiguration.banks[bank].purpose = VramConfiguration::ARM7;
-				if(bank == 2) T1WriteByte(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x240, T1ReadByte(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x240) | 1);
-				if(bank == 3) T1WriteByte(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x240, T1ReadByte(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x240) | 2);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::ARM7;
+				if(VRAMBANK == 2) T1WriteByte(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x240, T1ReadByte(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x240) | 1);
+				if(VRAMBANK == 3) T1WriteByte(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x240, T1ReadByte(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x240) | 2);
 				//printf("DING!\n");
-				switch(ofs) {
+				switch(VRAMBankCnt.OFS) {
 				case 0:
 				case 1:
-					vram_arm7_map[ofs] = vram_bank_info[bank].page_addr;
+					vram_arm7_map[VRAMBankCnt.OFS] = vram_bank_info[VRAMBANK].page_addr;
 					break;
 				default:
-               break;
+					break;
+//					PROGINFO("Unsupported ofs setting %d for arm7 vram bank %c\n", VRAMBankCnt.OFS, 'A'+VRAMBANK);
 				}
 
 				break;
 			case 3: //texture
-				vramConfiguration.banks[bank].purpose = VramConfiguration::TEX;
-				MMU.texInfo.textureSlotAddr[ofs] = MMU_vram_physical(vram_bank_info[bank].page_addr);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::TEX;
+				MMU.texInfo.textureSlotAddr[VRAMBankCnt.OFS] = MMU_vram_physical(vram_bank_info[VRAMBANK].page_addr);
 				break;
 			case 4: //BGB or BOBJ
-				if(bank == VRAM_BANK_C)  {
-					vramConfiguration.banks[bank].purpose = VramConfiguration::BBG;
-					MMU_vram_arm9(bank,VRAM_PAGE_BBG); //BBG
+				if(VRAMBANK == VRAM_BANK_C)  {
+					vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::BBG;
+					MMU_vram_arm9(VRAMBANK,VRAM_PAGE_BBG); //BBG
 				} else {
-					vramConfiguration.banks[bank].purpose = VramConfiguration::BOBJ;
-					MMU_vram_arm9(bank,VRAM_PAGE_BOBJ); //BOBJ
+					vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::BOBJ;
+					MMU_vram_arm9(VRAMBANK,VRAM_PAGE_BOBJ); //BOBJ
 				}
+//				if(VRAMBankCnt.OFS != 0) PROGINFO("Bank %i: MST %i OFS %i\n", VRAMBankCnt.MST, VRAMBankCnt.OFS);
 				break;
 			default: goto unsupported_mst;
 			}
 			break;
 
 		case VRAM_BANK_E:
-			mst = VRAMBankCnt & 7;
-			switch(mst) {
+//			if(VRAMBankCnt.OFS != 0) PROGINFO("Bank %i: MST %i OFS %i\n", VRAMBankCnt.MST, VRAMBankCnt.OFS);
+			switch(VRAMBankCnt.MST) {
 			case 0: //LCDC
-				vramConfiguration.banks[bank].purpose = VramConfiguration::LCDC;
-				MMU_vram_lcdc(bank);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::LCDC;
+				MMU_vram_lcdc(VRAMBANK);
 				break;
 			case 1: //ABG
-				vramConfiguration.banks[bank].purpose = VramConfiguration::ABG;
-				MMU_vram_arm9(bank,VRAM_PAGE_ABG);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::ABG;
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_ABG);
 				break;
 			case 2: //AOBJ
-				vramConfiguration.banks[bank].purpose = VramConfiguration::AOBJ;
-				MMU_vram_arm9(bank,VRAM_PAGE_AOBJ);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::AOBJ;
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_AOBJ);
 				break;
 			case 3: //texture palette
-				vramConfiguration.banks[bank].purpose = VramConfiguration::TEXPAL;
-				MMU.texInfo.texPalSlot[0] = MMU_vram_physical(vram_bank_info[bank].page_addr);
-				MMU.texInfo.texPalSlot[1] = MMU_vram_physical(vram_bank_info[bank].page_addr+1);
-				MMU.texInfo.texPalSlot[2] = MMU_vram_physical(vram_bank_info[bank].page_addr+2);
-				MMU.texInfo.texPalSlot[3] = MMU_vram_physical(vram_bank_info[bank].page_addr+3);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::TEXPAL;
+				MMU.texInfo.texPalSlot[0] = MMU_vram_physical(vram_bank_info[VRAMBANK].page_addr);
+				MMU.texInfo.texPalSlot[1] = MMU_vram_physical(vram_bank_info[VRAMBANK].page_addr+1);
+				MMU.texInfo.texPalSlot[2] = MMU_vram_physical(vram_bank_info[VRAMBANK].page_addr+2);
+				MMU.texInfo.texPalSlot[3] = MMU_vram_physical(vram_bank_info[VRAMBANK].page_addr+3);
 				break;
 			case 4: //A BG extended palette
-				vramConfiguration.banks[bank].purpose = VramConfiguration::ABGEXTPAL;
-				MMU.ExtPal[0][0] = MMU_vram_physical(vram_bank_info[bank].page_addr);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::ABGEXTPAL;
+				MMU.ExtPal[0][0] = MMU_vram_physical(vram_bank_info[VRAMBANK].page_addr);
 				MMU.ExtPal[0][1] = MMU.ExtPal[0][0] + ADDRESS_STEP_8KB;
 				MMU.ExtPal[0][2] = MMU.ExtPal[0][1] + ADDRESS_STEP_8KB;
 				MMU.ExtPal[0][3] = MMU.ExtPal[0][2] + ADDRESS_STEP_8KB;
@@ -637,47 +637,48 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 			
 		case VRAM_BANK_F:
 		case VRAM_BANK_G: {
-			mst = VRAMBankCnt & 7;
-			ofs = (VRAMBankCnt>>3) & 3;
 			const int pageofslut[] = {0,1,4,5};
-			const int pageofs = pageofslut[ofs];
-			switch(mst)
+			const int pageofs = pageofslut[VRAMBankCnt.OFS];
+			switch(VRAMBankCnt.MST)
 			{
 			case 0: //LCDC
-				vramConfiguration.banks[bank].purpose = VramConfiguration::LCDC;
-				MMU_vram_lcdc(bank);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::LCDC;
+				MMU_vram_lcdc(VRAMBANK);
+//				if(VRAMBankCnt.OFS != 0) PROGINFO("Bank %i: MST %i OFS %i\n", VRAMBankCnt.MST, VRAMBankCnt.OFS);
 				break;
 			case 1: //ABG
-				vramConfiguration.banks[bank].purpose = VramConfiguration::ABG;
-				MMU_vram_arm9(bank,VRAM_PAGE_ABG+pageofs);
-				MMU_vram_arm9(bank,VRAM_PAGE_ABG+pageofs+2); //unexpected mirroring (required by spyro eternal night)
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::ABG;
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_ABG+pageofs);
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_ABG+pageofs+2); //unexpected mirroring (required by spyro eternal night)
 				break;
 			case 2: //AOBJ
-				vramConfiguration.banks[bank].purpose = VramConfiguration::AOBJ;
-				MMU_vram_arm9(bank,VRAM_PAGE_AOBJ+pageofs);
-				MMU_vram_arm9(bank,VRAM_PAGE_AOBJ+pageofs+2); //unexpected mirroring - I have no proof, but it is inferred from the ABG above
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::AOBJ;
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_AOBJ+pageofs);
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_AOBJ+pageofs+2); //unexpected mirroring - I have no proof, but it is inferred from the ABG above
 				break;
 			case 3: //texture palette
-				vramConfiguration.banks[bank].purpose = VramConfiguration::TEXPAL;
-				MMU.texInfo.texPalSlot[pageofs] = MMU_vram_physical(vram_bank_info[bank].page_addr);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::TEXPAL;
+				MMU.texInfo.texPalSlot[pageofs] = MMU_vram_physical(vram_bank_info[VRAMBANK].page_addr);
 				break;
 			case 4: //A BG extended palette
-				switch(ofs) {
+				switch(VRAMBankCnt.OFS) {
 				case 0:
 				case 1:
-					vramConfiguration.banks[bank].purpose = VramConfiguration::ABGEXTPAL;
-					MMU.ExtPal[0][ofs*2] = MMU_vram_physical(vram_bank_info[bank].page_addr);
-					MMU.ExtPal[0][ofs*2+1] = MMU.ExtPal[0][ofs*2] + ADDRESS_STEP_8KB;
+					vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::ABGEXTPAL;
+					MMU.ExtPal[0][VRAMBankCnt.OFS*2] = MMU_vram_physical(vram_bank_info[VRAMBANK].page_addr);
+					MMU.ExtPal[0][VRAMBankCnt.OFS*2+1] = MMU.ExtPal[0][VRAMBankCnt.OFS*2] + ADDRESS_STEP_8KB;
 					break;
 				default:
-					vramConfiguration.banks[bank].purpose = VramConfiguration::INVALID;
+					vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::INVALID;
+//					PROGINFO("Unsupported ofs setting %d for engine A bgextpal vram bank %c\n", VRAMBankCnt.OFS, 'A'+VRAMBANK);
 					break;
 				}
 				break;
 			case 5: //A OBJ extended palette
-				vramConfiguration.banks[bank].purpose = VramConfiguration::AOBJEXTPAL;
-				MMU.ObjExtPal[0][0] = MMU_vram_physical(vram_bank_info[bank].page_addr);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::AOBJEXTPAL;
+				MMU.ObjExtPal[0][0] = MMU_vram_physical(vram_bank_info[VRAMBANK].page_addr);
 				MMU.ObjExtPal[0][1] = MMU.ObjExtPal[0][1] + ADDRESS_STEP_8KB;
+//				if(VRAMBankCnt.OFS != 0) PROGINFO("Bank %i: MST %i OFS %i\n", VRAMBankCnt.MST, VRAMBankCnt.OFS);
 				break;
 			default: goto unsupported_mst;
 			}
@@ -685,21 +686,22 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 		}
 
 		case VRAM_BANK_H:
-			mst = VRAMBankCnt & 3;
-			switch(mst)
+			assert(VRAMBankCnt.MST == VRAMBankCnt.MST_ABHI);
+//			if(VRAMBankCnt.OFS != 0) PROGINFO("Bank %i: MST %i OFS %i\n", VRAMBankCnt.MST_ABHI, VRAMBankCnt.OFS);
+			switch(VRAMBankCnt.MST_ABHI)
 			{
 			case 0: //LCDC
-				vramConfiguration.banks[bank].purpose = VramConfiguration::LCDC;
-				MMU_vram_lcdc(bank);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::LCDC;
+				MMU_vram_lcdc(VRAMBANK);
 				break;
 			case 1: //BBG
-				vramConfiguration.banks[bank].purpose = VramConfiguration::BBG;
-				MMU_vram_arm9(bank,VRAM_PAGE_BBG);
-				MMU_vram_arm9(bank,VRAM_PAGE_BBG + 4); //unexpected mirroring
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::BBG;
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_BBG);
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_BBG + 4); //unexpected mirroring
 				break;
 			case 2: //B BG extended palette
-				vramConfiguration.banks[bank].purpose = VramConfiguration::BBGEXTPAL;
-				MMU.ExtPal[1][0] = MMU_vram_physical(vram_bank_info[bank].page_addr);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::BBGEXTPAL;
+				MMU.ExtPal[1][0] = MMU_vram_physical(vram_bank_info[VRAMBANK].page_addr);
 				MMU.ExtPal[1][1] = MMU.ExtPal[1][0] + ADDRESS_STEP_8KB;
 				MMU.ExtPal[1][2] = MMU.ExtPal[1][1] + ADDRESS_STEP_8KB;
 				MMU.ExtPal[1][3] = MMU.ExtPal[1][2] + ADDRESS_STEP_8KB;
@@ -709,26 +711,27 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 			break;
 
 		case VRAM_BANK_I:
-			mst = VRAMBankCnt & 3;
-			switch(mst)
+			assert(VRAMBankCnt.MST == VRAMBankCnt.MST_ABHI);
+//			if(VRAMBankCnt.OFS != 0) PROGINFO("Bank %i: MST %i OFS %i\n", VRAMBankCnt.MST_ABHI, VRAMBankCnt.OFS);
+			switch(VRAMBankCnt.MST_ABHI)
 			{
 			case 0: //LCDC
-				vramConfiguration.banks[bank].purpose = VramConfiguration::LCDC;
-				MMU_vram_lcdc(bank);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::LCDC;
+				MMU_vram_lcdc(VRAMBANK);
 				break;
 			case 1: //BBG
-				vramConfiguration.banks[bank].purpose = VramConfiguration::BBG;
-				MMU_vram_arm9(bank,VRAM_PAGE_BBG+2);
-				MMU_vram_arm9(bank,VRAM_PAGE_BBG+3); //unexpected mirroring
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::BBG;
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_BBG+2);
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_BBG+3); //unexpected mirroring
 				break;
 			case 2: //BOBJ
-				vramConfiguration.banks[bank].purpose = VramConfiguration::BOBJ;
-				MMU_vram_arm9(bank,VRAM_PAGE_BOBJ);
-				MMU_vram_arm9(bank,VRAM_PAGE_BOBJ+1); //FF3 end scene (lens flare sprite) needs this as it renders a sprite off the end of the 16KB and back around
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::BOBJ;
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_BOBJ);
+				MMU_vram_arm9(VRAMBANK,VRAM_PAGE_BOBJ+1); //FF3 end scene (lens flare sprite) needs this as it renders a sprite off the end of the 16KB and back around
 				break;
 			case 3: //B OBJ extended palette
-				vramConfiguration.banks[bank].purpose = VramConfiguration::BOBJEXTPAL;
-				MMU.ObjExtPal[1][0] = MMU_vram_physical(vram_bank_info[bank].page_addr);
+				vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::BOBJEXTPAL;
+				MMU.ObjExtPal[1][0] = MMU_vram_physical(vram_bank_info[VRAMBANK].page_addr);
 				MMU.ObjExtPal[1][1] = MMU.ObjExtPal[1][1] + ADDRESS_STEP_8KB;
 				break;
 			default: goto unsupported_mst;
@@ -736,14 +739,15 @@ static inline void MMU_VRAMmapRefreshBank(const int bank)
 			break;
 
 			
-	} //switch(bank)
+	} //switch(VRAMBANK)
 
-	vramConfiguration.banks[bank].ofs = ofs;
+	vramConfiguration.banks[VRAMBANK].ofs = VRAMBankCnt.OFS;
 
 	return;
 
 unsupported_mst:
-	vramConfiguration.banks[bank].purpose = VramConfiguration::INVALID;
+	vramConfiguration.banks[VRAMBANK].purpose = VramConfiguration::INVALID;
+//	PROGINFO("Unsupported mst setting %d for vram bank %c\n", VRAMBankCnt.MST, 'A'+VRAMBANK);
 }
 
 void MMU_VRAM_unmap_all()
@@ -795,7 +799,7 @@ static inline void MMU_VRAMmapControl(u8 block, u8 VRAMBankCnt)
 	T1WriteByte(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x240, 0);
 
 	//write the new value to the reg
-	T1WriteByte(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x240 + block, VRAMBankCnt);
+	T1WriteByte(MMU.ARM9_REG, 0x240 + block, VRAMBankCnt);
 
 	//refresh all bank settings
 	//zero XX-XX-200X (long before jun 2012)
@@ -806,19 +810,19 @@ static inline void MMU_VRAMmapControl(u8 block, u8 VRAMBankCnt)
 	//goblet of fire "care of magical creatures" maps I and D to BOBJ (the I is an accident)
 	//and requires A to override it.
 	//This may create other bugs....
-	MMU_VRAMmapRefreshBank(VRAM_BANK_I);
-	MMU_VRAMmapRefreshBank(VRAM_BANK_H);
-	MMU_VRAMmapRefreshBank(VRAM_BANK_G);
-	MMU_VRAMmapRefreshBank(VRAM_BANK_F);
-	MMU_VRAMmapRefreshBank(VRAM_BANK_E);
+	MMU_VRAMmapRefreshBank<VRAM_BANK_I>();
+	MMU_VRAMmapRefreshBank<VRAM_BANK_H>();
+	MMU_VRAMmapRefreshBank<VRAM_BANK_G>();
+	MMU_VRAMmapRefreshBank<VRAM_BANK_F>();
+	MMU_VRAMmapRefreshBank<VRAM_BANK_E>();
 	//zero 21-jun-2012
 	//tomwi's streaming music demo sets A and D to ABG (the A is an accident).
 	//in this case, D should get priority. 
 	//this is somewhat risky. will it break other things?
-	MMU_VRAMmapRefreshBank(VRAM_BANK_A);
-	MMU_VRAMmapRefreshBank(VRAM_BANK_B);
-	MMU_VRAMmapRefreshBank(VRAM_BANK_C);
-	MMU_VRAMmapRefreshBank(VRAM_BANK_D);
+	MMU_VRAMmapRefreshBank<VRAM_BANK_A>();
+	MMU_VRAMmapRefreshBank<VRAM_BANK_B>();
+	MMU_VRAMmapRefreshBank<VRAM_BANK_C>();
+	MMU_VRAMmapRefreshBank<VRAM_BANK_D>();
 
 	//printf(vramConfiguration.describe().c_str());
 	//printf("vram remapped at vcount=%d\n",nds.VCount);
@@ -897,6 +901,8 @@ void MMU_Init(void)
 	LOG("MMU init\n");
 
 	memset(&MMU, 0, sizeof(MMU_struct));
+	
+	MMU.blank_memory = &MMU.ARM9_LCD[0xA4000];
 
 	//MMU.DTCMRegion = 0x027C0000;
 	//even though apps may change dtcm immediately upon startup, this is the correct hardware starting value:
@@ -943,7 +949,6 @@ void MMU_Reset()
 	memset(MMU.ARM9_VMEM, 0, sizeof(MMU.ARM9_VMEM));
 	memset(MMU.MAIN_MEM,  0, sizeof(MMU.MAIN_MEM));
 
-	memset(MMU.blank_memory,  0, sizeof(MMU.blank_memory));
 	memset(MMU.UNUSED_RAM,    0, sizeof(MMU.UNUSED_RAM));
 	memset(MMU.MORE_UNUSED_RAM,    0, sizeof(MMU.UNUSED_RAM));
 	
@@ -1038,16 +1043,16 @@ static void execsqrt() {
 	MMU_new.sqrt.busy = 1;
 
 	if (mode) { 
-		u64 v = T1ReadQuad(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2B8);
+		u64 v = T1ReadQuad(MMU.ARM9_REG, 0x2B8);
 		ret = (u32)isqrt(v);
 	} else {
-		u32 v = T1ReadLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2B8);
+		u32 v = T1ReadLong(MMU.ARM9_REG, 0x2B8);
 		ret = (u32)isqrt(v);
 	}
 
 	//clear the result while the sqrt unit is busy
 	//todo - is this right? is it reasonable?
-	T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2B4, 0);
+	T1WriteLong(MMU.ARM9_REG, 0x2B4, 0);
 
 	MMU.sqrtCycles = nds_timer + 26;
 	MMU.sqrtResult = ret;
@@ -1066,20 +1071,20 @@ static void execdiv() {
 	switch(mode)
 	{
 	case 0:	// 32/32
-		num = (s64) (s32) T1ReadLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x290);
-		den = (s64) (s32) T1ReadLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x298);
+		num = (s64) (s32) T1ReadLong(MMU.ARM9_REG, 0x290);
+		den = (s64) (s32) T1ReadLong(MMU.ARM9_REG, 0x298);
 		MMU.divCycles = nds_timer + 36;
 		break;
 	case 1:	// 64/32
 	case 3: //gbatek says this is same as mode 1
-		num = (s64) T1ReadQuad(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x290);
-		den = (s64) (s32) T1ReadLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x298);
+		num = (s64) T1ReadQuad(MMU.ARM9_REG, 0x290);
+		den = (s64) (s32) T1ReadLong(MMU.ARM9_REG, 0x298);
 		MMU.divCycles = nds_timer + 68;
 		break;
 	case 2:	// 64/64
 	default:
-		num = (s64) T1ReadQuad(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x290);
-		den = (s64) T1ReadQuad(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x298);
+		num = (s64) T1ReadQuad(MMU.ARM9_REG, 0x290);
+		den = (s64) T1ReadQuad(MMU.ARM9_REG, 0x298);
 		MMU.divCycles = nds_timer + 68;
 		break;
 	}
@@ -1090,7 +1095,7 @@ static void execdiv() {
 		mod = num;
 
 		// the DIV0 flag in DIVCNT is set only if the full 64bit DIV_DENOM value is zero, even in 32bit mode
-		if ((u64)T1ReadQuad(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x298) == 0) 
+		if ((u64)T1ReadQuad(MMU.ARM9_REG, 0x298) == 0) 
 			MMU_new.div.div0 = 1;
 	}
 	else
@@ -1103,10 +1108,10 @@ static void execdiv() {
 							(u32)(den>>32), (u32)den, 
 							(u32)(res>>32), (u32)res);
 
-	T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2A0, 0);
-	T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2A4, 0);
-	T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2A8, 0);
-	T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2AC, 0);
+	T1WriteLong(MMU.ARM9_REG, 0x2A0, 0);
+	T1WriteLong(MMU.ARM9_REG, 0x2A4, 0);
+	T1WriteLong(MMU.ARM9_REG, 0x2A8, 0);
+	T1WriteLong(MMU.ARM9_REG, 0x2AC, 0);
 
 	MMU.divResult = res;
 	MMU.divMod = mod;
@@ -1725,63 +1730,6 @@ u32 MMU_struct::gen_IF()
 
 	return IF;
 }
-
-static void writereg_DISP3DCNT(const int size, const u32 adr, const u32 val)
-{
-	//UGH. rewrite this shite to use individual values and reconstruct the return value instead of packing things in this !@#)ing register
-	
-	//nanostray2 cutscene will test this vs old desmumes by using some kind of 32bit access for setting up this reg for cutscenes
-	switch(size)
-	{
-	case 8:
-		switch(adr)
-		{
-		case REG_DISPA_DISP3DCNT: 
-			MMU.reg_DISP3DCNT_bits &= 0xFFFFFF00;
-			MMU.reg_DISP3DCNT_bits |= val;
-			gfx3d_Control(MMU.reg_DISP3DCNT_bits);
-			break;
-		case REG_DISPA_DISP3DCNT+1:
-			{
-				u32 myval = (val & ~0x30) | (~val & ((MMU.reg_DISP3DCNT_bits>>8) & 0x30)); // bits 12,13 are ack bits
-				myval &= 0x7F; //top bit isnt connected
-				MMU.reg_DISP3DCNT_bits = MMU.reg_DISP3DCNT_bits&0xFFFF00FF;
-				MMU.reg_DISP3DCNT_bits |= (myval<<8);
-				gfx3d_Control(MMU.reg_DISP3DCNT_bits);
-			}
-			break;
-		}
-		break;
-	case 16:
-	case 32:
-		writereg_DISP3DCNT(8,adr,val&0xFF);
-		writereg_DISP3DCNT(8,adr+1,(val>>8)&0xFF);
-		break;
-	}
-}
-
-static u32 readreg_DISP3DCNT(const int size, const u32 adr)
-{
-	//UGH. rewrite this shite to use individual values and reconstruct the return value instead of packing things in this !@#)ing register
-	switch(size)
-	{
-	case 8:
-		switch(adr)
-		{
-		case REG_DISPA_DISP3DCNT: 
-			return MMU.reg_DISP3DCNT_bits & 0xFF;
-		case REG_DISPA_DISP3DCNT+1:
-			return ((MMU.reg_DISP3DCNT_bits)>>8)& 0xFF;
-		}
-		break;
-	case 16:
-	case 32:
-		return readreg_DISP3DCNT(8,adr)|(readreg_DISP3DCNT(8,adr+1)<<8);
-	}
-	assert(false);
-	return 0;
-}
-
 
 static u32 readreg_POWCNT1(const int size, const u32 adr) { 
 	switch(size)
@@ -3229,10 +3177,11 @@ bool validateIORegsRead(u32 addr, u8 size)
 void FASTCALL _MMU_ARM9_write08(u32 adr, u8 val)
 {
 	adr &= 0x0FFFFFFF;
+	const u32 adrBank = (adr >> 24);
 
 	mmu_log_debug_ARM9(adr, "(write08) 0x%02X", val);
 
-	if(adr < 0x02000000)
+	if (adrBank < 0x02)
 	{
 #ifdef HAVE_JIT
 		JIT_COMPILED_FUNC_KNOWNBANK(adr, ARM9_ITCM, 0x7FFF, 0) = 0;
@@ -3247,249 +3196,446 @@ void FASTCALL _MMU_ARM9_write08(u32 adr, u8 val)
 	//block 8bit writes to OAM and palette memory
 	if ((adr & 0x0F000000) == 0x07000000) return;
 	if ((adr & 0x0F000000) == 0x05000000) return;
-
-	// Address is an IO register
-	if ((adr >> 24) == 4)
+	
+	switch (adrBank)
 	{
-		if (!validateIORegsWrite<ARMCPU_ARM9>(adr, 8, val)) return;
-		
-		// TODO: add pal reg
-		if (nds.power1.gpuMain == 0)
-			if ((adr >= 0x04000008) && (adr <= 0x0400005F)) return;
-		if (nds.power1.gpuSub == 0)
-			if ((adr >= 0x04001008) && (adr <= 0x0400105F)) return;
-		if (nds.power1.gfx3d_geometry == 0)
-			if ((adr >= 0x04000400) && (adr <= 0x040006FF)) return;
-		if (nds.power1.gfx3d_render == 0)
-			if ((adr >= 0x04000320) && (adr <= 0x040003FF)) return;
-
-		if(MMU_new.is_dma(adr)) { 
-			MMU_new.write_dma(ARMCPU_ARM9,8,adr,val); 
+		case 0x04: // I/O register
+		{
+			if (!validateIORegsWrite<ARMCPU_ARM9>(adr, 8, val)) return;
+			
+			// TODO: add pal reg
+			if (nds.power1.gpuMain == 0)
+				if ((adr >= 0x04000008) && (adr <= 0x0400005F)) return;
+			if (nds.power1.gpuSub == 0)
+				if ((adr >= 0x04001008) && (adr <= 0x0400105F)) return;
+			if (nds.power1.gfx3d_geometry == 0)
+				if ((adr >= 0x04000400) && (adr <= 0x040006FF)) return;
+			if (nds.power1.gfx3d_render == 0)
+				if ((adr >= 0x04000320) && (adr <= 0x040003FF)) return;
+			
+			if(MMU_new.is_dma(adr)) { 
+				MMU_new.write_dma(ARMCPU_ARM9,8,adr,val); 
+				return;
+			}
+			
+			GPUEngineA *mainEngine = GPU->GetEngineMain();
+			GPUEngineB *subEngine = GPU->GetEngineSub();
+			
+			switch(adr)
+			{
+				case REG_DISPA_BG0HOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x0010, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG0>();
+					return;
+				case REG_DISPA_BG0HOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x0011, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG0>();
+					return;
+					
+				case REG_DISPA_BG0VOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x0012, val);
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG0>();
+					return;
+				case REG_DISPA_BG0VOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x0013, val);
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG0>();
+					return;
+					
+				case REG_DISPA_BG1HOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x0014, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG1>();
+					return;
+				case REG_DISPA_BG1HOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x0015, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPA_BG1VOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x0016, val);
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG1>();
+					return;
+				case REG_DISPA_BG1VOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x0017, val);
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPA_BG2HOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x0018, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG2>();
+					return;
+				case REG_DISPA_BG2HOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x0019, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPA_BG2VOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x001A, val);
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG2>();
+					return;
+				case REG_DISPA_BG2VOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x001B, val);
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPA_BG3HOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x001C, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG3>();
+					return;
+				case REG_DISPA_BG3HOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x001D, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPA_BG3VOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x001E, val);
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG3>();
+					return;
+				case REG_DISPA_BG3VOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x001F, val);
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPA_WIN0H:
+					T1WriteByte(MMU.ARM9_REG, 0x0040, val);
+					mainEngine->ParseReg_WINnH<0>();
+					return;
+				case REG_DISPA_WIN0H+1:
+					T1WriteByte(MMU.ARM9_REG, 0x0041, val);
+					mainEngine->ParseReg_WINnH<0>();
+					return;
+					
+				case REG_DISPA_WIN1H:
+					T1WriteByte(MMU.ARM9_REG, 0x0042, val);
+					mainEngine->ParseReg_WINnH<1>();
+					return;
+				case REG_DISPA_WIN1H+1:
+					T1WriteByte(MMU.ARM9_REG, 0x0043, val);
+					mainEngine->ParseReg_WINnH<1>();
+					return;
+					
+				case REG_DISPA_WIN0V:
+					T1WriteByte(MMU.ARM9_REG, 0x0044, val);
+					return;
+				case REG_DISPA_WIN0V+1:
+					T1WriteByte(MMU.ARM9_REG, 0x0045, val);
+					return;
+					
+				case REG_DISPA_WIN1V:
+					T1WriteByte(MMU.ARM9_REG, 0x0046, val);
+					return;
+				case REG_DISPA_WIN1V+1:
+					T1WriteByte(MMU.ARM9_REG, 0x0047, val);
+					return;
+					
+				case REG_DISPA_WININ:
+					T1WriteByte(MMU.ARM9_REG, 0x0048, val);
+					return;
+				case REG_DISPA_WININ+1:
+					T1WriteByte(MMU.ARM9_REG, 0x0049, val);
+					return;
+					
+				case REG_DISPA_WINOUT:
+					T1WriteByte(MMU.ARM9_REG, 0x004A, val);
+					return;
+				case REG_DISPA_WINOUT+1:
+					T1WriteByte(MMU.ARM9_REG, 0x004B, val);
+					return;
+					
+				case REG_DISPA_MOSAIC:
+					T1WriteByte(MMU.ARM9_REG, 0x004C, val);
+					mainEngine->ParseReg_MOSAIC();
+					return;
+				case REG_DISPA_MOSAIC+1:
+					T1WriteByte(MMU.ARM9_REG, 0x004D, val);
+					mainEngine->ParseReg_MOSAIC();
+					return;
+					
+				case REG_DISPA_BLDCNT:
+					T1WriteByte(MMU.ARM9_REG, 0x0050, val);
+					mainEngine->ParseReg_BLDCNT();
+					return;
+				case REG_DISPA_BLDCNT+1:
+					T1WriteByte(MMU.ARM9_REG, 0x0051, val);
+					mainEngine->ParseReg_BLDCNT();
+					return;
+					
+				case REG_DISPA_BLDALPHA:
+					T1WriteByte(MMU.ARM9_REG, 0x0052, val);
+					mainEngine->ParseReg_BLDALPHA();
+					return;
+				case REG_DISPA_BLDALPHA+1:
+					T1WriteByte(MMU.ARM9_REG, 0x0053, val);
+					mainEngine->ParseReg_BLDALPHA();
+					return;
+					
+				case REG_DISPA_BLDY:
+					T1WriteByte(MMU.ARM9_REG, 0x0054, val);
+					mainEngine->ParseReg_BLDY();
+					return;
+				
+				case REG_DISPA_DISP3DCNT:
+					T1WriteByte(MMU.ARM9_REG, 0x0060, val);
+					ParseReg_DISP3DCNT();
+					return;
+				case REG_DISPA_DISP3DCNT+1:
+					T1WriteByte(MMU.ARM9_REG, 0x0061, val);
+					ParseReg_DISP3DCNT();
+					return;
+					
+				case REG_DISPA_DISPMMEMFIFO:
+					DISP_FIFOsend(val);
+					return;
+					
+				case REG_DISPB_BG0HOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x1010, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG0>();
+					return;
+				case REG_DISPB_BG0HOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x1011, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG0>();
+					return;
+					
+				case REG_DISPB_BG0VOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x1012, val);
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG0>();
+					return;
+				case REG_DISPB_BG0VOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x1013, val);
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG0>();
+					return;
+					
+				case REG_DISPB_BG1HOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x1014, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG1>();
+					return;
+				case REG_DISPB_BG1HOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x1015, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPB_BG1VOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x1016, val);
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG1>();
+					return;
+				case REG_DISPB_BG1VOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x1017, val);
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPB_BG2HOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x1018, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG2>();
+					return;
+				case REG_DISPB_BG2HOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x1019, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPB_BG2VOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x101A, val);
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG2>();
+					return;
+				case REG_DISPB_BG2VOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x101B, val);
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPB_BG3HOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x101C, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG3>();
+					return;
+				case REG_DISPB_BG3HOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x101D, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPB_BG3VOFS:
+					T1WriteByte(MMU.ARM9_REG, 0x101E, val);
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG3>();
+					return;
+				case REG_DISPB_BG3VOFS+1:
+					T1WriteByte(MMU.ARM9_REG, 0x101F, val);
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPB_WIN0H:
+					T1WriteByte(MMU.ARM9_REG, 0x1040, val);
+					subEngine->ParseReg_WINnH<0>();
+					return;
+				case REG_DISPB_WIN0H+1:
+					T1WriteByte(MMU.ARM9_REG, 0x1041, val);
+					subEngine->ParseReg_WINnH<0>();
+					return;
+					
+				case REG_DISPB_WIN1H:
+					T1WriteByte(MMU.ARM9_REG, 0x1042, val);
+					subEngine->ParseReg_WINnH<1>();
+					return;
+				case REG_DISPB_WIN1H+1:
+					T1WriteByte(MMU.ARM9_REG, 0x1043, val);
+					subEngine->ParseReg_WINnH<1>();
+					return;
+					
+				case REG_DISPB_WIN0V:
+					T1WriteByte(MMU.ARM9_REG, 0x1044, val);
+					return;
+				case REG_DISPB_WIN0V+1:
+					T1WriteByte(MMU.ARM9_REG, 0x1045, val);
+					return;
+					
+				case REG_DISPB_WIN1V:
+					T1WriteByte(MMU.ARM9_REG, 0x1046, val);
+					return;
+				case REG_DISPB_WIN1V+1:
+					T1WriteByte(MMU.ARM9_REG, 0x1047, val);
+					return;
+					
+				case REG_DISPB_WININ:
+					T1WriteByte(MMU.ARM9_REG, 0x1048, val);
+					return;
+				case REG_DISPB_WININ+1:
+					T1WriteByte(MMU.ARM9_REG, 0x1049, val);
+					return;
+					
+				case REG_DISPB_WINOUT:
+					T1WriteByte(MMU.ARM9_REG, 0x104A, val);
+					return;
+				case REG_DISPB_WINOUT+1:
+					T1WriteByte(MMU.ARM9_REG, 0x104B, val);
+					return;
+					
+				case REG_DISPB_MOSAIC:
+					T1WriteByte(MMU.ARM9_REG, 0x104C, val);
+					subEngine->ParseReg_MOSAIC();
+					return;
+				case REG_DISPB_MOSAIC+1:
+					T1WriteByte(MMU.ARM9_REG, 0x104D, val);
+					subEngine->ParseReg_MOSAIC();
+					return;
+					
+				case REG_DISPB_BLDCNT:
+					T1WriteByte(MMU.ARM9_REG, 0x1050, val);
+					subEngine->ParseReg_BLDCNT();
+					return;
+				case REG_DISPB_BLDCNT+1:
+					T1WriteByte(MMU.ARM9_REG, 0x1051, val);
+					subEngine->ParseReg_BLDCNT();
+					return;
+					
+				case REG_DISPB_BLDALPHA:
+					T1WriteByte(MMU.ARM9_REG, 0x1052, val);
+					subEngine->ParseReg_BLDALPHA();
+					return;
+				case REG_DISPB_BLDALPHA+1:
+					T1WriteByte(MMU.ARM9_REG, 0x1053, val);
+					subEngine->ParseReg_BLDALPHA();
+					return;
+					
+				case REG_DISPB_BLDY:
+					T1WriteByte(MMU.ARM9_REG, 0x1054, val);
+					subEngine->ParseReg_BLDY();
+					return;
+					
+				case REG_SQRTCNT: printf("ERROR 8bit SQRTCNT WRITE\n"); return;
+				case REG_SQRTCNT+1: printf("ERROR 8bit SQRTCNT1 WRITE\n"); return;
+				case REG_SQRTCNT+2: printf("ERROR 8bit SQRTCNT2 WRITE\n"); return;
+				case REG_SQRTCNT+3: printf("ERROR 8bit SQRTCNT3 WRITE\n"); return;
+					
+#if 1
+				case REG_DIVCNT: printf("ERROR 8bit DIVCNT WRITE\n"); return;
+				case REG_DIVCNT+1: printf("ERROR 8bit DIVCNT+1 WRITE\n"); return;
+				case REG_DIVCNT+2: printf("ERROR 8bit DIVCNT+2 WRITE\n"); return;
+				case REG_DIVCNT+3: printf("ERROR 8bit DIVCNT+3 WRITE\n"); return;
+#endif
+					
+					//fog table: only write bottom 7 bits
+				case eng_3D_FOG_TABLE+0x00: case eng_3D_FOG_TABLE+0x01: case eng_3D_FOG_TABLE+0x02: case eng_3D_FOG_TABLE+0x03: 
+				case eng_3D_FOG_TABLE+0x04: case eng_3D_FOG_TABLE+0x05: case eng_3D_FOG_TABLE+0x06: case eng_3D_FOG_TABLE+0x07: 
+				case eng_3D_FOG_TABLE+0x08: case eng_3D_FOG_TABLE+0x09: case eng_3D_FOG_TABLE+0x0A: case eng_3D_FOG_TABLE+0x0B: 
+				case eng_3D_FOG_TABLE+0x0C: case eng_3D_FOG_TABLE+0x0D: case eng_3D_FOG_TABLE+0x0E: case eng_3D_FOG_TABLE+0x0F: 
+				case eng_3D_FOG_TABLE+0x10: case eng_3D_FOG_TABLE+0x11: case eng_3D_FOG_TABLE+0x12: case eng_3D_FOG_TABLE+0x13: 
+				case eng_3D_FOG_TABLE+0x14: case eng_3D_FOG_TABLE+0x15: case eng_3D_FOG_TABLE+0x16: case eng_3D_FOG_TABLE+0x17: 
+				case eng_3D_FOG_TABLE+0x18: case eng_3D_FOG_TABLE+0x19: case eng_3D_FOG_TABLE+0x1A: case eng_3D_FOG_TABLE+0x1B: 
+				case eng_3D_FOG_TABLE+0x1C: case eng_3D_FOG_TABLE+0x1D: case eng_3D_FOG_TABLE+0x1E: case eng_3D_FOG_TABLE+0x1F: 
+					val &= 0x7F;
+					break;
+					
+					//ensata putchar port
+				case 0x04FFF000:
+					if(nds.ensataEmulation)
+					{
+						printf("%c",val);
+						fflush(stdout);
+					}
+					break;
+					
+				case eng_3D_GXSTAT:
+					MMU_new.gxstat.write(8,adr,val);
+					break;
+					
+				case REG_AUXSPICNT:
+				case REG_AUXSPICNT+1:
+					write_auxspicnt(ARMCPU_ARM9, 8, adr & 1, val);
+					return;
+					
+				case REG_AUXSPIDATA:
+				{
+					//if(val!=0) MMU.AUX_SPI_CMD = val & 0xFF; //zero 20-aug-2013 - this seems pointless
+					u8 spidata = slot1_device->auxspi_transaction(ARMCPU_ARM9,(u8)val);
+					T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][(REG_AUXSPIDATA >> 20) & 0xff], REG_AUXSPIDATA & 0xfff, spidata);
+					MMU.AUX_SPI_CNT &= ~0x80; //remove busy flag
+					return;
+				}
+					
+				case REG_POWCNT1: writereg_POWCNT1(8,adr,val); break;
+					
+				case REG_IF: REG_IF_WriteByte<ARMCPU_ARM9>(0,val); break;
+				case REG_IF+1: REG_IF_WriteByte<ARMCPU_ARM9>(1,val); break;
+				case REG_IF+2: REG_IF_WriteByte<ARMCPU_ARM9>(2,val); break;
+				case REG_IF+3: REG_IF_WriteByte<ARMCPU_ARM9>(3,val); break;
+					
+				case eng_3D_CLEAR_COLOR+0: case eng_3D_CLEAR_COLOR+1:
+				case eng_3D_CLEAR_COLOR+2: case eng_3D_CLEAR_COLOR+3:
+					T1WriteByte((u8*)&gfx3d.state.clearColor,adr-eng_3D_CLEAR_COLOR,val); 
+					break;
+					
+				case REG_VRAMCNTA:
+				case REG_VRAMCNTB:
+				case REG_VRAMCNTC:
+				case REG_VRAMCNTD:
+				case REG_VRAMCNTE:
+				case REG_VRAMCNTF:
+				case REG_VRAMCNTG:
+				case REG_WRAMCNT:
+				case REG_VRAMCNTH:
+				case REG_VRAMCNTI:
+					MMU_VRAMmapControl(adr-REG_VRAMCNTA, val);
+					break;
+					
+#ifdef LOG_CARD
+				case 0x040001A0 : /* TODO (clear): ??? */
+				case 0x040001A1 :
+				case 0x040001A2 :
+				case 0x040001A8 :
+				case 0x040001A9 :
+				case 0x040001AA :
+				case 0x040001AB :
+				case 0x040001AC :
+				case 0x040001AD :
+				case 0x040001AE :
+				case 0x040001AF :
+					LOG("%08X : %02X\r\n", adr, val);
+#endif
+			}
+			
+			MMU.MMU_MEM[ARMCPU_ARM9][adr>>20][adr&MMU.MMU_MASK[ARMCPU_ARM9][adr>>20]]=val;
 			return;
 		}
-		
-      GPUEngineA *mainEngine = GPU->GetEngineMain();
-		GPUEngineB *subEngine = GPU->GetEngineSub();
-		
-		switch(adr)
-		{
-			case REG_SQRTCNT: printf("ERROR 8bit SQRTCNT WRITE\n"); return;
-			case REG_SQRTCNT+1: printf("ERROR 8bit SQRTCNT1 WRITE\n"); return;
-			case REG_SQRTCNT+2: printf("ERROR 8bit SQRTCNT2 WRITE\n"); return;
-			case REG_SQRTCNT+3: printf("ERROR 8bit SQRTCNT3 WRITE\n"); return;
-			
-#if 1
-			case REG_DIVCNT: printf("ERROR 8bit DIVCNT WRITE\n"); return;
-			case REG_DIVCNT+1: printf("ERROR 8bit DIVCNT+1 WRITE\n"); return;
-			case REG_DIVCNT+2: printf("ERROR 8bit DIVCNT+2 WRITE\n"); return;
-			case REG_DIVCNT+3: printf("ERROR 8bit DIVCNT+3 WRITE\n"); return;
-#endif
-
-			//fog table: only write bottom 7 bits
-			case eng_3D_FOG_TABLE+0x00: case eng_3D_FOG_TABLE+0x01: case eng_3D_FOG_TABLE+0x02: case eng_3D_FOG_TABLE+0x03: 
-			case eng_3D_FOG_TABLE+0x04: case eng_3D_FOG_TABLE+0x05: case eng_3D_FOG_TABLE+0x06: case eng_3D_FOG_TABLE+0x07: 
-			case eng_3D_FOG_TABLE+0x08: case eng_3D_FOG_TABLE+0x09: case eng_3D_FOG_TABLE+0x0A: case eng_3D_FOG_TABLE+0x0B: 
-			case eng_3D_FOG_TABLE+0x0C: case eng_3D_FOG_TABLE+0x0D: case eng_3D_FOG_TABLE+0x0E: case eng_3D_FOG_TABLE+0x0F: 
-			case eng_3D_FOG_TABLE+0x10: case eng_3D_FOG_TABLE+0x11: case eng_3D_FOG_TABLE+0x12: case eng_3D_FOG_TABLE+0x13: 
-			case eng_3D_FOG_TABLE+0x14: case eng_3D_FOG_TABLE+0x15: case eng_3D_FOG_TABLE+0x16: case eng_3D_FOG_TABLE+0x17: 
-			case eng_3D_FOG_TABLE+0x18: case eng_3D_FOG_TABLE+0x19: case eng_3D_FOG_TABLE+0x1A: case eng_3D_FOG_TABLE+0x1B: 
-			case eng_3D_FOG_TABLE+0x1C: case eng_3D_FOG_TABLE+0x1D: case eng_3D_FOG_TABLE+0x1E: case eng_3D_FOG_TABLE+0x1F: 
-				val &= 0x7F;
-				break;
-
-			//ensata putchar port
-			case 0x04FFF000:
-				if(nds.ensataEmulation)
-				{
-					printf("%c",val);
-					fflush(stdout);
-				}
-				break;
-
-			case eng_3D_GXSTAT:
-				MMU_new.gxstat.write(8,adr,val);
-				break;
-
-			case REG_DISPA_WIN0H: 	 
-				mainEngine->SetWIN0_H1(val);
-				break ; 	 
-			case REG_DISPA_WIN0H+1: 	 
-				mainEngine->SetWIN0_H0(val);
-				break ; 	 
-			case REG_DISPA_WIN1H: 	 
-				mainEngine->SetWIN1_H1(val);
-				break ; 	 
-			case REG_DISPA_WIN1H+1: 	 
-				mainEngine->SetWIN1_H0(val);
-				break ; 	 
-
-			case REG_DISPB_WIN0H: 	 
-				subEngine->SetWIN0_H1(val);
-				break ; 	 
-			case REG_DISPB_WIN0H+1: 	 
-				subEngine->SetWIN0_H0(val);
-				break ; 	 
-			case REG_DISPB_WIN1H: 	 
-				subEngine->SetWIN1_H1(val);
-				break ; 	 
-			case REG_DISPB_WIN1H+1: 	 
-				subEngine->SetWIN1_H0(val);
-				break ;
-
-			case REG_DISPA_WIN0V: 	 
-				mainEngine->SetWIN0_V1(val) ;
-				break ; 	 
-			case REG_DISPA_WIN0V+1: 	 
-				mainEngine->SetWIN0_V0(val) ;
-				break ; 	 
-			case REG_DISPA_WIN1V: 	 
-				mainEngine->SetWIN1_V1(val) ;
-				break ; 	 
-			case REG_DISPA_WIN1V+1: 	 
-				mainEngine->SetWIN1_V0(val) ;
-				break ; 	 
-
-			case REG_DISPB_WIN0V: 	 
-				subEngine->SetWIN0_V1(val);
-				break ; 	 
-			case REG_DISPB_WIN0V+1: 	 
-				subEngine->SetWIN0_V0(val);
-				break ; 	 
-			case REG_DISPB_WIN1V: 	 
-				subEngine->SetWIN1_V1(val);
-				break ; 	 
-			case REG_DISPB_WIN1V+1: 	 
-				subEngine->SetWIN1_V0(val);
-				break ;
-
-			case REG_DISPA_WININ: 	 
-				mainEngine->SetWININ0(val);
-				break ; 	 
-			case REG_DISPA_WININ+1: 	 
-				mainEngine->SetWININ1(val);
-				break ; 	 
-			case REG_DISPA_WINOUT: 	 
-				mainEngine->SetWINOUT(val);
-				break ; 	 
-			case REG_DISPA_WINOUT+1: 	 
-				mainEngine->SetWINOBJ(val);
-				break ; 	 
-
-			case REG_DISPB_WININ: 	 
-				subEngine->SetWININ0(val);
-				break ; 	 
-			case REG_DISPB_WININ+1: 	 
-				subEngine->SetWININ1(val);
-				break ; 
-			case REG_DISPB_WINOUT: 	 
-				subEngine->SetWINOUT(val);
-				break ; 	 
-			case REG_DISPB_WINOUT+1: 	 
-				subEngine->SetWINOBJ(val);
-				break ;
-
-			case REG_DISPA_BLDCNT:
-				mainEngine->SetBLDCNT_HIGH(val);
-				break;
-			case REG_DISPA_BLDCNT+1:
-				mainEngine->SetBLDCNT_LOW(val);
-				break;
-
-			case REG_DISPB_BLDCNT: 	 
-				subEngine->SetBLDCNT_HIGH(val);
-				break;
-			case REG_DISPB_BLDCNT+1: 	 
-				subEngine->SetBLDCNT_LOW(val);
-				break;
-
-			case REG_DISPA_BLDALPHA: 	 
-				mainEngine->SetBLDALPHA_EVA(val);
-				break;
-			case REG_DISPA_BLDALPHA+1:
-				mainEngine->SetBLDALPHA_EVB(val);
-				break;
-
-			case REG_DISPB_BLDALPHA:
-				subEngine->SetBLDALPHA_EVA(val);
-				break;
-			case REG_DISPB_BLDALPHA+1:
-				subEngine->SetBLDALPHA_EVB(val);
-				break;
-
-			case REG_DISPA_BLDY: 	 
-				mainEngine->SetBLDY_EVY(val);
-				break ; 	 
-			case REG_DISPB_BLDY: 	 
-				subEngine->SetBLDY_EVY(val);
-				break;
-
-			case REG_AUXSPICNT:
-			case REG_AUXSPICNT+1:
-				write_auxspicnt(ARMCPU_ARM9, 8, adr & 1, val);
-				return;
-			
-			case REG_AUXSPIDATA:
-			{
-				//if(val!=0) MMU.AUX_SPI_CMD = val & 0xFF; //zero 20-aug-2013 - this seems pointless
-				u8 spidata = slot1_device->auxspi_transaction(ARMCPU_ARM9,(u8)val);
-				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][(REG_AUXSPIDATA >> 20) & 0xff], REG_AUXSPIDATA & 0xfff, spidata);
-				MMU.AUX_SPI_CNT &= ~0x80; //remove busy flag
-				return;
-			}
-
-			case REG_POWCNT1: writereg_POWCNT1(8,adr,val); break;
-			
-			case REG_DISPA_DISP3DCNT: writereg_DISP3DCNT(8,adr,val); return;
-			case REG_DISPA_DISP3DCNT+1: writereg_DISP3DCNT(8,adr,val); return;
-
-			case REG_IF: REG_IF_WriteByte<ARMCPU_ARM9>(0,val); break;
-			case REG_IF+1: REG_IF_WriteByte<ARMCPU_ARM9>(1,val); break;
-			case REG_IF+2: REG_IF_WriteByte<ARMCPU_ARM9>(2,val); break;
-			case REG_IF+3: REG_IF_WriteByte<ARMCPU_ARM9>(3,val); break;
-
-			case eng_3D_CLEAR_COLOR+0: case eng_3D_CLEAR_COLOR+1:
-			case eng_3D_CLEAR_COLOR+2: case eng_3D_CLEAR_COLOR+3:
-				T1WriteByte((u8*)&gfx3d.state.clearColor,adr-eng_3D_CLEAR_COLOR,val); 
-				break;
-
-			case REG_VRAMCNTA:
-			case REG_VRAMCNTB:
-			case REG_VRAMCNTC:
-			case REG_VRAMCNTD:
-			case REG_VRAMCNTE:
-			case REG_VRAMCNTF:
-			case REG_VRAMCNTG:
-			case REG_WRAMCNT:
-			case REG_VRAMCNTH:
-			case REG_VRAMCNTI:
-					MMU_VRAMmapControl(adr-REG_VRAMCNTA, val);
-				break;
-
-			case REG_DISPA_DISPMMEMFIFO:
-			{
-				DISP_FIFOsend(val);
-				return;
-			}
-		#ifdef LOG_CARD
-			case 0x040001A0 : /* TODO (clear): ??? */
-			case 0x040001A1 :
-			case 0x040001A2 :
-			case 0x040001A8 :
-			case 0x040001A9 :
-			case 0x040001AA :
-			case 0x040001AB :
-			case 0x040001AC :
-			case 0x040001AD :
-			case 0x040001AE :
-			case 0x040001AF :
-						LOG("%08X : %02X\r\n", adr, val);
-		#endif
-		}
-
-		MMU.MMU_MEM[ARMCPU_ARM9][adr>>20][adr&MMU.MMU_MASK[ARMCPU_ARM9][adr>>20]]=val;
-		return;
+		case 0x07: // OAM attributes
+			T1WriteByte(MMU.ARM9_OAM, adr & 0x07FF, val);
+			return;
 	}
-
+	
 	bool unmapped, restricted;
 	adr = MMU_LCDmap<ARMCPU_ARM9>(adr, unmapped, restricted);
 	if(unmapped) return;
@@ -3508,10 +3654,11 @@ void FASTCALL _MMU_ARM9_write08(u32 adr, u8 val)
 void FASTCALL _MMU_ARM9_write16(u32 adr, u16 val)
 {
 	adr &= 0x0FFFFFFE;
+	const u32 adrBank = (adr >> 24);
 
 	mmu_log_debug_ARM9(adr, "(write16) 0x%04X", val);
-
-	if (adr < 0x02000000)
+	
+	if (adrBank < 0x02)
 	{
 #ifdef HAVE_JIT
 		JIT_COMPILED_FUNC_KNOWNBANK(adr, ARM9_ITCM, 0x7FFF, 0) = 0;
@@ -3523,431 +3670,544 @@ void FASTCALL _MMU_ARM9_write16(u32 adr, u16 val)
 	if (slot2_write<ARMCPU_ARM9, u16>(adr, val))
 		return;
 
-	// Address is an IO register
-	if ((adr >> 24) == 4)
+	
+	switch (adrBank)
 	{
-		if (!validateIORegsWrite<ARMCPU_ARM9>(adr, 16, val)) return;
-
-		// TODO: add pal reg
-		if (nds.power1.gpuMain == 0)
-			if ((adr >= 0x04000008) && (adr <= 0x0400005F)) return;
-		if (nds.power1.gpuSub == 0)
-			if ((adr >= 0x04001008) && (adr <= 0x0400105F)) return;
-		if (nds.power1.gfx3d_geometry == 0)
-			if ((adr >= 0x04000400) && (adr <= 0x040006FF)) return;
-		if (nds.power1.gfx3d_render == 0)
-			if ((adr >= 0x04000320) && (adr <= 0x040003FF)) return;
-
-		if(MMU_new.is_dma(adr)) { 
-			MMU_new.write_dma(ARMCPU_ARM9,16,adr,val); 
-			return;
-		}
-
-		switch (adr >> 4)
+		case 0x04: // I/O register
 		{
-						//toon table
-			case 0x0400038:
-			case 0x0400039:
-			case 0x040003A:
-			case 0x040003B:
-				((u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[(adr & 0xFFF)>>1] = val;
-				gfx3d_UpdateToonTable((adr & 0x3F) >> 1, val);
-			return;
-		}
-		
-      GPUEngineA *mainEngine = GPU->GetEngineMain();
-		GPUEngineB *subEngine = GPU->GetEngineSub();
-		
-		// Address is an IO register
-		switch(adr)
-		{
-		case eng_3D_GXSTAT:
-			MMU_new.gxstat.write(16,adr,val);
-			break;
-
-		//fog table: only write bottom 7 bits
-		case eng_3D_FOG_TABLE+0x00: case eng_3D_FOG_TABLE+0x02: case eng_3D_FOG_TABLE+0x04: case eng_3D_FOG_TABLE+0x06:
-		case eng_3D_FOG_TABLE+0x08: case eng_3D_FOG_TABLE+0x0A: case eng_3D_FOG_TABLE+0x0C: case eng_3D_FOG_TABLE+0x0E:
-		case eng_3D_FOG_TABLE+0x10: case eng_3D_FOG_TABLE+0x12: case eng_3D_FOG_TABLE+0x14: case eng_3D_FOG_TABLE+0x16:
-		case eng_3D_FOG_TABLE+0x18: case eng_3D_FOG_TABLE+0x1A: case eng_3D_FOG_TABLE+0x1C: case eng_3D_FOG_TABLE+0x1E:
-			val &= 0x7F7F;
-			break;
-
-		case REG_DISPA_BG2XL: mainEngine->setAffineStartWord(2,0,val,0); break;
-		case REG_DISPA_BG2XH: mainEngine->setAffineStartWord(2,0,val,1); break;
-		case REG_DISPA_BG2YL: mainEngine->setAffineStartWord(2,1,val,0); break;
-		case REG_DISPA_BG2YH: mainEngine->setAffineStartWord(2,1,val,1); break;
-		case REG_DISPA_BG3XL: mainEngine->setAffineStartWord(3,0,val,0); break;
-		case REG_DISPA_BG3XH: mainEngine->setAffineStartWord(3,0,val,1); break;
-		case REG_DISPA_BG3YL: mainEngine->setAffineStartWord(3,1,val,0); break;
-		case REG_DISPA_BG3YH: mainEngine->setAffineStartWord(3,1,val,1); break;
-		case REG_DISPB_BG2XL: subEngine->setAffineStartWord(2,0,val,0); break;
-		case REG_DISPB_BG2XH: subEngine->setAffineStartWord(2,0,val,1); break;
-		case REG_DISPB_BG2YL: subEngine->setAffineStartWord(2,1,val,0); break;
-		case REG_DISPB_BG2YH: subEngine->setAffineStartWord(2,1,val,1); break;
-		case REG_DISPB_BG3XL: subEngine->setAffineStartWord(3,0,val,0); break;
-		case REG_DISPB_BG3XH: subEngine->setAffineStartWord(3,0,val,1); break;
-		case REG_DISPB_BG3YL: subEngine->setAffineStartWord(3,1,val,0); break;
-		case REG_DISPB_BG3YH: subEngine->setAffineStartWord(3,1,val,1); break;
-
-		case REG_DISPA_DISP3DCNT: writereg_DISP3DCNT(16,adr,val); return;
-
-			// Alpha test reference value - Parameters:1
-			case eng_3D_ALPHA_TEST_REF:
-			{
-				((u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x340>>1] = val;
-				gfx3d_glAlphaFunc(val);
+			if (!validateIORegsWrite<ARMCPU_ARM9>(adr, 16, val)) return;
+			
+			// TODO: add pal reg
+			if (nds.power1.gpuMain == 0)
+				if ((adr >= 0x04000008) && (adr <= 0x0400005F)) return;
+			if (nds.power1.gpuSub == 0)
+				if ((adr >= 0x04001008) && (adr <= 0x0400105F)) return;
+			if (nds.power1.gfx3d_geometry == 0)
+				if ((adr >= 0x04000400) && (adr <= 0x040006FF)) return;
+			if (nds.power1.gfx3d_render == 0)
+				if ((adr >= 0x04000320) && (adr <= 0x040003FF)) return;
+			
+			if(MMU_new.is_dma(adr)) { 
+				MMU_new.write_dma(ARMCPU_ARM9,16,adr,val); 
 				return;
 			}
 			
-			case eng_3D_CLEAR_COLOR:
-			case eng_3D_CLEAR_COLOR+2:
+			switch (adr >> 4)
 			{
-				T1WriteWord((u8*)&gfx3d.state.clearColor,adr-eng_3D_CLEAR_COLOR,val);
-				break;
+					//toon table
+				case 0x0400038:
+				case 0x0400039:
+				case 0x040003A:
+				case 0x040003B:
+					((u16 *)(MMU.ARM9_REG))[(adr & 0xFFF)>>1] = val;
+					gfx3d_UpdateToonTable((adr & 0x3F) >> 1, val);
+					return;
 			}
-
-			// Clear background depth setup - Parameters:2
-			case eng_3D_CLEAR_DEPTH:
+			
+			GPUEngineA *mainEngine = GPU->GetEngineMain();
+			GPUEngineB *subEngine = GPU->GetEngineSub();
+			
+			switch (adr)
 			{
-				((u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x354>>1] = val;
-				gfx3d_glClearDepth(val);
-				return;
-			}
-			// Fog Color - Parameters:4b
-			case eng_3D_FOG_COLOR:
-			{
-				((u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x358>>1] = val;
-				gfx3d_glFogColor(val);
-				return;
-			}
-			case eng_3D_FOG_OFFSET:
-			{
-				((u32 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x35C>>1] = val;
-				gfx3d_glFogOffset(val);
-				return;
-			}
-
-			case REG_DIVCNT:
-				MMU_new.div.write16(val);
-				execdiv();
-				return;
+				case REG_DISPA_DISPCNT:
+					T1WriteWord(MMU.ARM9_REG, 0x0000, val);
+					mainEngine->ParseReg_DISPCNT<GPUEngineID_Main>();
+					return;
+					
+				case REG_DISPA_DISPCNT+2:
+					T1WriteWord(MMU.ARM9_REG, 0x0002, val);
+					mainEngine->ParseReg_DISPCNT<GPUEngineID_Main>();
+					return;
+					
+				case REG_DISPA_BG0CNT:
+					//GPULOG("MAIN BG0 SETPROP 16B %08X\r\n", val);
+					T1WriteWord(MMU.ARM9_REG, 0x0008, val);
+					mainEngine->ParseReg_BGnCNT<GPUEngineID_Main, GPULayerID_BG0>();
+					return;
+					
+				case REG_DISPA_BG1CNT:
+					//GPULOG("MAIN BG1 SETPROP 16B %08X\r\n", val);
+					T1WriteWord(MMU.ARM9_REG, 0x000A, val);
+					mainEngine->ParseReg_BGnCNT<GPUEngineID_Main, GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPA_BG2CNT:
+					//GPULOG("MAIN BG2 SETPROP 16B %08X\r\n", val);
+					T1WriteWord(MMU.ARM9_REG, 0x000C, val);
+					mainEngine->ParseReg_BGnCNT<GPUEngineID_Main, GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPA_BG3CNT:
+					//GPULOG("MAIN BG3 SETPROP 16B %08X\r\n", val);
+					T1WriteWord(MMU.ARM9_REG, 0x000E, val);
+					mainEngine->ParseReg_BGnCNT<GPUEngineID_Main, GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPA_BG0HOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x0010, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG0>();
+					return;
+					
+				case REG_DISPA_BG0VOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x0012, val);
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG0>();
+					return;
+					
+				case REG_DISPA_BG1HOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x0014, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPA_BG1VOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x0016, val);
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPA_BG2HOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x0018, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPA_BG2VOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x001A, val);
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPA_BG3HOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x001C, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPA_BG3VOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x001E, val);
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPA_BG2XL:
+					T1WriteWord(MMU.ARM9_REG, 0x0028, val);
+					mainEngine->ParseReg_BGnX<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPA_BG2XH:
+					T1WriteWord(MMU.ARM9_REG, 0x002A, val);
+					mainEngine->ParseReg_BGnX<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPA_BG2YL:
+					T1WriteWord(MMU.ARM9_REG, 0x002C, val);
+					mainEngine->ParseReg_BGnY<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPA_BG2YH:
+					T1WriteWord(MMU.ARM9_REG, 0x002E, val);
+					mainEngine->ParseReg_BGnY<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPA_BG3XL:
+					T1WriteWord(MMU.ARM9_REG, 0x0038, val);
+					mainEngine->ParseReg_BGnX<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPA_BG3XH:
+					T1WriteWord(MMU.ARM9_REG, 0x003A, val);
+					mainEngine->ParseReg_BGnX<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPA_BG3YL:
+					T1WriteWord(MMU.ARM9_REG, 0x003C, val);
+					mainEngine->ParseReg_BGnY<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPA_BG3YH:
+					T1WriteWord(MMU.ARM9_REG, 0x003E, val);
+					mainEngine->ParseReg_BGnY<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPA_WIN0H:
+					T1WriteWord(MMU.ARM9_REG, 0x0040, val);
+					mainEngine->ParseReg_WINnH<0>();
+					return;
+					
+				case REG_DISPA_WIN1H:
+					T1WriteWord(MMU.ARM9_REG, 0x0042, val);
+					mainEngine->ParseReg_WINnH<1>();
+					return;
+					
+				case REG_DISPA_WIN0V:
+					T1WriteWord(MMU.ARM9_REG, 0x0044, val);
+					return;
+					
+				case REG_DISPA_WIN1V:
+					T1WriteWord(MMU.ARM9_REG, 0x0046, val);
+					return;
+					
+				case REG_DISPA_WININ:
+					T1WriteWord(MMU.ARM9_REG, 0x0048, val);
+					return;
+					
+				case REG_DISPA_WINOUT:
+					T1WriteWord(MMU.ARM9_REG, 0x004A, val);
+					return;
+					
+				case REG_DISPA_MOSAIC:
+					T1WriteWord(MMU.ARM9_REG, 0x004C, val);
+					mainEngine->ParseReg_MOSAIC();
+					return;
+					
+				case REG_DISPA_BLDCNT:
+					T1WriteWord(MMU.ARM9_REG, 0x0050, val);
+					mainEngine->ParseReg_BLDCNT();
+					return;
+					
+				case REG_DISPA_BLDALPHA:
+					T1WriteWord(MMU.ARM9_REG, 0x0052, val);
+					mainEngine->ParseReg_BLDALPHA();
+					return;
+					
+				case REG_DISPA_BLDY:
+					T1WriteWord(MMU.ARM9_REG, 0x0054, val);
+					mainEngine->ParseReg_BLDY();
+					return;
+					
+				case REG_DISPA_DISP3DCNT:
+					T1WriteLong(MMU.ARM9_REG, 0x0060, val);
+					ParseReg_DISP3DCNT();
+					return;
+					
+				case REG_DISPA_DISPCAPCNT:
+					T1WriteWord(MMU.ARM9_REG, 0x0064, val);
+					mainEngine->ParseReg_DISPCAPCNT();
+					return;
+				case REG_DISPA_DISPCAPCNT+2:
+					T1WriteWord(MMU.ARM9_REG, 0x0066, val);
+					mainEngine->ParseReg_DISPCAPCNT();
+					return;
+					
+				case REG_DISPA_DISPMMEMFIFO:
+					DISP_FIFOsend(val);
+					return;
+					
+				case REG_DISPA_MASTERBRIGHT:
+					T1WriteWord(MMU.ARM9_REG, 0x006C, val);
+					mainEngine->ParseReg_MASTER_BRIGHT();
+					return;
+					
+				case REG_DISPB_DISPCNT:
+					T1WriteWord(MMU.ARM9_REG, 0x1000, val);
+					subEngine->ParseReg_DISPCNT<GPUEngineID_Sub>();
+					return;
+					
+				case REG_DISPB_DISPCNT+2:
+					T1WriteWord(MMU.ARM9_REG, 0x1002, val);
+					subEngine->ParseReg_DISPCNT<GPUEngineID_Sub>();
+					return;
+					
+				case REG_DISPB_BG0CNT:
+					//GPULOG("SUB BG0 SETPROP 16B %08X\r\n", val);
+					T1WriteWord(MMU.ARM9_REG, 0x1008, val);
+					subEngine->ParseReg_BGnCNT<GPUEngineID_Sub, GPULayerID_BG0>();
+					return;
+					
+				case REG_DISPB_BG1CNT:
+					//GPULOG("SUB BG1 SETPROP 16B %08X\r\n", val);
+					T1WriteWord(MMU.ARM9_REG, 0x100A, val);
+					subEngine->ParseReg_BGnCNT<GPUEngineID_Sub, GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPB_BG2CNT:
+					//GPULOG("SUB BG2 SETPROP 16B %08X\r\n", val);
+					T1WriteWord(MMU.ARM9_REG, 0x100C, val);
+					subEngine->ParseReg_BGnCNT<GPUEngineID_Sub, GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPB_BG3CNT:
+					//GPULOG("SUB BG3 SETPROP 16B %08X\r\n", val);
+					T1WriteWord(MMU.ARM9_REG, 0x100E, val);
+					subEngine->ParseReg_BGnCNT<GPUEngineID_Sub, GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPB_BG0HOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x1010, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG0>();
+					return;
+					
+				case REG_DISPB_BG0VOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x1012, val);
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG0>();
+					return;
+					
+				case REG_DISPB_BG1HOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x1014, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPB_BG1VOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x1016, val);
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPB_BG2HOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x1018, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPB_BG2VOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x101A, val);
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPB_BG3HOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x101C, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPB_BG3VOFS:
+					T1WriteWord(MMU.ARM9_REG, 0x101E, val);
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPB_BG2XL:
+					T1WriteWord(MMU.ARM9_REG, 0x1028, val);
+					subEngine->ParseReg_BGnX<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPB_BG2XH:
+					T1WriteWord(MMU.ARM9_REG, 0x102A, val);
+					subEngine->ParseReg_BGnX<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPB_BG2YL:
+					T1WriteWord(MMU.ARM9_REG, 0x102C, val);
+					subEngine->ParseReg_BGnY<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPB_BG2YH:
+					T1WriteWord(MMU.ARM9_REG, 0x102E, val);
+					subEngine->ParseReg_BGnY<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPB_BG3XL:
+					T1WriteWord(MMU.ARM9_REG, 0x1038, val);
+					subEngine->ParseReg_BGnX<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPB_BG3XH:
+					T1WriteWord(MMU.ARM9_REG, 0x103A, val);
+					subEngine->ParseReg_BGnX<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPB_BG3YL:
+					T1WriteWord(MMU.ARM9_REG, 0x103C, val);
+					subEngine->ParseReg_BGnY<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPB_BG3YH:
+					T1WriteWord(MMU.ARM9_REG, 0x103E, val);
+					subEngine->ParseReg_BGnY<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPB_WIN0H:
+					T1WriteWord(MMU.ARM9_REG, 0x1040, val);
+					subEngine->ParseReg_WINnH<0>();
+					return;
+					
+				case REG_DISPB_WIN1H:
+					T1WriteWord(MMU.ARM9_REG, 0x1042, val);
+					subEngine->ParseReg_WINnH<1>();
+					return;
+					
+				case REG_DISPB_WIN0V:
+					T1WriteWord(MMU.ARM9_REG, 0x1044, val);
+					break;
+					
+				case REG_DISPB_WIN1V:
+					T1WriteWord(MMU.ARM9_REG, 0x1046, val);
+					return;
+					
+				case REG_DISPB_WININ:
+					T1WriteWord(MMU.ARM9_REG, 0x1048, val);
+					return;
+					
+				case REG_DISPB_WINOUT:
+					T1WriteWord(MMU.ARM9_REG, 0x104A, val);
+					return;
+					
+				case REG_DISPB_MOSAIC:
+					T1WriteWord(MMU.ARM9_REG, 0x104C, val);
+					subEngine->ParseReg_MOSAIC();
+					return;
+					
+				case REG_DISPB_BLDCNT:
+					T1WriteWord(MMU.ARM9_REG, 0x1050, val);
+					subEngine->ParseReg_BLDCNT();
+					return;
+					
+				case REG_DISPB_BLDALPHA:
+					T1WriteWord(MMU.ARM9_REG, 0x1052, val);
+					subEngine->ParseReg_BLDALPHA();
+					return;
+					
+				case REG_DISPB_BLDY:
+					T1WriteWord(MMU.ARM9_REG, 0x1054, val);
+					subEngine->ParseReg_BLDY();
+					return;
+					
+				case REG_DISPB_MASTERBRIGHT:
+					T1WriteWord(MMU.ARM9_REG, 0x106C, val);
+					subEngine->ParseReg_MASTER_BRIGHT();
+					return;
+					
+				case eng_3D_GXSTAT:
+					MMU_new.gxstat.write(16,adr,val);
+					break;
+					
+					//fog table: only write bottom 7 bits
+				case eng_3D_FOG_TABLE+0x00: case eng_3D_FOG_TABLE+0x02: case eng_3D_FOG_TABLE+0x04: case eng_3D_FOG_TABLE+0x06:
+				case eng_3D_FOG_TABLE+0x08: case eng_3D_FOG_TABLE+0x0A: case eng_3D_FOG_TABLE+0x0C: case eng_3D_FOG_TABLE+0x0E:
+				case eng_3D_FOG_TABLE+0x10: case eng_3D_FOG_TABLE+0x12: case eng_3D_FOG_TABLE+0x14: case eng_3D_FOG_TABLE+0x16:
+				case eng_3D_FOG_TABLE+0x18: case eng_3D_FOG_TABLE+0x1A: case eng_3D_FOG_TABLE+0x1C: case eng_3D_FOG_TABLE+0x1E:
+					val &= 0x7F7F;
+					break;
+					
+					// Alpha test reference value - Parameters:1
+				case eng_3D_ALPHA_TEST_REF:
+					HostWriteWord(MMU.ARM9_REG, 0x0340, val);
+					gfx3d_glAlphaFunc(val);
+					return;
+					
+				case eng_3D_CLEAR_COLOR:
+				case eng_3D_CLEAR_COLOR+2:
+					T1WriteWord((u8*)&gfx3d.state.clearColor,adr-eng_3D_CLEAR_COLOR,val);
+					break;
+					
+					// Clear background depth setup - Parameters:2
+				case eng_3D_CLEAR_DEPTH:
+					HostWriteWord(MMU.ARM9_REG, 0x0354, val);
+					gfx3d_glClearDepth(val);
+					return;
+					
+					// Fog Color - Parameters:4b
+				case eng_3D_FOG_COLOR:
+					HostWriteWord(MMU.ARM9_REG, 0x0358, val);
+					gfx3d_glFogColor(val);
+					return;
+					
+				case eng_3D_FOG_OFFSET:
+					HostWriteWord(MMU.ARM9_REG, 0x035C, val);
+					gfx3d_glFogOffset(val);
+					return;
+					
+				case REG_DIVCNT:
+					MMU_new.div.write16(val);
+					execdiv();
+					return;
 #if 1
-			case REG_DIVNUMER:
-			case REG_DIVNUMER+2:
-			case REG_DIVNUMER+4:
-				printf("DIV: 16 write NUMER %08X. PLEASE REPORT! \n", val);
-				break;
-			case REG_DIVDENOM:
-			case REG_DIVDENOM+2:
-			case REG_DIVDENOM+4:
-				printf("DIV: 16 write DENOM %08X. PLEASE REPORT! \n", val);
-				break;
+				case REG_DIVNUMER:
+				case REG_DIVNUMER+2:
+				case REG_DIVNUMER+4:
+					printf("DIV: 16 write NUMER %08X. PLEASE REPORT! \n", val);
+					break;
+				case REG_DIVDENOM:
+				case REG_DIVDENOM+2:
+				case REG_DIVDENOM+4:
+					printf("DIV: 16 write DENOM %08X. PLEASE REPORT! \n", val);
+					break;
 #endif
-			case REG_SQRTCNT:
-				MMU_new.sqrt.write16(val);
-				execsqrt();
-				return;
-
-			case REG_DISPA_BLDCNT: 	 
-				mainEngine->SetBLDCNT(val);
-				break ; 	 
-			case REG_DISPB_BLDCNT: 	 
-				subEngine->SetBLDCNT(val);
-				break ; 	 
-			case REG_DISPA_BLDALPHA: 	 
-				mainEngine->SetBLDALPHA(val);
-				break ; 	 
-			case REG_DISPB_BLDALPHA: 	 
-				subEngine->SetBLDALPHA(val);
-				break ; 	 
-			case REG_DISPA_BLDY: 	 
-				mainEngine->SetBLDY_EVY(val);
-				break ; 	 
-			case REG_DISPB_BLDY: 	 
-				subEngine->SetBLDY_EVY(val);
-				break;
-			case REG_DISPA_MASTERBRIGHT:
-				mainEngine->SetMasterBrightness(val);
-				break;
-				/*
-			case REG_DISPA_MOSAIC: 	 
-				GPU_setMOSAIC(MainScreen.gpu,val) ; 	 
-				break ; 	 
-			case REG_DISPB_MOSAIC: 	 
-				GPU_setMOSAIC(SubScreen.gpu,val) ; 	 
-				break ;
-				*/
-			//case REG_DISPA_BG0HOFS:
-			//	GPU_setBGxHOFS(0, MainScreen.gpu, val);
-			//	break;
-			//case REG_DISPA_BG0VOFS:
-			//	GPU_setBGxVOFS(0, MainScreen.gpu, val);
-			//	break;
-			//case REG_DISPA_BG1HOFS:
-			//	GPU_setBGxHOFS(1, MainScreen.gpu, val);
-			//	break;
-			//case REG_DISPA_BG1VOFS:
-			//	GPU_setBGxVOFS(1, MainScreen.gpu, val);
-			//	break;
-			//case REG_DISPA_BG2HOFS:
-			//	GPU_setBGxHOFS(2, MainScreen.gpu, val);
-			//	break;
-			//case REG_DISPA_BG2VOFS:
-			//	GPU_setBGxVOFS(2, MainScreen.gpu, val);
-			//	break;
-			//case REG_DISPA_BG3HOFS:
-			//	GPU_setBGxHOFS(3, MainScreen.gpu, val);
-			//	break;
-			//case REG_DISPA_BG3VOFS:
-			//	GPU_setBGxVOFS(3, MainScreen.gpu, val);
-			//	break;
-
-			case REG_DISPA_WIN0H: 	 
-				mainEngine->SetWIN0_H(val);
-				break ; 	 
-			case REG_DISPA_WIN1H: 	 
-				mainEngine->SetWIN1_H(val);
-				break ; 	 
-			case REG_DISPB_WIN0H: 	 
-				subEngine->SetWIN0_H(val);
-				break ; 	 
-			case REG_DISPB_WIN1H: 	 
-				subEngine->SetWIN1_H(val);
-				break ; 	 
-			case REG_DISPA_WIN0V: 	 
-				mainEngine->SetWIN0_V(val);
-				break ; 	 
-			case REG_DISPA_WIN1V: 	 
-				mainEngine->SetWIN1_V(val);
-				break ; 	 
-			case REG_DISPB_WIN0V: 	 
-				subEngine->SetWIN0_V(val);
-				break ; 	 
-			case REG_DISPB_WIN1V: 	 
-				subEngine->SetWIN1_V(val);
-				break ; 	 
-			case REG_DISPA_WININ: 	 
-				mainEngine->SetWININ(val);
-				break ; 	 
-			case REG_DISPA_WINOUT: 	 
-				mainEngine->SetWINOUT16(val);
-				break ; 	 
-
-		/*	case REG_DISPB_BG0HOFS:
-				GPU_setBGxHOFS(0, SubScreen.gpu, val);
-				break;
-			case REG_DISPB_BG0VOFS:
-				GPU_setBGxVOFS(0, SubScreen.gpu, val);
-				break;
-			case REG_DISPB_BG1HOFS:
-				GPU_setBGxHOFS(1, SubScreen.gpu, val);
-				break;
-			case REG_DISPB_BG1VOFS:
-				GPU_setBGxVOFS(1, SubScreen.gpu, val);
-				break;
-			case REG_DISPB_BG2HOFS:
-				GPU_setBGxHOFS(2, SubScreen.gpu, val);
-				break;
-			case REG_DISPB_BG2VOFS:
-				GPU_setBGxVOFS(2, SubScreen.gpu, val);
-				break;
-			case REG_DISPB_BG3HOFS:
-				GPU_setBGxHOFS(3, SubScreen.gpu, val);
-				break;
-			case REG_DISPB_BG3VOFS:
-				GPU_setBGxVOFS(3, SubScreen.gpu, val);
-				break;*/
-
-			case REG_DISPB_WININ: 	 
-				subEngine->SetWININ(val);
-				break ; 	 
-			case REG_DISPB_WINOUT: 	 
-				subEngine->SetWINOUT16(val);
-				break ;
-
-			case REG_DISPB_MASTERBRIGHT:
-				subEngine->SetMasterBrightness(val);
-				break;
-
-            case REG_POWCNT1:
-				writereg_POWCNT1(16,adr,val);
-				return;
-
-			case REG_EXMEMCNT:
-			{
-				u16 remote_proc = T1ReadWord(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x204);
-				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x204, val);
-				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x204, (val & 0xFF80) | (remote_proc & 0x7F));
-				return;
+				case REG_SQRTCNT:
+					MMU_new.sqrt.write16(val);
+					execsqrt();
+					return;
+					
+				case REG_POWCNT1:
+					writereg_POWCNT1(16,adr,val);
+					return;
+					
+				case REG_EXMEMCNT:
+				{
+					u16 remote_proc = T1ReadWord(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x204);
+					T1WriteWord(MMU.ARM9_REG, 0x204, val);
+					T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x204, (val & 0xFF80) | (remote_proc & 0x7F));
+					return;
+				}
+					
+				case REG_AUXSPICNT:
+					write_auxspicnt(ARMCPU_ARM9, 16, 0, val);
+					return;
+					
+				case REG_AUXSPIDATA:
+				{
+					//if(val!=0) MMU.AUX_SPI_CMD = val & 0xFF;  //zero 20-aug-2013 - this seems pointless
+					u8 spidata = slot1_device->auxspi_transaction(ARMCPU_ARM9,(u8)val);
+					T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][(REG_AUXSPIDATA >> 20) & 0xff], REG_AUXSPIDATA & 0xfff, spidata);
+					MMU.AUX_SPI_CNT &= ~0x80; //remove busy flag
+					return;
+				}
+					
+				case REG_VRAMCNTA:
+				case REG_VRAMCNTC:
+				case REG_VRAMCNTE:
+				case REG_VRAMCNTG:
+				case REG_VRAMCNTH:
+					MMU_VRAMmapControl(adr-REG_VRAMCNTA, val & 0xFF);
+					MMU_VRAMmapControl(adr-REG_VRAMCNTA+1, val >> 8);
+					break;
+					
+				case REG_IME:
+					NDS_Reschedule();
+					MMU.reg_IME[ARMCPU_ARM9] = val & 0x01;
+					T1WriteLong(MMU.ARM9_REG, 0x208, val);
+					return;
+				case REG_IE :
+					NDS_Reschedule();
+					MMU.reg_IE[ARMCPU_ARM9] = (MMU.reg_IE[ARMCPU_ARM9]&0xFFFF0000) | val;
+					return;
+				case REG_IE + 2 :
+					NDS_Reschedule();
+					MMU.reg_IE[ARMCPU_ARM9] = (MMU.reg_IE[ARMCPU_ARM9]&0xFFFF) | (((u32)val)<<16);
+					return;
+				case REG_IF: REG_IF_WriteWord<ARMCPU_ARM9>(0,val); return;
+				case REG_IF+2: REG_IF_WriteWord<ARMCPU_ARM9>(2,val); return;
+					
+				case REG_IPCSYNC:
+					MMU_IPCSync(ARMCPU_ARM9, val);
+					return;
+				case REG_IPCFIFOCNT:
+					IPC_FIFOcnt(ARMCPU_ARM9, val);
+					return;
+					
+				case REG_TM0CNTL :
+				case REG_TM1CNTL :
+				case REG_TM2CNTL :
+				case REG_TM3CNTL :
+					MMU.timerReload[ARMCPU_ARM9][(adr>>2)&3] = val;
+					return;
+				case REG_TM0CNTH :
+				case REG_TM1CNTH :
+				case REG_TM2CNTH :
+				case REG_TM3CNTH :
+				{
+					int timerIndex	= ((adr-2)>>2)&0x3;
+					write_timer(ARMCPU_ARM9, timerIndex, val);
+					return;
+				}
+					
+				case REG_GCROMCTRL :
+					MMU_writeToGCControl<ARMCPU_ARM9>( (T1ReadLong(MMU.MMU_MEM[0][0x40], 0x1A4) & 0xFFFF0000) | val);
+					return;
+				case REG_GCROMCTRL+2 :
+					MMU_writeToGCControl<ARMCPU_ARM9>( (T1ReadLong(MMU.MMU_MEM[0][0x40], 0x1A4) & 0xFFFF) | ((u32) val << 16));
+					return;
 			}
-
-			case REG_AUXSPICNT:
-				write_auxspicnt(ARMCPU_ARM9, 16, 0, val);
-				return;
-
-			case REG_AUXSPIDATA:
-			{
-				//if(val!=0) MMU.AUX_SPI_CMD = val & 0xFF;  //zero 20-aug-2013 - this seems pointless
-				u8 spidata = slot1_device->auxspi_transaction(ARMCPU_ARM9,(u8)val);
-				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][(REG_AUXSPIDATA >> 20) & 0xff], REG_AUXSPIDATA & 0xfff, spidata);
-				MMU.AUX_SPI_CNT &= ~0x80; //remove busy flag
-				return;
-			}
-
-			case REG_DISPA_BG0CNT :
-				//GPULOG("MAIN BG0 SETPROP 16B %08X\r\n", val);
-				mainEngine->SetBGProp(0, val);
-				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x8, val);
-				return;
-			case REG_DISPA_BG1CNT :
-				//GPULOG("MAIN BG1 SETPROP 16B %08X\r\n", val);
-				mainEngine->SetBGProp(1, val);
-				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0xA, val);
-				return;
-			case REG_DISPA_BG2CNT :
-				//GPULOG("MAIN BG2 SETPROP 16B %08X\r\n", val);
-				mainEngine->SetBGProp(2, val);
-				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0xC, val);
-				return;
-			case REG_DISPA_BG3CNT :
-				//GPULOG("MAIN BG3 SETPROP 16B %08X\r\n", val);
-				mainEngine->SetBGProp(3, val);
-				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0xE, val);
-				return;
-			case REG_DISPB_BG0CNT :
-				//GPULOG("SUB BG0 SETPROP 16B %08X\r\n", val);
-				subEngine->SetBGProp(0, val);
-				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x1008, val);
-				return;
-			case REG_DISPB_BG1CNT :
-				//GPULOG("SUB BG1 SETPROP 16B %08X\r\n", val);
-				subEngine->SetBGProp(1, val);
-				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x100A, val);
-				return;
-			case REG_DISPB_BG2CNT :
-				//GPULOG("SUB BG2 SETPROP 16B %08X\r\n", val);
-				subEngine->SetBGProp(2, val);
-				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x100C, val);
-				return;
-			case REG_DISPB_BG3CNT :
-				//GPULOG("SUB BG3 SETPROP 16B %08X\r\n", val);
-				subEngine->SetBGProp(3, val);
-				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x100E, val);
-				return;
-
-			case REG_VRAMCNTA:
-			case REG_VRAMCNTC:
-			case REG_VRAMCNTE:
-			case REG_VRAMCNTG:
-			case REG_VRAMCNTH:
-				MMU_VRAMmapControl(adr-REG_VRAMCNTA, val & 0xFF);
-				MMU_VRAMmapControl(adr-REG_VRAMCNTA+1, val >> 8);
-				break;
-
-			case REG_IME:
-				NDS_Reschedule();
-				MMU.reg_IME[ARMCPU_ARM9] = val & 0x01;
-				T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x208, val);
-				return;
-			case REG_IE :
-				NDS_Reschedule();
-				MMU.reg_IE[ARMCPU_ARM9] = (MMU.reg_IE[ARMCPU_ARM9]&0xFFFF0000) | val;
-				return;
-			case REG_IE + 2 :
-				NDS_Reschedule();
-				MMU.reg_IE[ARMCPU_ARM9] = (MMU.reg_IE[ARMCPU_ARM9]&0xFFFF) | (((u32)val)<<16);
-				return;
-			case REG_IF: REG_IF_WriteWord<ARMCPU_ARM9>(0,val); return;
-			case REG_IF+2: REG_IF_WriteWord<ARMCPU_ARM9>(2,val); return;
-
-            case REG_IPCSYNC:
-				MMU_IPCSync(ARMCPU_ARM9, val);
-				return;
-			case REG_IPCFIFOCNT:
-				IPC_FIFOcnt(ARMCPU_ARM9, val);
-				return;
-
-            case REG_TM0CNTL :
-            case REG_TM1CNTL :
-            case REG_TM2CNTL :
-            case REG_TM3CNTL :
-				MMU.timerReload[ARMCPU_ARM9][(adr>>2)&3] = val;
-				return;
-			case REG_TM0CNTH :
-			case REG_TM1CNTH :
-			case REG_TM2CNTH :
-			case REG_TM3CNTH :
-			{
-				int timerIndex	= ((adr-2)>>2)&0x3;
-				write_timer(ARMCPU_ARM9, timerIndex, val);
-				return;
-			}
-
-			case REG_DISPA_DISPCNT :
-				{
-					u32 v = (T1ReadLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0) & 0xFFFF0000) | val;
-					mainEngine->SetVideoProp(v);
-					T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0, v);
-					return;
-				}
-			case REG_DISPA_DISPCNT+2 : 
-				{
-					u32 v = (T1ReadLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0) & 0xFFFF) | ((u32) val << 16);
-					mainEngine->SetVideoProp(v);
-					T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0, v);
-				}
-				return;
-			case REG_DISPA_DISPCAPCNT :
-				{
-					u32 v = (T1ReadLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x64) & 0xFFFF0000) | val; 
-					mainEngine->SetDISPCAPCNT(v);
-					T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x64, v);
-					return;
-				}
-			case REG_DISPA_DISPCAPCNT + 2:
-				{
-					u32 v = (T1ReadLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x64) & 0xFFFF) | ((u32)val << 16); 
-					mainEngine->SetDISPCAPCNT(v);
-					T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x64, v);
-					return;
-				}
-
-			case REG_DISPB_DISPCNT :
-				{
-					u32 v = (T1ReadLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x1000) & 0xFFFF0000) | val;
-					subEngine->SetVideoProp(v);
-					T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x1000, v);
-					return;
-				}
-			case REG_DISPB_DISPCNT+2 : 
-				{
-					//emu_halt();
-					u32 v = (T1ReadLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x1000) & 0xFFFF) | ((u32) val << 16);
-					subEngine->SetVideoProp(v);
-					T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x1000, v);
-					return;
-				}
-
-			case REG_DISPA_DISPMMEMFIFO:
-			{
-				DISP_FIFOsend(val);
-				return;
-			}
-
-			case REG_GCROMCTRL :
-				MMU_writeToGCControl<ARMCPU_ARM9>( (T1ReadLong(MMU.MMU_MEM[0][0x40], 0x1A4) & 0xFFFF0000) | val);
-				return;
-			case REG_GCROMCTRL+2 :
-				MMU_writeToGCControl<ARMCPU_ARM9>( (T1ReadLong(MMU.MMU_MEM[0][0x40], 0x1A4) & 0xFFFF) | ((u32) val << 16));
-				return;
+			
+			T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][adr>>20], adr&MMU.MMU_MASK[ARMCPU_ARM9][adr>>20], val);
+			return;
 		}
-
-		T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][adr>>20], adr&MMU.MMU_MASK[ARMCPU_ARM9][adr>>20], val); 
-		return;
+			
+		case 0x07: // OAM attributes
+			T1WriteWord(MMU.ARM9_OAM, adr & 0x07FF, val);
+			return;
 	}
-
-
+	
 	bool unmapped, restricted;
 	adr = MMU_LCDmap<ARMCPU_ARM9>(adr, unmapped, restricted);
 	if(unmapped) return;
@@ -3965,10 +4225,11 @@ void FASTCALL _MMU_ARM9_write16(u32 adr, u16 val)
 void FASTCALL _MMU_ARM9_write32(u32 adr, u32 val)
 {
 	adr &= 0x0FFFFFFC;
+	const u32 adrBank = (adr >> 24);
 	
 	mmu_log_debug_ARM9(adr, "(write32) 0x%08X", val);
 
-	if(adr<0x02000000)
+	if (adrBank < 0x02)
 	{
 #ifdef HAVE_JIT
 		JIT_COMPILED_FUNC_KNOWNBANK(adr, ARM9_ITCM, 0x7FFF, 0) = 0;
@@ -3989,397 +4250,463 @@ void FASTCALL _MMU_ARM9_write32(u32 adr, u32 val)
 	}
 #endif
 
-	// Address is an IO register
-	if ((adr >> 24) == 4)
+	
+	switch (adrBank)
 	{
-		if (!validateIORegsWrite<ARMCPU_ARM9>(adr, 32, val)) return;
-
-		// TODO: add pal reg
-		if (nds.power1.gpuMain == 0)
-			if ((adr >= 0x04000008) && (adr <= 0x0400005F)) return;
-		if (nds.power1.gpuSub == 0)
-			if ((adr >= 0x04001008) && (adr <= 0x0400105F)) return;
-		if (nds.power1.gfx3d_geometry == 0)
-			if ((adr >= 0x04000400) && (adr <= 0x040006FF)) return;
-		if (nds.power1.gfx3d_render == 0)
-			if ((adr >= 0x04000320) && (adr <= 0x040003FF)) return;
-
-		// MightyMax: no need to do several ifs, when only one can happen
-		// switch/case instead
-		// both comparison >=,< per if can be replaced by one bit comparison since
-		// they are 2^4 aligned and 2^4n wide
-		// this looks ugly but should reduce load on register writes, they are done as 
-		// lookups by the compiler
-		switch (adr >> 4)
+		case 0x04: // I/O register
 		{
-			case 0x400033:		//edge color table
-				((u32 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[(adr & 0xFFF) >> 2] = val;
+			if (!validateIORegsWrite<ARMCPU_ARM9>(adr, 32, val)) return;
+			
+			// TODO: add pal reg
+			if (nds.power1.gpuMain == 0)
+				if ((adr >= 0x04000008) && (adr <= 0x0400005F)) return;
+			if (nds.power1.gpuSub == 0)
+				if ((adr >= 0x04001008) && (adr <= 0x0400105F)) return;
+			if (nds.power1.gfx3d_geometry == 0)
+				if ((adr >= 0x04000400) && (adr <= 0x040006FF)) return;
+			if (nds.power1.gfx3d_render == 0)
+				if ((adr >= 0x04000320) && (adr <= 0x040003FF)) return;
+			
+			// MightyMax: no need to do several ifs, when only one can happen
+			// switch/case instead
+			// both comparison >=,< per if can be replaced by one bit comparison since
+			// they are 2^4 aligned and 2^4n wide
+			// this looks ugly but should reduce load on register writes, they are done as 
+			// lookups by the compiler
+			switch (adr >> 4)
+			{
+				case 0x400033:		//edge color table
+					((u32 *)(MMU.ARM9_REG))[(adr & 0xFFF) >> 2] = val;
+					return;
+					
+				case 0x400038:
+				case 0x400039:
+				case 0x40003A:
+				case 0x40003B:		//toon table
+					((u32 *)(MMU.ARM9_REG))[(adr & 0xFFF) >> 2] = val;
+					gfx3d_UpdateToonTable((adr & 0x3F) >> 1, val);
+					return;
+					
+				case 0x400040:
+				case 0x400041:
+				case 0x400042:
+				case 0x400043:		// FIFO Commands
+					((u32 *)(MMU.ARM9_REG))[(adr & 0xFFF) >> 2] = val;
+					gfx3d_sendCommandToFIFO(val);
+					return;
+					
+				case 0x400044:
+				case 0x400045:
+				case 0x400046:
+				case 0x400047:
+				case 0x400048:
+				case 0x400049:
+				case 0x40004A:
+				case 0x40004B:
+				case 0x40004C:
+				case 0x40004D:
+				case 0x40004E:
+				case 0x40004F:
+				case 0x400050:
+				case 0x400051:
+				case 0x400052:
+				case 0x400053:
+				case 0x400054:
+				case 0x400055:
+				case 0x400056:
+				case 0x400057:
+				case 0x400058:
+				case 0x400059:
+				case 0x40005A:
+				case 0x40005B:
+				case 0x40005C:		// Individual Commands
+					if (gxFIFO.size > 254)
+						nds.freezeBus |= 1;
+					
+					((u32 *)(MMU.ARM9_REG))[(adr & 0xFFF) >> 2] = val;
+					gfx3d_sendCommand(adr, val);
+					return;
+					
+				default:
+					break;
+			}
+			
+			if(MMU_new.is_dma(adr)) { 
+				MMU_new.write_dma(ARMCPU_ARM9,32,adr,val);
 				return;
-
-			case 0x400038:
-			case 0x400039:
-			case 0x40003A:
-			case 0x40003B:		//toon table
-				((u32 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[(adr & 0xFFF) >> 2] = val;
-				gfx3d_UpdateToonTable((adr & 0x3F) >> 1, val);
-				return;
-
-			case 0x400040:
-			case 0x400041:
-			case 0x400042:
-			case 0x400043:		// FIFO Commands
-				((u32 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[(adr & 0xFFF) >> 2] = val;
-				gfx3d_sendCommandToFIFO(val);
-				return;
-				
-			case 0x400044:
-			case 0x400045:
-			case 0x400046:
-			case 0x400047:
-			case 0x400048:
-			case 0x400049:
-			case 0x40004A:
-			case 0x40004B:
-			case 0x40004C:
-			case 0x40004D:
-			case 0x40004E:
-			case 0x40004F:
-			case 0x400050:
-			case 0x400051:
-			case 0x400052:
-			case 0x400053:
-			case 0x400054:
-			case 0x400055:
-			case 0x400056:
-			case 0x400057:
-			case 0x400058:
-			case 0x400059:
-			case 0x40005A:
-			case 0x40005B:
-			case 0x40005C:		// Individual Commands
-				if (gxFIFO.size > 254)
-					nds.freezeBus |= 1;
-
-				((u32 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[(adr & 0xFFF) >> 2] = val;
-				gfx3d_sendCommand(adr, val);
-				return;
-
-			default:
-				break;
-		}
-
-		if(MMU_new.is_dma(adr)) { 
-			MMU_new.write_dma(ARMCPU_ARM9,32,adr,val);
+			}
+			
+			GPUEngineA *mainEngine = GPU->GetEngineMain();
+			GPUEngineB *subEngine = GPU->GetEngineSub();
+			
+			switch (adr)
+			{
+				case REG_DISPA_DISPCNT:
+					T1WriteLong(MMU.ARM9_REG, 0x0000, val);
+					mainEngine->ParseReg_DISPCNT<GPUEngineID_Main>();
+					//GPULOG("MAIN INIT 32B %08X\r\n", val);
+					return;
+					
+				case REG_DISPA_BG0CNT:
+					T1WriteLong(MMU.ARM9_REG, 0x0008, val);
+					mainEngine->ParseReg_BGnCNT<GPUEngineID_Main, GPULayerID_BG0>();
+					mainEngine->ParseReg_BGnCNT<GPUEngineID_Main, GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPA_BG2CNT:
+					T1WriteLong(MMU.ARM9_REG, 0x000C, val);
+					mainEngine->ParseReg_BGnCNT<GPUEngineID_Main, GPULayerID_BG2>();
+					mainEngine->ParseReg_BGnCNT<GPUEngineID_Main, GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPA_BG0HOFS:
+					T1WriteLong(MMU.ARM9_REG, 0x0010, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG0>();
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG0>();
+					return;
+					
+				case REG_DISPA_BG1HOFS:
+					T1WriteLong(MMU.ARM9_REG, 0x0014, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG1>();
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPA_BG2HOFS:
+					T1WriteLong(MMU.ARM9_REG, 0x0018, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG2>();
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPA_BG3HOFS:
+					T1WriteLong(MMU.ARM9_REG, 0x001C, val);
+					mainEngine->ParseReg_BGnHOFS<GPULayerID_BG3>();
+					mainEngine->ParseReg_BGnVOFS<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPA_BG2XL:
+					T1WriteLong(MMU.ARM9_REG, 0x0028, val);
+					mainEngine->ParseReg_BGnX<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPA_BG2YL:
+					T1WriteLong(MMU.ARM9_REG, 0x002C, val);
+					mainEngine->ParseReg_BGnY<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPA_BG3XL:
+					T1WriteLong(MMU.ARM9_REG, 0x0038, val);
+					mainEngine->ParseReg_BGnX<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPA_BG3YL:
+					T1WriteLong(MMU.ARM9_REG, 0x003C, val);
+					mainEngine->ParseReg_BGnY<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPA_WIN0H:
+					T1WriteLong(MMU.ARM9_REG, 0x0040, val);
+					mainEngine->ParseReg_WINnH<0>();
+					mainEngine->ParseReg_WINnH<1>();
+					return;
+					
+				case REG_DISPA_WIN0V:
+					T1WriteLong(MMU.ARM9_REG, 0x0044, val);
+					return;
+					
+				case REG_DISPA_WININ:
+					T1WriteLong(MMU.ARM9_REG, 0x0048, val);
+					return;
+					
+				case REG_DISPA_MOSAIC:
+					T1WriteLong(MMU.ARM9_REG, 0x004C, val);
+					mainEngine->ParseReg_MOSAIC();
+					return;
+					
+				case REG_DISPA_BLDCNT:
+					T1WriteLong(MMU.ARM9_REG, 0x0050, val);
+					mainEngine->ParseReg_BLDCNT();
+					mainEngine->ParseReg_BLDALPHA();
+					return;
+					
+				case REG_DISPA_BLDY:
+					T1WriteLong(MMU.ARM9_REG, 0x0054, val);
+					mainEngine->ParseReg_BLDY();
+					return;
+					
+				case REG_DISPA_DISP3DCNT:
+					T1WriteLong(MMU.ARM9_REG, 0x0060, val);
+					ParseReg_DISP3DCNT();
+					return;
+					
+				case REG_DISPA_DISPCAPCNT:
+					T1WriteLong(MMU.ARM9_REG, 0x0064, val);
+					mainEngine->ParseReg_DISPCAPCNT();
+					return;
+					
+				case REG_DISPA_DISPMMEMFIFO:
+					DISP_FIFOsend(val);
+					return;
+					
+				case REG_DISPA_MASTERBRIGHT:
+					T1WriteLong(MMU.ARM9_REG, 0x006C, val);
+					mainEngine->ParseReg_MASTER_BRIGHT();
+					return;
+					
+				case REG_DISPB_DISPCNT:
+					T1WriteLong(MMU.ARM9_REG, 0x1000, val);
+					subEngine->ParseReg_DISPCNT<GPUEngineID_Sub>();
+					//GPULOG("SUB INIT 32B %08X\r\n", val);
+					return;
+					
+				case REG_DISPB_BG0CNT:
+					T1WriteLong(MMU.ARM9_REG, 0x1008, val);
+					subEngine->ParseReg_BGnCNT<GPUEngineID_Sub, GPULayerID_BG0>();
+					subEngine->ParseReg_BGnCNT<GPUEngineID_Sub, GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPB_BG2CNT:
+					T1WriteLong(MMU.ARM9_REG, 0x100C, val);
+					subEngine->ParseReg_BGnCNT<GPUEngineID_Sub, GPULayerID_BG2>();
+					subEngine->ParseReg_BGnCNT<GPUEngineID_Sub, GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPB_BG0HOFS:
+					T1WriteLong(MMU.ARM9_REG, 0x1010, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG0>();
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG0>();
+					return;
+					
+				case REG_DISPB_BG1HOFS:
+					T1WriteLong(MMU.ARM9_REG, 0x1014, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG1>();
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG1>();
+					return;
+					
+				case REG_DISPB_BG2HOFS:
+					T1WriteLong(MMU.ARM9_REG, 0x1018, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG2>();
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPB_BG3HOFS:
+					T1WriteLong(MMU.ARM9_REG, 0x101C, val);
+					subEngine->ParseReg_BGnHOFS<GPULayerID_BG3>();
+					subEngine->ParseReg_BGnVOFS<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPB_BG2XL:
+					T1WriteLong(MMU.ARM9_REG, 0x1028, val);
+					subEngine->ParseReg_BGnX<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPB_BG2YL:
+					T1WriteLong(MMU.ARM9_REG, 0x102C, val);
+					subEngine->ParseReg_BGnY<GPULayerID_BG2>();
+					return;
+					
+				case REG_DISPB_BG3XL:
+					T1WriteLong(MMU.ARM9_REG, 0x1038, val);
+					subEngine->ParseReg_BGnX<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPB_BG3YL:
+					T1WriteLong(MMU.ARM9_REG, 0x103C, val);
+					subEngine->ParseReg_BGnY<GPULayerID_BG3>();
+					return;
+					
+				case REG_DISPB_WIN0H:
+					T1WriteLong(MMU.ARM9_REG, 0x1040, val);
+					subEngine->ParseReg_WINnH<0>();
+					subEngine->ParseReg_WINnH<1>();
+					return;
+					
+				case REG_DISPB_WIN0V:
+					T1WriteLong(MMU.ARM9_REG, 0x1044, val);
+					return;
+					
+				case REG_DISPB_WININ:
+					T1WriteLong(MMU.ARM9_REG, 0x1048, val);
+					return;
+					
+				case REG_DISPB_MOSAIC:
+					T1WriteLong(MMU.ARM9_REG, 0x104C, val);
+					subEngine->ParseReg_MOSAIC();
+					return;
+					
+				case REG_DISPB_BLDCNT:
+					T1WriteLong(MMU.ARM9_REG, 0x1050, val);
+					subEngine->ParseReg_BLDCNT();
+					subEngine->ParseReg_BLDALPHA();
+					return;
+					
+				case REG_DISPB_BLDY:
+					T1WriteLong(MMU.ARM9_REG, 0x1054, val);
+					subEngine->ParseReg_BLDY();
+					return;
+					
+				case REG_DISPB_MASTERBRIGHT:
+					T1WriteLong(MMU.ARM9_REG, 0x006C, val);
+					subEngine->ParseReg_MASTER_BRIGHT();
+					return;
+					
+				case REG_SQRTCNT: MMU_new.sqrt.write16((u16)val); return;
+				case REG_DIVCNT: MMU_new.div.write16((u16)val); return;
+					
+				case REG_POWCNT1: writereg_POWCNT1(32,adr,val); break;
+					
+					//fog table: only write bottom 7 bits
+				case eng_3D_FOG_TABLE+0x00: case eng_3D_FOG_TABLE+0x04: case eng_3D_FOG_TABLE+0x08: case eng_3D_FOG_TABLE+0x0C:
+				case eng_3D_FOG_TABLE+0x10: case eng_3D_FOG_TABLE+0x14: case eng_3D_FOG_TABLE+0x18: case eng_3D_FOG_TABLE+0x1C:
+					val &= 0x7F7F7F7F;
+					break;
+					
+					//ensata handshaking port?
+				case 0x04FFF010:
+					if(nds.ensataEmulation && nds.ensataHandshake == ENSATA_HANDSHAKE_ack && val == 0x13579bdf)
+						nds.ensataHandshake = ENSATA_HANDSHAKE_confirm;
+					if(nds.ensataEmulation && nds.ensataHandshake == ENSATA_HANDSHAKE_confirm && val == 0xfdb97531)
+					{
+						printf("ENSATA HANDSHAKE COMPLETE\n");
+						nds.ensataHandshake = ENSATA_HANDSHAKE_complete;
+					}
+					break;
+					
+					//todo - these are usually write only regs (these and 1000 more)
+					//shouldnt we block them from getting written? ugh
+				case eng_3D_CLIPMTX_RESULT:
+					if(nds.ensataEmulation && nds.ensataHandshake == ENSATA_HANDSHAKE_none && val==0x2468ace0)
+					{
+						printf("ENSATA HANDSHAKE BEGIN\n");
+						nds.ensataHandshake = ENSATA_HANDSHAKE_query;
+					}
+					break;
+					
+				case eng_3D_GXSTAT:
+					MMU_new.gxstat.write32(val);
+					break;
+					
+					// Alpha test reference value - Parameters:1
+				case eng_3D_ALPHA_TEST_REF:
+					HostWriteLong(MMU.ARM9_REG, 0x0340, val);
+					gfx3d_glAlphaFunc(val);
+					return;
+					
+				case eng_3D_CLEAR_COLOR:
+					T1WriteLong((u8*)&gfx3d.state.clearColor,0,val); 
+					break;
+					
+					// Clear background depth setup - Parameters:2
+				case eng_3D_CLEAR_DEPTH:
+					HostWriteLong(MMU.ARM9_REG, 0x0354, val);
+					gfx3d_glClearDepth(val);
+					return;
+					
+					// Fog Color - Parameters:4b
+				case eng_3D_FOG_COLOR:
+					HostWriteLong(MMU.ARM9_REG, 0x0358, val);
+					gfx3d_glFogColor(val);
+					return;
+					
+				case eng_3D_FOG_OFFSET:
+					HostWriteLong(MMU.ARM9_REG, 0x035C, val);
+					gfx3d_glFogOffset(val);
+					return;
+					
+				case REG_VRAMCNTA:
+				case REG_VRAMCNTE:
+					MMU_VRAMmapControl(adr-REG_VRAMCNTA, val & 0xFF);
+					MMU_VRAMmapControl(adr-REG_VRAMCNTA+1, (val >> 8) & 0xFF);
+					MMU_VRAMmapControl(adr-REG_VRAMCNTA+2, (val >> 16) & 0xFF);
+					MMU_VRAMmapControl(adr-REG_VRAMCNTA+3, (val >> 24) & 0xFF);
+					break;
+				case REG_VRAMCNTH:
+					MMU_VRAMmapControl(adr-REG_VRAMCNTA, val & 0xFF);
+					MMU_VRAMmapControl(adr-REG_VRAMCNTA+1, (val >> 8) & 0xFF);
+					break;
+					
+				case REG_IME : 
+					NDS_Reschedule();
+					MMU.reg_IME[ARMCPU_ARM9] = val & 0x01;
+					T1WriteLong(MMU.ARM9_REG, 0x208, val);
+					return;
+					
+				case REG_IE :
+					NDS_Reschedule();
+					MMU.reg_IE[ARMCPU_ARM9] = val;
+					return;
+					
+				case REG_IF: REG_IF_WriteLong<ARMCPU_ARM9>(val); return;
+					
+				case REG_TM0CNTL:
+				case REG_TM1CNTL:
+				case REG_TM2CNTL:
+				case REG_TM3CNTL:
+				{
+					int timerIndex = (adr>>2)&0x3;
+					MMU.timerReload[ARMCPU_ARM9][timerIndex] = (u16)val;
+					T1WriteWord(MMU.ARM9_REG, adr & 0xFFF, val);
+					write_timer(ARMCPU_ARM9, timerIndex, val>>16);
+					return;
+				}
+					
+				case REG_DIVNUMER:
+					T1WriteLong(MMU.ARM9_REG, 0x290, val);
+					execdiv();
+					return;
+				case REG_DIVNUMER+4:
+					T1WriteLong(MMU.ARM9_REG, 0x294, val);
+					execdiv();
+					return;
+					
+				case REG_DIVDENOM :
+				{
+					T1WriteLong(MMU.ARM9_REG, 0x298, val);
+					execdiv();
+					return;
+				}
+				case REG_DIVDENOM+4 :
+				{
+					T1WriteLong(MMU.ARM9_REG, 0x29C, val);
+					execdiv();
+					return;
+				}
+					
+				case REG_SQRTPARAM :
+				{
+					T1WriteLong(MMU.ARM9_REG, 0x2B8, val);
+					execsqrt();
+					return;
+				}
+				case REG_SQRTPARAM+4 :
+					T1WriteLong(MMU.ARM9_REG, 0x2BC, val);
+					execsqrt();
+					return;
+					
+				case REG_IPCSYNC:
+					MMU_IPCSync(ARMCPU_ARM9, val);
+					return;
+				case REG_IPCFIFOCNT:
+					IPC_FIFOcnt(ARMCPU_ARM9, val);
+					return;
+				case REG_IPCFIFOSEND:
+					IPC_FIFOsend(ARMCPU_ARM9, val);
+					return;
+					
+				case REG_GCROMCTRL :
+					MMU_writeToGCControl<ARMCPU_ARM9>(val);
+					return;
+					
+				case REG_GCDATAIN:
+					MMU_writeToGC<ARMCPU_ARM9>(val);
+					return;
+			}
+			T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][adr>>20], adr & MMU.MMU_MASK[ARMCPU_ARM9][adr>>20], val);
 			return;
 		}
-		
-      GPUEngineA *mainEngine = GPU->GetEngineMain();
-		GPUEngineB *subEngine = GPU->GetEngineSub();
-
-		switch(adr)
-		{
-			case REG_SQRTCNT: MMU_new.sqrt.write16((u16)val); return;
-			case REG_DIVCNT: MMU_new.div.write16((u16)val); return;
-
-			case REG_POWCNT1: writereg_POWCNT1(32,adr,val); break;
-
-			//fog table: only write bottom 7 bits
-			case eng_3D_FOG_TABLE+0x00: case eng_3D_FOG_TABLE+0x04: case eng_3D_FOG_TABLE+0x08: case eng_3D_FOG_TABLE+0x0C:
-			case eng_3D_FOG_TABLE+0x10: case eng_3D_FOG_TABLE+0x14: case eng_3D_FOG_TABLE+0x18: case eng_3D_FOG_TABLE+0x1C:
-				val &= 0x7F7F7F7F;
-				break;
-
-
-			//ensata handshaking port?
-			case 0x04FFF010:
-				if(nds.ensataEmulation && nds.ensataHandshake == ENSATA_HANDSHAKE_ack && val == 0x13579bdf)
-					nds.ensataHandshake = ENSATA_HANDSHAKE_confirm;
-				if(nds.ensataEmulation && nds.ensataHandshake == ENSATA_HANDSHAKE_confirm && val == 0xfdb97531)
-				{
-					printf("ENSATA HANDSHAKE COMPLETE\n");
-					nds.ensataHandshake = ENSATA_HANDSHAKE_complete;
-				}
-				break;
-
-			//todo - these are usually write only regs (these and 1000 more)
-			//shouldnt we block them from getting written? ugh
-			case eng_3D_CLIPMTX_RESULT:
-				if(nds.ensataEmulation && nds.ensataHandshake == ENSATA_HANDSHAKE_none && val==0x2468ace0)
-				{
-					printf("ENSATA HANDSHAKE BEGIN\n");
-					nds.ensataHandshake = ENSATA_HANDSHAKE_query;
-				}
-				break;
-
-			case eng_3D_GXSTAT:
-				MMU_new.gxstat.write32(val);
-				break;
-			case REG_DISPA_BG2XL:
-				mainEngine->setAffineStart(2,0,val);
-				return;
-			case REG_DISPA_BG2YL:
-				mainEngine->setAffineStart(2,1,val);
-				return;
-			case REG_DISPB_BG2XL:
-				subEngine->setAffineStart(2,0,val);
-				return;
-			case REG_DISPB_BG2YL:
-				subEngine->setAffineStart(2,1,val);
-				return;
-			case REG_DISPA_BG3XL:
-				mainEngine->setAffineStart(3,0,val);
-				return;
-			case REG_DISPA_BG3YL:
-				mainEngine->setAffineStart(3,1,val);
-				return;
-			case REG_DISPB_BG3XL:
-				subEngine->setAffineStart(3,0,val);
-				return;
-			case REG_DISPB_BG3YL:
-				subEngine->setAffineStart(3,1,val);
-				return;
-
-			// Alpha test reference value - Parameters:1
-			case eng_3D_ALPHA_TEST_REF:
-			{
-				((u32 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x340>>2] = val;
-				gfx3d_glAlphaFunc(val);
-				return;
-			}
-
-			case eng_3D_CLEAR_COLOR:
-				T1WriteLong((u8*)&gfx3d.state.clearColor,0,val); 
-				break;
-				
-			// Clear background depth setup - Parameters:2
-			case eng_3D_CLEAR_DEPTH:
-			{
-				((u32 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x354>>2] = val;
-				gfx3d_glClearDepth(val);
-				return;
-			}
-			// Fog Color - Parameters:4b
-			case 0x04000358:
-			{
-				((u32 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x358>>2] = val;
-				gfx3d_glFogColor(val);
-				return;
-			}
-			case 0x0400035C:
-			{
-				((u32 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x35C>>2] = val;
-				gfx3d_glFogOffset(val);
-				return;
-			}
-
-			//case REG_DISPA_BG0HOFS:
-			//	GPU_setBGxHOFS(0, MainScreen.gpu, val&0xFFFF);
-			//	GPU_setBGxVOFS(0, MainScreen.gpu, (val>>16));
-			//	break;
-
-			case REG_DISPA_WININ: 	 
-			{
-				mainEngine->SetWININ(val & 0xFFFF) ;
-				mainEngine->SetWINOUT16((val >> 16) & 0xFFFF) ;
-	            break;
-			}
-			case REG_DISPB_WININ:
-			{
-				subEngine->SetWININ(val & 0xFFFF) ;
-				subEngine->SetWINOUT16((val >> 16) & 0xFFFF) ;
-	            break;
-			}
-
-			case REG_DISPA_WIN0H:
-			{
-				mainEngine->SetWIN0_H(val & 0xFFFF);
-				mainEngine->SetWIN1_H(val >> 16);
-				break;
-			}
-			case REG_DISPA_WIN0V:
-			{
-				mainEngine->SetWIN0_V(val & 0xFFFF);
-				mainEngine->SetWIN1_V(val >> 16);
-				break;
-			}
-			case REG_DISPB_WIN0H:
-			{
-				subEngine->SetWIN0_H(val & 0xFFFF);
-				subEngine->SetWIN1_H(val >> 16);
-				break;
-			}
-			case REG_DISPB_WIN0V:
-			{
-				subEngine->SetWIN0_V(val & 0xFFFF);
-				subEngine->SetWIN1_V(val >> 16);
-				break;
-			}
-
-			case REG_DISPA_MASTERBRIGHT:
-				mainEngine->SetMasterBrightness(val & 0xFFFF);
-				break;
-			case REG_DISPB_MASTERBRIGHT:
-				subEngine->SetMasterBrightness(val & 0xFFFF);
-				break;
-
-			case REG_DISPA_BLDCNT:
-			{
-				mainEngine->SetBLDCNT(val & 0xFFFF);
-				mainEngine->SetBLDALPHA(val >> 16);
-				break;
-			}
-			case REG_DISPB_BLDCNT:
-			{
-				subEngine->SetBLDCNT(val & 0xFFFF);
-				subEngine->SetBLDALPHA(val >> 16);
-				break;
-			}
-
-			case REG_DISPA_BLDY:
-				mainEngine->SetBLDY_EVY(val & 0xFFFF);
-				break ; 	 
-			case REG_DISPB_BLDY: 	 
-				subEngine->SetBLDY_EVY(val & 0xFFFF);
-				break;
-
-			case REG_DISPA_DISPCNT :
-				mainEngine->SetVideoProp(val);
-				//GPULOG("MAIN INIT 32B %08X\r\n", val);
-				T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0, val);
-				return;
-				
-			case REG_DISPB_DISPCNT : 
-				subEngine->SetVideoProp(val);
-				//GPULOG("SUB INIT 32B %08X\r\n", val);
-				T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x1000, val);
-				return;
-
-			case REG_VRAMCNTA:
-			case REG_VRAMCNTE:
-				MMU_VRAMmapControl(adr-REG_VRAMCNTA, val & 0xFF);
-				MMU_VRAMmapControl(adr-REG_VRAMCNTA+1, (val >> 8) & 0xFF);
-				MMU_VRAMmapControl(adr-REG_VRAMCNTA+2, (val >> 16) & 0xFF);
-				MMU_VRAMmapControl(adr-REG_VRAMCNTA+3, (val >> 24) & 0xFF);
-				break;
-			case REG_VRAMCNTH:
-				MMU_VRAMmapControl(adr-REG_VRAMCNTA, val & 0xFF);
-				MMU_VRAMmapControl(adr-REG_VRAMCNTA+1, (val >> 8) & 0xFF);
-				break;
-
-			case REG_IME : 
-				NDS_Reschedule();
-				MMU.reg_IME[ARMCPU_ARM9] = val & 0x01;
-				T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x208, val);
-				return;
-				
-			case REG_IE :
-				NDS_Reschedule();
-				MMU.reg_IE[ARMCPU_ARM9] = val;
-				return;
 			
-			case REG_IF: REG_IF_WriteLong<ARMCPU_ARM9>(val); return;
-
-            case REG_TM0CNTL:
-            case REG_TM1CNTL:
-            case REG_TM2CNTL:
-            case REG_TM3CNTL:
-			{
-				int timerIndex = (adr>>2)&0x3;
-				MMU.timerReload[ARMCPU_ARM9][timerIndex] = (u16)val;
-				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][0x40], adr & 0xFFF, val);
-				write_timer(ARMCPU_ARM9, timerIndex, val>>16);
-				return;
-			}
-
-			case REG_DIVNUMER:
-				T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x290, val);
-				execdiv();
-				return;
-			case REG_DIVNUMER+4:
-				T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x294, val);
-				execdiv();
-				return;
-
-            case REG_DIVDENOM :
-				{
-					T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x298, val);
-					execdiv();
-					return;
-				}
-			case REG_DIVDENOM+4 :
-				{
-					T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x29C, val);
-					execdiv();
-					return;
-				}
-
-			case REG_SQRTPARAM :
-			{
-				T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2B8, val);
-				execsqrt();
-				return;
-			}
-			case REG_SQRTPARAM+4 :
-				T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2BC, val);
-				execsqrt();
-				return;
-			
-			case REG_IPCSYNC:
-				MMU_IPCSync(ARMCPU_ARM9, val);
-				return;
-			case REG_IPCFIFOCNT:
-				IPC_FIFOcnt(ARMCPU_ARM9, val);
-				return;
-			case REG_IPCFIFOSEND:
-				IPC_FIFOsend(ARMCPU_ARM9, val);
-				return;
-
-           
-			case REG_GCROMCTRL :
-				MMU_writeToGCControl<ARMCPU_ARM9>(val);
-				return;
-			case REG_DISPA_DISPCAPCNT :
-				//INFO("MMU write32: REG_DISPA_DISPCAPCNT 0x%X\n", val);
-				mainEngine->SetDISPCAPCNT(val);
-				T1WriteLong(MMU.ARM9_REG, 0x64, val);
-				return;
-				
-			case REG_DISPA_BG0CNT :
-				mainEngine->SetBGProp(0, (val & 0xFFFF));
-				mainEngine->SetBGProp(1, (val >> 16));
-				//if((val>>16)==0x400) emu_halt();
-				T1WriteLong(MMU.ARM9_REG, 8, val);
-				return;
-			case REG_DISPA_BG2CNT :
-				mainEngine->SetBGProp(2, (val & 0xFFFF));
-				mainEngine->SetBGProp(3, (val >> 16));
-				T1WriteLong(MMU.ARM9_REG, 0xC, val);
-				return;
-			case REG_DISPB_BG0CNT :
-				subEngine->SetBGProp(0, (val & 0xFFFF));
-				subEngine->SetBGProp(1, (val >> 16));
-				T1WriteLong(MMU.ARM9_REG, 0x1008, val);
-				return;
-			case REG_DISPB_BG2CNT :
-				subEngine->SetBGProp(2, (val & 0xFFFF));
-				subEngine->SetBGProp(3, (val >> 16));
-				T1WriteLong(MMU.ARM9_REG, 0x100C, val);
-				return;
-			case REG_DISPA_DISPMMEMFIFO:
-			{
-				DISP_FIFOsend(val);
-				return;
-			}
-
-			case REG_DISPA_DISP3DCNT: writereg_DISP3DCNT(32,adr,val); return;
-
-			case REG_GCDATAIN:
-				MMU_writeToGC<ARMCPU_ARM9>(val);
-				return;
-		}
-
-		T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][adr>>20], adr & MMU.MMU_MASK[ARMCPU_ARM9][adr>>20], val);
-		return;
+		case 0x07: // OAM attributes
+			T1WriteLong(MMU.ARM9_OAM, adr & 0x07FF, val);
+			return;
 	}
 
 	bool unmapped, restricted;
@@ -4491,11 +4818,6 @@ u8 FASTCALL _MMU_ARM9_read08(u32 adr)
 			case eng_3D_GXSTAT:
 				return MMU_new.gxstat.read(8,adr);
 
-			case REG_DISPA_DISP3DCNT: return readreg_DISP3DCNT(8,adr);
-			case REG_DISPA_DISP3DCNT+1: return readreg_DISP3DCNT(8,adr);
-			case REG_DISPA_DISP3DCNT+2: return readreg_DISP3DCNT(8,adr);
-			case REG_DISPA_DISP3DCNT+3: return readreg_DISP3DCNT(8,adr);
-
 			case REG_KEYINPUT:
 				break;
 		}
@@ -4594,9 +4916,6 @@ u16 FASTCALL _MMU_ARM9_read16(u32 adr)
             case REG_POWCNT1: 
 			case REG_POWCNT1+2:
 				return readreg_POWCNT1(16,adr);
-
-			case REG_DISPA_DISP3DCNT: return readreg_DISP3DCNT(16,adr);
-			case REG_DISPA_DISP3DCNT+2: return readreg_DISP3DCNT(16,adr);
 
 			case REG_KEYINPUT:
 				break;
@@ -4739,7 +5058,7 @@ u32 FASTCALL _MMU_ARM9_read32(u32 adr)
 			case REG_TM2CNTL :
 			case REG_TM3CNTL :
 				{
-					u32 val = T1ReadWord(MMU.MMU_MEM[ARMCPU_ARM9][0x40], (adr + 2) & 0xFFF);
+					u32 val = T1ReadWord(MMU.ARM9_REG, (adr + 2) & 0xFFF);
 					return MMU.timer[ARMCPU_ARM9][(adr&0xF)>>2] | (val<<16);
 				}	
      
@@ -4747,7 +5066,6 @@ u32 FASTCALL _MMU_ARM9_read32(u32 adr)
 				return MMU_readFromGC<ARMCPU_ARM9>();
 
 			case REG_POWCNT1: return readreg_POWCNT1(32,adr);
-			case REG_DISPA_DISP3DCNT: return readreg_DISP3DCNT(32,adr);
 
 			case REG_KEYINPUT:
 				break;
@@ -4923,7 +5241,7 @@ void FASTCALL _MMU_ARM7_write16(u32 adr, u16 val)
 
 			case REG_EXMEMCNT:
 			{
-				u16 remote_proc = T1ReadWord(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x204);
+				u16 remote_proc = T1ReadWord(MMU.ARM9_REG, 0x204);
 				T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM7][0x40], 0x204, (val & 0x7F) | (remote_proc & 0xFF80));
 			}
 			return;

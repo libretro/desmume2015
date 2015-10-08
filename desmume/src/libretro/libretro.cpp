@@ -985,12 +985,13 @@ void retro_run (void)
 
    if (!skipped)
    {
-      u16 *screen = GPU->GetCustomFramebuffer();
+      const NDSDisplayInfo &dispInfo = GPU->GetDisplayInfo();
+      u16 *screen = dispInfo.masterCustomBuffer;
       if (layout.draw_screen1)
-         SwapScreen (layout.dst,  screen, layout.pitch);
+         SwapScreen (layout.dst, screen, layout.pitch);
       if (layout.draw_screen2)
       {
-         screen = GPU->GetCustomFramebuffer() + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+         screen = screen + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
          SwapScreen (layout.dst2, screen, layout.pitch);
          DrawPointer(layout.dst2, layout.pitch);
       }

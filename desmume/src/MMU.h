@@ -308,6 +308,47 @@ struct GCBUS_Controller
 	eCardMode mode; //probably only one of these
 };
 
+typedef union
+{
+	u8 value;
+	
+#ifdef LOCAL_LE
+	struct
+	{
+		unsigned MST:3;
+		unsigned OFS:2;
+		unsigned :2;
+		unsigned Enable:1;
+	};
+	
+	struct
+	{
+		unsigned MST_ABHI:2;
+		unsigned :1;
+		unsigned OFS_ABHI:2;
+		unsigned :2;
+		unsigned Enable_ABHI:1;
+	};
+#else
+	struct
+	{
+		unsigned Enable:1;
+		unsigned :2;
+		unsigned OFS:2;
+		unsigned MST:3;
+	};
+	
+	struct
+	{
+		unsigned Enable_ABHI:1;
+		unsigned :2;
+		unsigned OFS_ABHI:2;
+		unsigned :1;
+		unsigned MST_ABHI:2;
+	};
+#endif
+} VRAMCNT;
+
 #define DUP2(x)  x, x
 #define DUP4(x)  x, x, x, x
 #define DUP8(x)  x, x, x, x,  x, x, x, x
@@ -324,18 +365,14 @@ struct MMU_struct
 	u8 MAIN_MEM[16*1024*1024]; //expanded from 8MB to 16MB to support dsi
 	u8 ARM9_REG[0x1000000]; //this variable is evil and should be removed by correctly emulating all registers.
 	u8 ARM9_BIOS[0x8000];
-	u8 ARM9_VMEM[0x800];
+	CACHE_ALIGN u8 ARM9_VMEM[0x800];
 	
-	#include "PACKED.h"
-	struct {
-		u8 ARM9_LCD[0xA4000];
-		//an extra 128KB for blank memory, directly after arm9_lcd, so that
-		//we can easily map things to the end of arm9_lcd to represent 
-		//an unmapped state
-		u8 blank_memory[0x20000];  
-	};
-	#include "PACKED_END.h"
-
+	//an extra 128KB for blank memory, directly after arm9_lcd, so that
+	//we can easily map things to the end of arm9_lcd to represent
+	//an unmapped state
+	CACHE_ALIGN u8 ARM9_LCD[0xA4000 + 0x20000];
+	u8 *blank_memory;
+	
     u8 ARM9_OAM[0x800];
 
 	u8* ExtPal[2][4];
@@ -389,8 +426,6 @@ struct MMU_struct
 	u32 reg_IF_bits[2];
 	//these flags are set occasionally to indicate that an irq should have entered the pipeline, and processing will be deferred a tiny bit to help emulate things
 	u32 reg_IF_pending[2];
-
-	u32 reg_DISP3DCNT_bits;
 
 	template<int PROCNUM> u32 gen_IF();
 
@@ -515,16 +550,20 @@ extern const armcpu_memory_iface arm9_base_memory_iface;
 extern const armcpu_memory_iface arm7_base_memory_iface;
 extern const armcpu_memory_iface arm9_direct_memory_iface;
 
-#define VRAM_BANKS 9
-#define VRAM_BANK_A 0
-#define VRAM_BANK_B 1
-#define VRAM_BANK_C 2
-#define VRAM_BANK_D 3
-#define VRAM_BANK_E 4
-#define VRAM_BANK_F 5
-#define VRAM_BANK_G 6
-#define VRAM_BANK_H 7
-#define VRAM_BANK_I 8
+enum VRAMBankID
+{
+	VRAM_BANK_A = 0,
+	VRAM_BANK_B = 1,
+	VRAM_BANK_C = 2,
+	VRAM_BANK_D = 3,
+	VRAM_BANK_E = 4,
+	VRAM_BANK_F = 5,
+	VRAM_BANK_G = 6,
+	VRAM_BANK_H = 7,
+	VRAM_BANK_I = 8,
+	
+	VRAM_BANK_COUNT = 9
+};
 
 #define VRAM_PAGE_ABG 0
 #define VRAM_PAGE_BBG 128
@@ -541,10 +580,10 @@ struct VramConfiguration {
 	struct BankInfo {
 		Purpose purpose;
 		int ofs;
-	} banks[VRAM_BANKS];
+	} banks[VRAM_BANK_COUNT];
 	
 	inline void clear() {
-		for(int i=0;i<VRAM_BANKS;i++) {
+		for(int i=0;i<VRAM_BANK_COUNT;i++) {
 			banks[i].ofs = 0;
 			banks[i].purpose = OFF;
 		}

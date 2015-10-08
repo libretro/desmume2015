@@ -157,9 +157,9 @@ int NDS_Init()
 	NDS_ARM7.ResetMemoryInterfaceToBase();
 
    if (GPU != NULL)
-		delete GPU;
+		GPU->FinalizeAndDeallocate();
 	
-	GPU = new GPUSubsystem;
+	GPU = GPUSubsystem::Allocate();
 	
 	if (SPU_Init(SNDCORE_DUMMY, 740) != 0)
 		return -1;
@@ -176,8 +176,8 @@ void NDS_DeInit(void)
 	gameInfo.closeROM();
 	SPU_DeInit();
 
-   delete GPU;
-   GPU = NULL;
+	GPU->FinalizeAndDeallocate();
+	GPU = NULL;
 
 	MMU_DeInit();
 
@@ -740,8 +740,9 @@ public:
 	}
 	void Advance()
 	{
-      const GPUEngineA *mainEngine = GPU->GetEngineMain();
-		bool capturing = (mainEngine->dispCapCnt.enabled || (mainEngine->dispCapCnt.val & 0x80000000));
+		const GPUEngineA *mainEngine = GPU->GetEngineMain();
+		const IOREG_DISPCAPCNT &DISPCAPCNT = mainEngine->GetIORegisterMap().DISPCAPCNT;
+		const bool capturing = (DISPCAPCNT.CaptureEnable != 0);
 
 
 		if(capturing && consecutiveNonCaptures > 30)
@@ -1038,13 +1039,13 @@ struct TSequenceItem_divider : public TSequenceItem
 #endif
 		MMU_new.div.busy = 0;
 #ifdef HOST_64 
-		T1WriteQuad(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2A0, MMU.divResult);
-		T1WriteQuad(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2A8, MMU.divMod);
+		T1WriteQuad(MMU.ARM9_REG, 0x2A0, MMU.divResult);
+		T1WriteQuad(MMU.ARM9_REG, 0x2A8, MMU.divMod);
 #else
-		T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2A0, (u32)MMU.divResult);
-		T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2A4, (u32)(MMU.divResult >> 32));
-		T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2A8, (u32)MMU.divMod);
-		T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2AC, (u32)(MMU.divMod >> 32));
+		T1WriteLong(MMU.ARM9_REG, 0x2A0, (u32)MMU.divResult);
+		T1WriteLong(MMU.ARM9_REG, 0x2A4, (u32)(MMU.divResult >> 32));
+		T1WriteLong(MMU.ARM9_REG, 0x2A8, (u32)MMU.divMod);
+		T1WriteLong(MMU.ARM9_REG, 0x2AC, (u32)(MMU.divMod >> 32));
 #endif
 		MMU.divRunning = FALSE;
 	}
@@ -1071,7 +1072,7 @@ struct TSequenceItem_sqrtunit : public TSequenceItem
 		IF_DEVELOPER(DEBUG_statistics.sequencerExecutionCounters[3]++);
 #endif
 		MMU_new.sqrt.busy = 0;
-		T1WriteLong(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x2B4, MMU.sqrtResult);
+		T1WriteLong(MMU.ARM9_REG, 0x2B4, MMU.sqrtResult);
 		MMU.sqrtRunning = FALSE;
 	}
 
@@ -1280,12 +1281,6 @@ static void execHardware_hstart_vblankEnd()
 
 	//some emulation housekeeping
 	frameSkipper.Advance();
-
-   if (GPU->GetWillAutoBlitNativeToCustomBuffer())
-	{
-		GPU->GetEngineMain()->BlitNativeToCustomFramebuffer();
-		GPU->GetEngineSub()->BlitNativeToCustomFramebuffer();
-	}
 }
 
 static void execHardware_hstart_vblankStart()
@@ -2785,7 +2780,7 @@ bool ValidateSlot2Access(u32 procnum, u32 demandSRAMSpeed, u32 demand1stROMSpeed
 	static const u32 _rom1Speeds[] = {10,8,6,18};
 	static const u32 _rom2Speeds[] = {6,4};
 	u16 exmemcnt = T1ReadWord(MMU.MMU_MEM[procnum][0x40], 0x204);
-	u16 exmemcnt9 = T1ReadWord(MMU.MMU_MEM[ARMCPU_ARM9][0x40], 0x204);
+	u16 exmemcnt9 = T1ReadWord(MMU.ARM9_REG, 0x204);
 	u32 arm7access = (exmemcnt9 & EXMEMCNT_MASK_SLOT2_ARM7);
 	u32 sramSpeed = _sramSpeeds[(exmemcnt & EXMEMCNT_MASK_SLOT2_SRAM_TIME)];
 	u32 romSpeed1 = _rom1Speeds[(exmemcnt & EXMEMCNT_MASK_SLOT2_ROM_1ST_TIME)>>2];
