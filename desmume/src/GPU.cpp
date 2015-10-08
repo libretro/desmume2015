@@ -4143,7 +4143,7 @@ GPUSubsystem::GPUSubsystem()
 	_displayInfo.customWidth = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
 	_displayInfo.customHeight = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
 	
-	_nativeFramebuffer = (u16 *)malloc_alignedCacheLine(GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT * sizeof(u16) * 2);
+	ClearWithColor(0x8000);
 	
 	_displayInfo.isCustomSizeRequested = false;
 	_displayInfo.masterCustomBuffer = _customFramebuffer;
@@ -4161,13 +4161,10 @@ GPUSubsystem::GPUSubsystem()
 	_displayInfo.renderedHeight[1] = GPU_FRAMEBUFFER_NATIVE_HEIGHT;
 	_displayInfo.renderedBuffer[0] = _displayInfo.nativeBuffer[0];
 	_displayInfo.renderedBuffer[1] = _displayInfo.nativeBuffer[1];
-
-	ClearWithColor(0x8000);
 }
 
 GPUSubsystem::~GPUSubsystem()
 {
-	free_aligned(this->_nativeFramebuffer);
 	free_aligned(this->_customFramebuffer);
 	free_aligned(this->_customVRAM);
 	
@@ -4180,6 +4177,17 @@ GPUSubsystem::~GPUSubsystem()
 	delete _engineSub;
 	
 	gfx3d_deinit();
+}
+
+GPUSubsystem* GPUSubsystem::Allocate()
+{
+	return new(malloc_aligned64(sizeof(GPUSubsystem))) GPUSubsystem();
+}
+
+void GPUSubsystem::FinalizeAndDeallocate()
+{
+	this->~GPUSubsystem();
+	free_aligned(this);
 }
 
 void GPUSubsystem::Reset()
