@@ -1,3 +1,4 @@
+DEBUG=0
 X432R_CUSTOMRENDERER_ENABLED=0
 
 ifeq ($(platform),)
@@ -193,13 +194,15 @@ else ifneq (,$(findstring armv,$(platform)))
 	endif
 	CXXFLAGS += -DARM
 
-
 # Windows
 else
 	TARGET := $(TARGET_NAME)_libretro.dll
 	CC = gcc
 	CXX = g++
-	SHARED := -shared -static-libgcc -static-libstdc++ -s -Wl,--version-script=$(CORE_DIR)/libretro/link.T
+	SHARED := -shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(CORE_DIR)/libretro/link.T
+	ifeq ($(DEBUG), 0)
+		SHARED += -s
+	endif
 	DESMUME_JIT = 1
 	HAVE_DIRENT_WIN = 1
 
@@ -215,7 +218,6 @@ endif
 
 include Makefile.common
 
-DEBUG=0
 ifeq ($(DEBUG), 1)
 	CXXFLAGS += -g -O0
 else
