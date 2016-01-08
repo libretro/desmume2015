@@ -118,11 +118,6 @@ static void SwapScreen(uint16_t *dst, const uint16_t *src, uint32_t pitch)
    }
 }
 
-namespace
-{
-    uint32_t firmwareLanguage;
-}
-
 void retro_get_system_info(struct retro_system_info *info)
 {
    info->library_name = "DeSmuME";
@@ -427,33 +422,6 @@ static void check_variables(bool first_boot)
    else
       frameSkip = 0;
 
-    var.key = "desmume_firmware_language";
-
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        static const struct { const char* name; uint32_t id; } languages[6] = 
-        {
-            { "Japanese", 0 },
-            { "English", 1 },
-            { "French", 2 },
-            { "German", 3 },
-            { "Italian", 4 },
-            { "Spanish", 5 }
-        };
-
-        for (int i = 0; i < 6; i ++)
-        {
-            if (!strcmp(languages[i].name, var.value))
-            {
-                firmwareLanguage = languages[i].id;
-                break;
-            }
-        }
-    }
-   else
-      firmwareLanguage = 1;
-
-
    var.key = "desmume_gfx_edgemark";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -640,7 +608,6 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_pointer_stylus_jitter", "Enable emulated stylus jitter; disable|enable"},
       { "desmume_load_to_memory", "Load Game into Memory (restart); disable|enable" },
       { "desmume_advanced_timing", "Enable Advanced Bus-Level Timing; enable|disable" },
-      { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
       { "desmume_screens_gap", "Screen Gap; 0|5|64|90|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
       { "desmume_gfx_edgemark", "Enable Edgemark; enable|disable" },
@@ -780,7 +747,7 @@ void retro_init (void)
     // Init DeSmuME
     struct NDS_fw_config_data fw_config;
     NDS_FillDefaultFirmwareConfigData(&fw_config);
-    fw_config.language = firmwareLanguage;
+    fw_config.language = retro_get_language();
 
 
     //addonsChangePak(NDS_ADDON_NONE);
@@ -1119,6 +1086,45 @@ void retro_cheat_set(unsigned index, bool enabled, const char *code)
 }
 
 unsigned retro_get_region (void) { return RETRO_REGION_NTSC; }
+
+unsigned retro_get_language (void)
+{
+	unsigned raLang;
+	environ_cb(RETRO_ENVIRONMENT_GET_LANGUAGE, &raLang);
+	
+	/*Convert RetroArch language values to desmume's
+	RetroArch     Desmume     Value
+	English       Japanese    0
+	Japanese      English     1
+	French        French      2
+	Spanish       German      3
+	German        Italian     4
+	Italian       Spanish     5
+	*/
+
+	switch (raLang)
+	{
+		case 0:
+			raLang = 1;
+			break;
+		case 1:
+			raLang = 0;
+			break;
+		case 2:
+			raLang = 2;
+			break;
+		case 3:
+			raLang = 5;
+			break;
+		case 4:
+			raLang = 3;
+			break;
+		case 5:
+			raLang = 4;
+			break;
+	}
+	return raLang;
+}
 
 #ifdef PSP
 int ftruncate(int fd, off_t length)
