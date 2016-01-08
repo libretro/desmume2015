@@ -64,6 +64,23 @@ struct LayoutData
 
 static bool touchEnabled;
 
+static unsigned host_get_language(void)
+{
+   static const u8 langconv[]={ // libretro to NDS
+      NDS_FW_LANG_ENG,
+      NDS_FW_LANG_JAP,
+      NDS_FW_LANG_FRE,
+      NDS_FW_LANG_SPA,
+      NDS_FW_LANG_GER,
+      NDS_FW_LANG_ITA
+   };
+
+   unsigned lang = RETRO_LANGUAGE_ENGLISH;
+   environ_cb(RETRO_ENVIRONMENT_GET_LANGUAGE, &lang);
+   if (lang >= 6) lang = RETRO_LANGUAGE_ENGLISH;
+   return langconv[lang];
+}
+
 static inline int32_t Saturate(int32_t min, int32_t max, int32_t aValue)
 {
    return std::max(min, std::min(max, aValue));
@@ -431,8 +448,9 @@ static void check_variables(bool first_boot)
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        static const struct { const char* name; uint32_t id; } languages[6] = 
+        static const struct { const char* name; int id; } languages[] = 
         {
+            { "Auto", -1 },
             { "Japanese", 0 },
             { "English", 1 },
             { "French", 2 },
@@ -441,11 +459,12 @@ static void check_variables(bool first_boot)
             { "Spanish", 5 }
         };
 
-        for (int i = 0; i < 6; i ++)
+        for (int i = 0; i < 7; i ++)
         {
             if (!strcmp(languages[i].name, var.value))
             {
                 firmwareLanguage = languages[i].id;
+                if (firmwareLanguage == -1) firmwareLanguage = host_get_language();
                 break;
             }
         }
@@ -640,7 +659,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_pointer_stylus_jitter", "Enable emulated stylus jitter; disable|enable"},
       { "desmume_load_to_memory", "Load Game into Memory (restart); disable|enable" },
       { "desmume_advanced_timing", "Enable Advanced Bus-Level Timing; enable|disable" },
-      { "desmume_firmware_language", "Firmware language; English|Japanese|French|German|Italian|Spanish" },
+      { "desmume_firmware_language", "Firmware language; Auto|English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
       { "desmume_screens_gap", "Screen Gap; 0|5|64|90|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
       { "desmume_gfx_edgemark", "Enable Edgemark; enable|disable" },
