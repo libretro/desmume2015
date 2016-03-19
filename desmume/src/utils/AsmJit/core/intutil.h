@@ -205,7 +205,7 @@ namespace IntUtil
 
     if (sizeof(T) >= 2) base = base | (base >>  8);
     if (sizeof(T) >= 4) base = base | (base >> 16);
-    if (sizeof(T) >= 8) base = base | (base >> 32);
+    if (sizeof(T) >= 8) base = base | (base >> 16 >> 16);
 
 #if defined(_MSC_VER)
 # pragma warning(pop)
