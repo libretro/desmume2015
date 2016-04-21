@@ -1,5 +1,6 @@
 SOURCES_CXX :=
 
+INCDIR += -I$(CORE_DIR)/libretro-common/include
 ifeq ($(HAVE_DIRENT_WIN), 1)
 INCDIR += -I$(CORE_DIR)/libretro/dirent_win32 -I$(CORE_DIR)/windows
 
@@ -88,6 +89,7 @@ SOURCES_C += $(CORE_DIR)/utils/ConvertUTF.c \
 				 $(CORE_DIR)/fs-linux.c \
 				 $(CORE_DIR)/ROMReader.c \
 				 $(CORE_DIR)/utils/dlditool.c \
+				 $(CORE_DIR)/libretro-common/rthreads/rthreads.c \
 				 $(CORE_DIR)/version.c
 
 ifeq ($(DESMUME_JIT_ARM),1)
