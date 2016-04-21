@@ -1,7 +1,7 @@
 /*
 	Copyright (C) 2006 yopyop
 	Copyright (C) 2006-2007 shash
-	Copyright (C) 2008-2015 DeSmuME team
+	Copyright (C) 2008-2016 DeSmuME team
 
 	This file is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -292,7 +292,8 @@ enum OGLVertexAttributeID
 enum OGLTextureUnitID
 {
 	// Main textures will always be on texture unit 0.
-	OGLTextureUnitID_ToonTable = 1,
+	OGLTextureUnitID_FinalColor = 1,
+	OGLTextureUnitID_ToonTable,
 	OGLTextureUnitID_GColor,
 	OGLTextureUnitID_GDepth,
 	OGLTextureUnitID_GPolyID,
@@ -425,13 +426,14 @@ struct OGLRenderRef
 	GLuint texGPolyID;
 	GLuint texGDepthStencilID;
 	GLuint texPostprocessFogID;
+	GLuint texFinalColorID;
 	
 	GLuint rboMSGColorID;
 	GLuint rboMSGDepthID;
 	GLuint rboMSGPolyID;
 	GLuint rboMSGFogAttrID;
 	GLuint rboMSGDepthStencilID;
-	GLuint rboMSPostprocessID;
+	GLuint rboFramebufferRGBA6665ID;
 	
 	GLuint fboClearImageID;
 	GLuint fboRenderID;
@@ -446,10 +448,15 @@ struct OGLRenderRef
 	
 	GLuint vertexEdgeMarkShaderID;
 	GLuint vertexFogShaderID;
+	GLuint vertexFramebufferOutputShaderID;
 	GLuint fragmentEdgeMarkShaderID;
 	GLuint fragmentFogShaderID;
+	GLuint fragmentFramebufferRGBA6665OutputShaderID;
+	GLuint fragmentFramebufferRGBA8888OutputShaderID;
 	GLuint programEdgeMarkID;
 	GLuint programFogID;
+	GLuint programFramebufferRGBA6665OutputID;
+	GLuint programFramebufferRGBA8888OutputID;
 	
 	GLint uniformFramebufferSize;
 	GLint uniformStateToonShadingMode;
@@ -566,6 +573,9 @@ private:
 	unsigned int versionMinor;
 	unsigned int versionRevision;
 	
+private:
+	Render3DError _FlushFramebufferConvertOnCPU(const FragmentColor *__restrict srcFramebuffer, FragmentColor *__restrict dstFramebuffer, u16 *__restrict dstRGBA5551);
+	
 protected:
 	// OpenGL-specific References
 	OGLRenderRef *ref;
@@ -577,14 +587,18 @@ protected:
 	bool isMultisampledFBOSupported;
 	bool isShaderSupported;
 	bool isVAOSupported;
+	bool willFlipFramebufferOnGPU;
+	bool willConvertFramebufferOnGPU;
 	
 	// Textures
 	TexCacheItem *currTexture;
 	
+	FragmentColor *_mappedFramebuffer;
 	bool _pixelReadNeedsFinish;
 	size_t _currentPolyIndex;
+	std::vector<u8> _shadowPolyID;
 	
-	Render3DError FlushFramebuffer(FragmentColor *__restrict dstRGBA6665, u16 *__restrict dstRGBA5551);
+	Render3DError FlushFramebuffer(const FragmentColor *__restrict srcFramebuffer, FragmentColor *__restrict dstFramebuffer, u16 *__restrict dstRGBA5551);
 	
 	// OpenGL-specific methods
 	virtual Render3DError CreateVBOs() = 0;
@@ -602,12 +616,20 @@ protected:
 	virtual Render3DError InitTextures() = 0;
 	virtual Render3DError InitFinalRenderStates(const std::set<std::string> *oglExtensionSet) = 0;
 	virtual Render3DError InitTables() = 0;
+	virtual Render3DError InitPostprocessingPrograms(const std::string &edgeMarkVtxShader,
+													 const std::string &edgeMarkFragShader,
+													 const std::string &fogVtxShader,
+													 const std::string &fogFragShader,
+													 const std::string &framebufferOutputVtxShader,
+													 const std::string &framebufferOutputRGBA6665FragShader,
+													 const std::string &framebufferOutputRGBA8888FragShader) = 0;
+	virtual Render3DError DestroyPostprocessingPrograms() = 0;
 	virtual Render3DError InitEdgeMarkProgramBindings() = 0;
 	virtual Render3DError InitEdgeMarkProgramShaderLocations() = 0;
-	virtual Render3DError InitPostprocessingPrograms(const std::string &edgeMarkVtxShader, const std::string &edgeMarkFragShader, const std::string &fogVtxShader, const std::string &fogFragShader) = 0;
 	virtual Render3DError InitFogProgramBindings() = 0;
 	virtual Render3DError InitFogProgramShaderLocations() = 0;
-	virtual Render3DError DestroyPostprocessingPrograms() = 0;
+	virtual Render3DError InitFramebufferOutputProgramBindings() = 0;
+	virtual Render3DError InitFramebufferOutputShaderLocations() = 0;
 	
 	virtual Render3DError LoadGeometryShaders(std::string &outVertexShaderProgram, std::string &outFragmentShaderProgram) = 0;
 	virtual Render3DError InitGeometryProgramBindings() = 0;
@@ -637,6 +659,8 @@ public:
 	bool ValidateShaderProgramLink(GLuint theProgram) const;
 	void GetVersion(unsigned int *major, unsigned int *minor, unsigned int *revision) const;
 	void SetVersion(unsigned int major, unsigned int minor, unsigned int revision);
+	
+	virtual FragmentColor* GetFramebuffer();
 };
 
 class OpenGLRenderer_1_2 : public OpenGLRenderer
@@ -662,12 +686,20 @@ protected:
 	virtual Render3DError InitGeometryProgramBindings();
 	virtual Render3DError InitGeometryProgramShaderLocations();
 	virtual void DestroyGeometryProgram();
+	virtual Render3DError InitPostprocessingPrograms(const std::string &edgeMarkVtxShader,
+													 const std::string &edgeMarkFragShader,
+													 const std::string &fogVtxShader,
+													 const std::string &fogFragShader,
+													 const std::string &framebufferOutputVtxShader,
+													 const std::string &framebufferOutputRGBA6665FragShader,
+													 const std::string &framebufferOutputRGBA8888FragShader);
+	virtual Render3DError DestroyPostprocessingPrograms();
 	virtual Render3DError InitEdgeMarkProgramBindings();
 	virtual Render3DError InitEdgeMarkProgramShaderLocations();
-	virtual Render3DError InitPostprocessingPrograms(const std::string &edgeMarkVtxShader, const std::string &edgeMarkFragShader, const std::string &fogVtxShader, const std::string &fogFragShader);
 	virtual Render3DError InitFogProgramBindings();
 	virtual Render3DError InitFogProgramShaderLocations();
-	virtual Render3DError DestroyPostprocessingPrograms();
+	virtual Render3DError InitFramebufferOutputProgramBindings();
+	virtual Render3DError InitFramebufferOutputShaderLocations();
 	
 	virtual Render3DError CreateToonTable();
 	virtual Render3DError DestroyToonTable();
@@ -727,19 +759,14 @@ class OpenGLRenderer_1_5 : public OpenGLRenderer_1_4
 protected:
 	virtual Render3DError CreateVBOs();
 	virtual void DestroyVBOs();
-	virtual Render3DError CreatePBOs();
-	virtual void DestroyPBOs();
 	virtual Render3DError CreateVAOs();
 	
 	virtual Render3DError EnableVertexAttributes();
 	virtual Render3DError DisableVertexAttributes();
 	virtual Render3DError BeginRender(const GFX3D &engine);
-	virtual Render3DError ReadBackPixels();
-		
+	
 public:
 	~OpenGLRenderer_1_5();
-	
-	virtual Render3DError RenderFinish();
 };
 
 class OpenGLRenderer_2_0 : public OpenGLRenderer_1_5
@@ -747,12 +774,20 @@ class OpenGLRenderer_2_0 : public OpenGLRenderer_1_5
 protected:
 	virtual Render3DError InitExtensions();
 	virtual Render3DError InitFinalRenderStates(const std::set<std::string> *oglExtensionSet);
+	virtual Render3DError InitPostprocessingPrograms(const std::string &edgeMarkVtxShader,
+													 const std::string &edgeMarkFragShader,
+													 const std::string &fogVtxShader,
+													 const std::string &fogFragShader,
+													 const std::string &framebufferOutputVtxShader,
+													 const std::string &framebufferOutputRGBA6665FragShader,
+													 const std::string &framebufferOutputRGBA8888FragShader);
+	virtual Render3DError DestroyPostprocessingPrograms();
 	virtual Render3DError InitEdgeMarkProgramBindings();
 	virtual Render3DError InitEdgeMarkProgramShaderLocations();
-	virtual Render3DError InitPostprocessingPrograms(const std::string &edgeMarkVtxShader, const std::string &edgeMarkFragShader, const std::string &fogVtxShader, const std::string &fogFragShader);
 	virtual Render3DError InitFogProgramBindings();
 	virtual Render3DError InitFogProgramShaderLocations();
-	virtual Render3DError DestroyPostprocessingPrograms();
+	virtual Render3DError InitFramebufferOutputProgramBindings();
+	virtual Render3DError InitFramebufferOutputShaderLocations();
 	
 	virtual Render3DError EnableVertexAttributes();
 	virtual Render3DError DisableVertexAttributes();
