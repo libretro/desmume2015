@@ -1,11 +1,6 @@
 SOURCES_CXX :=
 
 INCDIR += -I$(CORE_DIR)/libretro-common/include
-ifeq ($(HAVE_DIRENT_WIN), 1)
-INCDIR += -I$(CORE_DIR)/libretro/dirent_win32 -I$(CORE_DIR)/windows
-
-SOURCES_C += $(CORE_DIR)/libretro/dirent_win32/dirent.c
-endif
 
 SOURCES_CXX += \
 	$(CORE_DIR)/armcpu.cpp \
