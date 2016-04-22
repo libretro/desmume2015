@@ -37,12 +37,6 @@
 #define IF_DEVELOPER(X)
 #endif
 
-#ifdef MSB_FIRST
-#ifndef WORDS_BIGENDIAN
-#define WORDS_BIGENDIAN
-#endif
-#endif
-
 #ifdef HOST_WINDOWS
 	#define ENABLE_SSE
 	#define ENABLE_SSE2
