@@ -53,6 +53,9 @@
 #include "FIFO.h"
 #include "movie.h" //only for currframecounter which really ought to be moved into the core emu....
 
+#if 0
+#define NEW
+#endif
 
 /*
 thoughts on flush timing:
@@ -420,8 +423,7 @@ struct tmpVertInfo
 	bool first;
 } tempVertInfo;
 
-
-static void twiddleLists()
+static void twiddleLists(void)
 {
 	listTwiddle++;
 	listTwiddle &= 1;
@@ -548,8 +550,14 @@ void gfx3d_init()
 		vertlist = &vertlists[0];
 	}
 	
+#ifdef NEW
+	gfx3d.state.savedDISP3DCNT.value = 0;
+	gfx3d.state.fogDensityTable = MMU.ARM9_REG+0x0360;
+	gfx3d.state.edgeMarkColorTable = (u16 *)(MMU.ARM9_REG+0x0330);
+#else
 	gfx3d.state.fogDensityTable = MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0360;
 	gfx3d.state.edgeMarkColorTable = (u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]+0x0330);
+#endif
 	
 	makeTables();
 	Render3D_Init();
@@ -644,6 +652,12 @@ void gfx3d_reset()
 
 	GFX_PIPEclear();
 	GFX_FIFOclear();
+
+#ifdef NEW
+	gfx3d._videoFrameCount = 0;
+	gfx3d.render3DFrameCount = 0;
+	Render3DFramesPerSecond = 0;
+#endif
 	
 	CurrentRenderer->Reset();
 }
@@ -865,7 +879,7 @@ static void SetVertex()
 	}
 }
 
-static void gfx3d_glPolygonAttrib_cache()
+static void gfx3d_glPolygonAttrib_cache(void)
 {
 	// Light enable/disable
 	lightMask = (polyAttr&0xF);
@@ -877,7 +891,7 @@ static void gfx3d_glPolygonAttrib_cache()
 	cullingMask = (polyAttr>>6)&3;
 }
 
-static void gfx3d_glTexImage_cache()
+static void gfx3d_glTexImage_cache(void)
 {
 	texCoordinateTransform = (textureFormat>>30);
 }
@@ -1406,6 +1420,12 @@ static void gfx3d_glVertex_rel(s32 v)
 
 static void gfx3d_glPolygonAttrib (u32 val)
 {
+#if 0
+	if(inBegin) {
+		//PROGINFO("Set polyattr in the middle of a begin/end pair.\n  (This won't be activated until the next begin)\n");
+		//TODO - we need some some similar checking for teximageparam etc.
+	}
+#endif
 	polyAttrPending = val;
 	GFX_DELAY(1);
 }
@@ -2026,6 +2046,8 @@ static void gfx3d_doFlush()
 	gfx3d.vertlist = vertlist;
 
 	//and also our current render state
+
+#if 1
 	if (BIT1(control)) gfx3d.state.shading = GFX3D_State::HIGHLIGHT;
 	else gfx3d.state.shading = GFX3D_State::TOON;
 	gfx3d.state.enableTexturing = BIT0(control);
@@ -2041,6 +2063,12 @@ static void gfx3d_doFlush()
 	gfx3d.state.wbuffer = BIT1(gfx3d.state.activeFlushCommand);
 
 	gfx3d.renderState = gfx3d.state;
+#else
+	gfx3d.state.sortmode = BIT0(gfx3d.state.activeFlushCommand);
+	gfx3d.state.wbuffer = BIT1(gfx3d.state.activeFlushCommand);
+
+	gfx3d.renderState = gfx3d.state;
+#endif
 	
 	// Override render states per user settings
 	if (!CommonSettings.GFX3D_Texture)
@@ -2155,6 +2183,7 @@ void gfx3d_VBlankEndSignal(bool skipFrame)
 
 	drawPending = FALSE;
 
+#if 1
 	if (!CommonSettings.showGpu.main)
 	{
 		memset(_gfx3d_colorRGBA6665, 0, GPU->GetCustomFramebufferWidth() * GPU->GetCustomFramebufferHeight() * sizeof(FragmentColor));
@@ -2162,6 +2191,32 @@ void gfx3d_VBlankEndSignal(bool skipFrame)
 	}
 	
 	CurrentRenderer->Render(gfx3d);
+#else
+	if (CurrentRenderer->GetRenderNeedsFinish())
+	{
+		CurrentRenderer->SetFramebufferFlushStates(false, false);
+		CurrentRenderer->RenderFinish();
+		CurrentRenderer->SetFramebufferFlushStates(true, true);
+		CurrentRenderer->SetRenderNeedsFinish(false);
+		GPU->GetEventHandler()->DidRender3DEnd();
+	}
+	
+	GPU->GetEventHandler()->DidRender3DBegin();
+	
+	if (CommonSettings.showGpu.main)
+	{
+		CurrentRenderer->SetRenderNeedsFinish(true);
+		CurrentRenderer->SetTextureProcessingProperties(CommonSettings.GFX3D_Renderer_TextureDeposterize, CommonSettings.GFX3D_Renderer_TextureScalingFactor);
+		CurrentRenderer->Render(gfx3d);
+	}
+	else
+	{
+		memset(GPU->GetEngineMain()->Get3DFramebufferRGBA6665(), 0, GPU->GetCustomFramebufferWidth() * GPU->GetCustomFramebufferHeight() * sizeof(FragmentColor));
+		memset(GPU->GetEngineMain()->Get3DFramebufferRGBA5551(), 0, GPU->GetCustomFramebufferWidth() * GPU->GetCustomFramebufferHeight() * sizeof(u16));
+		CurrentRenderer->SetRenderNeedsFinish(false);
+		GPU->GetEventHandler()->DidRender3DEnd();
+	}
+#endif
 }
 
 void gfx3d_sendCommandToFIFO(u32 val)
@@ -2268,7 +2323,11 @@ void gfx3d_glGetLightColor(const size_t index, u32 &dst)
 //consider building a little state structure that looks exactly like this describes
 
 SFORMAT SF_GFX3D[]={
+#if 1
 	{ "GCTL", 4, 1, &control}, // no longer regenerated indirectly, see comment in loadstate()
+#else
+	{ "GCTL", 4, 1, &gfx3d.state.savedDISP3DCNT},
+#endif
 	{ "GPAT", 4, 1, &polyAttr},
 	{ "GPAP", 4, 1, &polyAttrPending},
 	{ "GINB", 4, 1, &inBegin},
@@ -2445,6 +2504,39 @@ bool gfx3d_loadstate(EMUFILE* is, int size)
 	}
 
 	return true;
+}
+
+void gfx3d_parseCurrentDISP3DCNT()
+{
+#ifdef NEW
+	const IOREG_DISP3DCNT &DISP3DCNT = gfx3d.state.savedDISP3DCNT;
+	
+	gfx3d.state.enableTexturing		= (DISP3DCNT.EnableTexMapping != 0);
+	gfx3d.state.shading				=  DISP3DCNT.PolygonShading;
+	gfx3d.state.enableAlphaTest		= (DISP3DCNT.EnableAlphaTest != 0);
+	gfx3d.state.enableAlphaBlending	= (DISP3DCNT.EnableAlphaBlending != 0);
+	gfx3d.state.enableAntialiasing	= (DISP3DCNT.EnableAntiAliasing != 0);
+	gfx3d.state.enableEdgeMarking	= (DISP3DCNT.EnableEdgeMarking != 0);
+	gfx3d.state.enableFogAlphaOnly	= (DISP3DCNT.FogOnlyAlpha != 0);
+	gfx3d.state.enableFog			= (DISP3DCNT.EnableFog != 0);
+	gfx3d.state.fogShift			=  DISP3DCNT.FogShiftSHR;
+	gfx3d.state.enableClearImage	= (DISP3DCNT.RearPlaneMode != 0);
+#endif
+}
+
+void ParseReg_DISP3DCNT()
+{
+#ifdef NEW
+	const IOREG_DISP3DCNT &DISP3DCNT = GPU->GetEngineMain()->GetIORegisterMap().DISP3DCNT;
+	
+	if (gfx3d.state.savedDISP3DCNT.value == DISP3DCNT.value)
+	{
+		return;
+	}
+	
+	gfx3d.state.savedDISP3DCNT.value = DISP3DCNT.value;
+	gfx3d_parseCurrentDISP3DCNT();
+#endif
 }
 
 //-------------------
