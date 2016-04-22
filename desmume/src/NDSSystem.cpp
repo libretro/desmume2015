@@ -24,6 +24,7 @@
 #include <math.h>
 extern unsigned long crc32(unsigned long, const unsigned char*,unsigned int);
 
+#include "utils/dlditool.h"
 #include "utils/decrypt/decrypt.h"
 #include "utils/decrypt/crc.h"
 #include "utils/advanscene.h"
