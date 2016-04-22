@@ -73,17 +73,17 @@ class EMUFILE;
 #define RGB15TO32_NOALPHA(col) ( color_15bit_to_24bit[col&0x7FFF] )
 
 //produce a 32bpp color from a ds RGB15 plus an 8bit alpha, using a table
-#ifdef WORDS_BIGENDIAN
-	#define RGB15TO32(col,alpha8) ( (alpha8) | color_15bit_to_24bit[(col)&0x7FFF] )
+#ifdef MSB_FIRST
+#define RGB15TO32(col,alpha8) ( (alpha8) | color_15bit_to_24bit[(col)&0x7FFF] )
 #else
-	#define RGB15TO32(col,alpha8) ( ((alpha8)<<24) | color_15bit_to_24bit[(col)&0x7FFF] )
+#define RGB15TO32(col,alpha8) ( ((alpha8)<<24) | color_15bit_to_24bit[(col)&0x7FFF] )
 #endif
 
 //produce a 5555 32bit color from a ds RGB15 plus an 5bit alpha
-#ifdef WORDS_BIGENDIAN
-	#define RGB15TO5555(col,alpha5) ( (alpha5) | ((((col) & 0x7C00)>>10)<<8) | ((((col) & 0x03E0)>>5)<<16) | (((col) & 0x001F)<<24) )
+#ifdef MSB_FIRST
+#define RGB15TO5555(col,alpha5) ( (alpha5) | ((((col) & 0x7C00)>>10)<<8) | ((((col) & 0x03E0)>>5)<<16) | (((col) & 0x001F)<<24) )
 #else
-	#define RGB15TO5555(col,alpha5) ( ((alpha5)<<24) | ((((col) & 0x7C00)>>10)<<16) | ((((col) & 0x03E0)>>5)<<8) | ((col) & 0x001F) )
+#define RGB15TO5555(col,alpha5) ( ((alpha5)<<24) | ((((col) & 0x7C00)>>10)<<16) | ((((col) & 0x03E0)>>5)<<8) | ((col) & 0x001F) )
 #endif
 
 //produce a 6665 32bit color from a ds RGB15 plus an 5bit alpha
@@ -93,7 +93,7 @@ inline u32 RGB15TO6665(u16 col, u8 alpha5)
 	const u16 g = (col&0x03E0)>>5;
 	const u16 b = (col&0x7C00)>>10;
 	
-#ifdef WORDS_BIGENDIAN
+#ifdef MSB_FIRST
 	const u32 ret = alpha5 | (((b<<1)+1)<<8) | (((g<<1)+1)<<16) | (((r<<1)+1)<<24);
 #else
 	const u32 ret = (alpha5<<24) | (((b<<1)+1)<<16) | (((g<<1)+1)<<8) | ((r<<1)+1);
@@ -239,6 +239,12 @@ enum
 	TEXMODE_4X4									= 5,
 	TEXMODE_A5I3								= 6,
 	TEXMODE_16BPP								= 7
+};
+
+enum PolygonShadingMode
+{
+	PolygonShadingMode_Toon						= 0,
+	PolygonShadingMode_Highlight				= 1
 };
 
 void gfx3d_init();
@@ -641,7 +647,7 @@ struct GFX3D_State
 		, enableClearImage(false)
 		, enableFog(false)
 		, enableFogAlphaOnly(false)
-		, shading(TOON)
+		, shading(PolygonShadingMode_Toon)
 		, alphaTestRef(0)
 		, activeFlushCommand(0)
 		, pendingFlushCommand(0)
@@ -659,11 +665,17 @@ struct GFX3D_State
 			u16ToonTable[i] = 0;
 	}
 
+#if 0
+	IOREG_DISP3DCNT savedDISP3DCNT;
+#endif
+
 	BOOL enableTexturing, enableAlphaTest, enableAlphaBlending, 
 		enableAntialiasing, enableEdgeMarking, enableClearImage, enableFog, enableFogAlphaOnly;
 
-	static const u32 TOON = 0;
-	static const u32 HIGHLIGHT = 1;
+#if 1
+   static const u32 TOON = 0;
+   static const u32 HIGHLIGHT = 1;
+#endif
 	u32 shading;
 
 	BOOL wbuffer, sortmode;
