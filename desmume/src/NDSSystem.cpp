@@ -34,7 +34,6 @@ extern unsigned long crc32(unsigned long, const unsigned char*,unsigned int);
 #include "armcpu.h"
 #include "render3D.h"
 #include "MMU.h"
-#include "ROMReader.h"
 #include "gfx3d.h"
 #include "GPU.h"
 #include "cp15.h"
