@@ -246,8 +246,8 @@ typedef enum
 	ARM7 = 1
 } cpu_id_t;
 
-///endian-flips count bytes.  count should be even and nonzero.
-inline void FlipByteOrder(u8 *src, u32 count)
+/* endian-flips count bytes.  count should be even and nonzero. */
+static INLINE void FlipByteOrder(u8 *src, u32 count)
 {
 	u8 *start=src;
 	u8 *end=src+count-1;
@@ -266,9 +266,8 @@ inline void FlipByteOrder(u8 *src, u32 count)
 	}
 }
 
-
-
-inline u64 double_to_u64(double d) {
+static INLINE u64 double_to_u64(double d)
+{
 	union {
 		u64 a;
 		double b;
@@ -277,7 +276,8 @@ inline u64 double_to_u64(double d) {
 	return fuxor.a;
 }
 
-inline double u64_to_double(u64 u) {
+static INLINE double u64_to_double(u64 u)
+{
 	union {
 		u64 a;
 		double b;
@@ -286,7 +286,8 @@ inline double u64_to_double(u64 u) {
 	return fuxor.b;
 }
 
-inline u32 float_to_u32(float f) {
+static INLINE u32 float_to_u32(float f)
+{
 	union {
 		u32 a;
 		float b;
@@ -295,7 +296,8 @@ inline u32 float_to_u32(float f) {
 	return fuxor.a;
 }
 
-inline float u32_to_float(u32 u) {
+static INLINE float u32_to_float(u32 u)
+{
 	union {
 		u32 a;
 		float b;
@@ -304,36 +306,35 @@ inline float u32_to_float(u32 u) {
 	return fuxor.b;
 }
 
-
-///stores a 32bit value into the provided byte array in guaranteed little endian form
-inline void en32lsb(u8 *buf, u32 morp)
-{ 
+/* stores a 32bit value into the provided byte array in guaranteed little endian form */
+static INLINE void en32lsb(u8 *buf, u32 morp)
+{
 	buf[0]=(u8)(morp);
 	buf[1]=(u8)(morp>>8);
 	buf[2]=(u8)(morp>>16);
 	buf[3]=(u8)(morp>>24);
 } 
 
-inline void en16lsb(u8* buf, u16 morp)
+static INLINE void en16lsb(u8* buf, u16 morp)
 {
 	buf[0]=(u8)morp;
 	buf[1]=(u8)(morp>>8);
 }
 
 ///unpacks a 64bit little endian value from the provided byte array into host byte order
-inline u64 de64lsb(u8 *morp)
+static INLINE u64 de64lsb(u8 *morp)
 {
 	return morp[0]|(morp[1]<<8)|(morp[2]<<16)|(morp[3]<<24)|((u64)morp[4]<<32)|((u64)morp[5]<<40)|((u64)morp[6]<<48)|((u64)morp[7]<<56);
 }
 
 ///unpacks a 32bit little endian value from the provided byte array into host byte order
-inline u32 de32lsb(u8 *morp)
+static INLINE u32 de32lsb(u8 *morp)
 {
 	return morp[0]|(morp[1]<<8)|(morp[2]<<16)|(morp[3]<<24);
 }
 
 ///unpacks a 16bit little endian value from the provided byte array into host byte order
-inline u16 de16lsb(u8 *morp)
+static INLINE u16 de16lsb(u8 *morp)
 {
 	return morp[0]|(morp[1]<<8);
 }
