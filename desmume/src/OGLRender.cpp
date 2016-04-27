@@ -1054,7 +1054,7 @@ Render3DError OpenGLRenderer::_FlushFramebufferConvertOnCPU(const FragmentColor 
 #endif
 				for (; i < pixCount; i++)
 				{
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 					dstFramebuffer[i] = BGRA8888_32_To_RGBA6665_32(srcFramebuffer[i]);
 					dstRGBA5551[i]    = BGRA8888_32_To_RGBA5551_16(srcFramebuffer[i]);
 #else
@@ -1075,7 +1075,7 @@ Render3DError OpenGLRenderer::_FlushFramebufferConvertOnCPU(const FragmentColor 
 #endif
 				for (; i < pixCount; i++)
 				{
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 					dstFramebuffer[i] = BGRA8888_32_To_RGBA6665_32(srcFramebuffer[i]);
 #else
 					dstFramebuffer[i] = BGRA8888_32Rev_To_RGBA6665_32Rev(srcFramebuffer[i]);
@@ -1094,7 +1094,7 @@ Render3DError OpenGLRenderer::_FlushFramebufferConvertOnCPU(const FragmentColor 
 #endif
 				for (; i < pixCount; i++)
 				{
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 					dstRGBA5551[i]    = BGRA8888_32_To_RGBA5551_16(srcFramebuffer[i]);
 #else
 					dstRGBA5551[i]    = BGRA8888_32Rev_To_RGBA5551_16Rev(srcFramebuffer[i]);
@@ -1118,7 +1118,7 @@ Render3DError OpenGLRenderer::_FlushFramebufferConvertOnCPU(const FragmentColor 
 				for (; i < pixCount; i++)
 				{
 					dstFramebuffer[i] = srcFramebuffer[i];
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 					dstRGBA5551[i]    = BGRA8888_32_To_RGBA5551_16(srcFramebuffer[i]);
 #else
 					dstRGBA5551[i]    = BGRA8888_32Rev_To_RGBA5551_16Rev(srcFramebuffer[i]);
@@ -1141,7 +1141,7 @@ Render3DError OpenGLRenderer::_FlushFramebufferConvertOnCPU(const FragmentColor 
 #endif
 				for (; i < pixCount; i++)
 				{
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 					dstRGBA5551[i]    = BGRA8888_32_To_RGBA5551_16(srcFramebuffer[i]);
 #else
 					dstRGBA5551[i]    = BGRA8888_32Rev_To_RGBA5551_16Rev(srcFramebuffer[i]);
@@ -1171,7 +1171,7 @@ Render3DError OpenGLRenderer::_FlushFramebufferConvertOnCPU(const FragmentColor 
 #endif
 					for (; x < pixCount; x++, ir++, iw++)
 					{
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 						dstFramebuffer[iw] = BGRA8888_32_To_RGBA6665_32(srcFramebuffer[ir]);
 						dstRGBA5551[iw]    = BGRA8888_32_To_RGBA5551_16(srcFramebuffer[ir]);
 #else
@@ -1196,7 +1196,7 @@ Render3DError OpenGLRenderer::_FlushFramebufferConvertOnCPU(const FragmentColor 
 #endif
 					for (; x < pixCount; x++, ir++, iw++)
 					{
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 						dstFramebuffer[iw] = BGRA8888_32_To_RGBA6665_32(srcFramebuffer[ir]);
 #else
 						dstFramebuffer[iw] = BGRA8888_32Rev_To_RGBA6665_32Rev(srcFramebuffer[ir]);
@@ -1219,7 +1219,7 @@ Render3DError OpenGLRenderer::_FlushFramebufferConvertOnCPU(const FragmentColor 
 #endif
 					for (; x < pixCount; x++, ir++, iw++)
 					{
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 						dstRGBA5551[iw]    = BGRA8888_32_To_RGBA5551_16(srcFramebuffer[ir]);
 #else
 						dstRGBA5551[iw]    = BGRA8888_32Rev_To_RGBA5551_16Rev(srcFramebuffer[ir]);
@@ -1247,7 +1247,7 @@ Render3DError OpenGLRenderer::_FlushFramebufferConvertOnCPU(const FragmentColor 
 					for (; x < pixCount; x++, ir++, iw++)
 					{
 						dstFramebuffer[iw] = srcFramebuffer[ir];
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 						dstRGBA5551[iw]    = BGRA8888_32_To_RGBA5551_16(srcFramebuffer[ir]);
 #else
 						dstRGBA5551[iw]    = BGRA8888_32Rev_To_RGBA5551_16Rev(srcFramebuffer[ir]);
@@ -1283,7 +1283,7 @@ Render3DError OpenGLRenderer::_FlushFramebufferConvertOnCPU(const FragmentColor 
 #endif
 					for (; x < pixCount; x++, ir++, iw++)
 					{
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 						dstRGBA5551[iw]    = BGRA8888_32_To_RGBA5551_16(srcFramebuffer[ir]);
 #else
 						dstRGBA5551[iw]    = BGRA8888_32Rev_To_RGBA5551_16Rev(srcFramebuffer[ir]);

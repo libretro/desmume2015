@@ -49,7 +49,7 @@ bool gpu_loadstate(EMUFILE* is, int size);
     it holds flags for general display
 *******************************************************************************/
 
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 struct _DISPCNT
 {
 /* 7*/  u8 ForceBlank:1;      // A+B:
@@ -149,7 +149,7 @@ enum BlendFunc
     some flags indicate special drawing mode, size, FX
 *******************************************************************************/
 
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 struct _BGxCNT
 {
 /* 7*/ u8 Palette_256:1;         // 0=16x16, 1=1*256 palette
@@ -235,7 +235,7 @@ typedef union {
 	u16 val;
 } WINxDIM;
 
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 typedef struct {
 /* 6*/  u8 :2;
 /* 5*/  u8 WINx_Effect_Enable:1;
@@ -257,7 +257,7 @@ typedef struct {
 } WINxBIT;
 #endif
 
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 typedef union {
 	struct {
 		WINxBIT win0;
@@ -421,7 +421,7 @@ enum GPUEngineID
 #define ADDRESS_STEP_512KB	   0x80000
 #define ADDRESS_MASK_256KB	   (ADDRESS_STEP_256KB-1)
 
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 struct _TILEENTRY
 {
 /*14*/	unsigned Palette:4;
@@ -465,7 +465,7 @@ typedef union
 */
 
 struct _COLOR { // abgr x555
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 	unsigned alpha:1;    // sometimes it is unused (pad)
 	unsigned blue:5;
 	unsigned green:5;
@@ -530,7 +530,7 @@ typedef union
 	
 	struct
 	{
-#ifdef LOCAL_BE
+#ifdef MSB_FIRST
 		//attr0
 		unsigned Shape:2;
 		unsigned Depth:1;
