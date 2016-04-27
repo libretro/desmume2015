@@ -54,7 +54,7 @@ class CHEATS
 {
 private:
 	std::vector<CHEATS_LIST> list;
-	u8					filename[MAX_PATH];
+	u8					filename[PATH_MAX_LENGTH];
 	u32					currentGet;
 
 	void	ARparser(CHEATS_LIST& cheat);

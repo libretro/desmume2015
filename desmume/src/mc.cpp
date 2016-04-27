@@ -236,8 +236,8 @@ BackupDevice::BackupDevice()
 
 	if (gameInfo.romsize == 0) return;
 
-	char buf[MAX_PATH] = {0};
-	memset(buf, 0, MAX_PATH);
+	char buf[PATH_MAX_LENGTH] = {0};
+	memset(buf, 0, sizeof(buf));
 	path.getpathnoext(path.BATTERY, buf);
 	filename = std::string(buf) + ".dsv";
 
@@ -1057,8 +1057,8 @@ bool BackupDevice::exportData(const char *filename)
 
 	if (memcmp(filename + strlen(filename) - 5, ".sav*", 5) == 0)
 	{
-		char tmp[MAX_PATH];
-		memset(tmp, 0, MAX_PATH);
+		char tmp[PATH_MAX_LENGTH];
+		memset(tmp, 0, PATH_MAX_LENGTH);
 		strcpy(tmp, filename);
 		tmp[strlen(tmp)-1] = 0;
 		return export_no_gba(tmp);

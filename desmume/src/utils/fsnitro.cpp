@@ -501,7 +501,7 @@ bool FS_NITRO::extractFile(u16 id, string to)
 	if (!inited) return false;
 	if (id > numFiles) return false;
 
-	char curr_dir[MAX_PATH] = {0};
+	char curr_dir[PATH_MAX_LENGTH] = {0};
 	getcwd(curr_dir, sizeof(curr_dir));
 	chdir(to.c_str());
 	extract(id, fat[id].filename);
@@ -519,7 +519,7 @@ bool FS_NITRO::extractAll(string to, void (*callback)(u32 current, u32 num))
 	__mkdir(dataDir.c_str());
 	__mkdir(overlayDir.c_str());
 
-	char curr_dir[MAX_PATH] = {0};
+	char curr_dir[PATH_MAX_LENGTH] = {0};
 	getcwd(curr_dir, sizeof(curr_dir));
 	chdir(dataDir.c_str());
 

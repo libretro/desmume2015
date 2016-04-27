@@ -71,20 +71,7 @@
 #endif
 #endif
 
-#if !defined(MAX_PATH)
-	#if defined(HOST_WINDOWS)
-		#define MAX_PATH 260
-	#elif defined(__GNUC__)
-		#include <limits.h>
-		#if !defined(PATH_MAX)
-			#define MAX_PATH 1024
-		#else
-			#define MAX_PATH PATH_MAX
-		#endif
-	#else
-		#define MAX_PATH 1024
-	#endif
-#endif
+#include <retro_miscellaneous.h>
 
 //------------alignment macros-------------
 //dont apply these to types without further testing. it only works portably here on declarations of variables

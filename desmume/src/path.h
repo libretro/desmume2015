@@ -96,17 +96,17 @@ public:
 		MAXKNOWNPATH = MODULE
 	};
 
-	char pathToRoms[MAX_PATH];
-	char pathToBattery[MAX_PATH];
-	char pathToStates[MAX_PATH];
-	char pathToScreenshots[MAX_PATH];
-	char pathToAviFiles[MAX_PATH];
-	char pathToCheats[MAX_PATH];
-	char pathToSounds[MAX_PATH];
-	char pathToFirmware[MAX_PATH];
-	char pathToModule[MAX_PATH];
-	char pathToLua[MAX_PATH];
-	char pathToSlot1D[MAX_PATH];
+	char pathToRoms[PATH_MAX_LENGTH];
+	char pathToBattery[PATH_MAX_LENGTH];
+	char pathToStates[PATH_MAX_LENGTH];
+	char pathToScreenshots[PATH_MAX_LENGTH];
+	char pathToAviFiles[PATH_MAX_LENGTH];
+	char pathToCheats[PATH_MAX_LENGTH];
+	char pathToSounds[PATH_MAX_LENGTH];
+	char pathToFirmware[PATH_MAX_LENGTH];
+	char pathToModule[PATH_MAX_LENGTH];
+	char pathToLua[PATH_MAX_LENGTH];
+	char pathToSlot1D[PATH_MAX_LENGTH];
 
 	void init(const char *filename) 
 	{
@@ -126,7 +126,7 @@ public:
    {
       const char* saveDir = 0;
       environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &saveDir);
-      strncpy(pathToModule, saveDir ? saveDir : ".", MAX_PATH);
+      strncpy(pathToModule, saveDir ? saveDir : ".", PATH_MAX_LENGTH);
 
       if(saveDir == 0 && log_cb)
       {
@@ -134,7 +134,7 @@ public:
 
          const char* systemDir = 0;
          environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &systemDir);
-         strncpy(pathToModule, systemDir ? systemDir : ".", MAX_PATH);
+         strncpy(pathToModule, systemDir ? systemDir : ".", PATH_MAX_LENGTH);
 
          if(systemDir == 0 && log_cb)
             log_cb(RETRO_LOG_WARN, "System directory is not defined. Fallback to ROM dir\n");	  
@@ -162,14 +162,14 @@ public:
 	void ReadKey(char *pathToRead, const char *key)
 	{
 #ifdef HOST_WINDOWS
-		GetPrivateProfileString(SECTION, key, key, pathToRead, MAX_PATH, IniName);
+		GetPrivateProfileString(SECTION, key, key, pathToRead, PATH_MAX_LENGTH, IniName);
 		if(strcmp(pathToRead, key) == 0) {
-			//since the variables are all intialized in this file they all use MAX_PATH
-			GetDefaultPath(pathToRead, key, MAX_PATH);
+			//since the variables are all intialized in this file they all use PATH_MAX_LENGTH
+			GetDefaultPath(pathToRead, key, PATH_MAX_LENGTH);
 		}
 #else
-		//since the variables are all intialized in this file they all use MAX_PATH
-		GetDefaultPath(pathToRead, key, MAX_PATH);
+		//since the variables are all intialized in this file they all use PATH_MAX_LENGTH
+		GetDefaultPath(pathToRead, key, PATH_MAX_LENGTH);
 #endif
 	}
 
@@ -263,7 +263,7 @@ public:
 				thePath = (std::string)pathToModule + thePath;
 			}
 
-			strncpy(buffer, thePath.c_str(), MAX_PATH);
+			strncpy(buffer, thePath.c_str(), PATH_MAX_LENGTH);
 			#ifdef HOST_WINDOWS
 			FCEUD_MakePathDirs(buffer);
 			#endif
@@ -274,13 +274,13 @@ public:
 			if(buffer[len] == DIRECTORY_DELIMITER_CHAR) 
 				buffer[len] = '\0';
 
-			strncpy(pathToCopy, buffer, MAX_PATH);
+			strncpy(pathToCopy, buffer, PATH_MAX_LENGTH);
 		}
 	}
 
 	std::string getpath(KnownPath path)
 	{
-		char temp[MAX_PATH];
+		char temp[PATH_MAX_LENGTH];
 		SwitchPath(GET, path, temp);
 		return temp;
 	}
@@ -354,9 +354,9 @@ public:
 			}
 				else if (strchr(strftimeArgs, *p))
 				{
-					char tmp[MAX_PATH];
+					char tmp[PATH_MAX_LENGTH];
 					char format[] = { '%', *p, '\0' };
-					strftime(tmp, MAX_PATH, format, time_struct);
+					strftime(tmp, PATH_MAX_LENGTH, format, time_struct);
 					file.append(tmp);
 		}
 			}
@@ -374,7 +374,7 @@ public:
 		}
 #endif
 
-		strncpy(output, file.c_str(), MAX_PATH);
+		strncpy(output, file.c_str(), PATH_MAX_LENGTH);
 	}
 
 	enum R4Format

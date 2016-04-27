@@ -113,7 +113,7 @@ struct fw_memory_chip
 	
 	// needs only for firmware
 	bool isFirmware;
-	char userfile[MAX_PATH];
+	char userfile[PATH_MAX_LENGTH];
 };
 
 

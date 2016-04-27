@@ -313,7 +313,7 @@ bool CFIRMWARE::load()
 
 	// Generate the path for the external firmware config file.
 	std::string extFilePath = CFIRMWARE::GetExternalFilePath();
-	strncpy(MMU.fw.userfile, extFilePath.c_str(), MAX_PATH);
+	strncpy(MMU.fw.userfile, extFilePath.c_str(), PATH_MAX_LENGTH);
 
 	successLoad = true;
 	return true;
@@ -611,7 +611,7 @@ std::string CFIRMWARE::GetExternalFilePath()
 {
 	std::string fwPath = CommonSettings.Firmware;
 	std::string fwFileName = Path::GetFileNameFromPathWithoutExt(fwPath);
-	char configPath[MAX_PATH] = {0};
+	char configPath[PATH_MAX_LENGTH] = {0};
 	path.getpath(path.BATTERY, configPath);
 	if (configPath[strlen(configPath)-1] == DIRECTORY_DELIMITER_CHAR)
 			configPath[strlen(configPath)-1] = 0;

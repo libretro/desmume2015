@@ -136,8 +136,8 @@ int NDS_Init()
 	printf("%s\n", EMU_DESMUME_NAME_AND_VERSION());
 
 	{
-		char	buf[MAX_PATH];
-		memset(buf, 0, MAX_PATH);
+		char	buf[PATH_MAX_LENGTH];
+		memset(buf, 0, sizeof(buf));
 		strcpy(buf, path.pathToModule);
 		strcat(buf, "desmume.ddb");							// DeSmuME database	:)
 		advsc.setDatabase(buf);
@@ -594,7 +594,7 @@ static int rom_init_path(const char *filename, const char *physicalName, const c
 int NDS_LoadROM(const char *filename, const char *physicalName, const char *logicalFilename)
 {
 	int	ret;
-	char	buf[MAX_PATH];
+	char	buf[PATH_MAX_LENGTH];
 
 	if (filename == NULL)
 		return -1;
@@ -694,7 +694,7 @@ int NDS_LoadROM(const char *filename, const char *physicalName, const char *logi
 
 	if (cheats != NULL)
 	{
-		memset(buf, 0, MAX_PATH);
+		memset(buf, 0, sizeof(buf));
 		path.getpathnoext(path.CHEATS, buf);
 		strcat(buf, ".dct");						// DeSmuME cheat		:)
 		cheats->init(buf);
