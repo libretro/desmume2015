@@ -348,16 +348,6 @@ inline u16 de16lsb(u8 *morp)
 	return morp[0]|(morp[1]<<8);
 }
 
-#ifndef ARRAY_SIZE
-//taken from winnt.h
-extern "C++" // templates cannot be declared to have 'C' linkage
-template <typename T, size_t N>
-char (*BLAHBLAHBLAH( UNALIGNED T (&)[N] ))[N];
-
-#define ARRAY_SIZE(A) (sizeof(*BLAHBLAHBLAH(A)))
-#endif
-
-
 //fairly standard for loop macros
 #define MACRODO1(TRICK,TODO) { const size_t X = TRICK; TODO; }
 #define MACRODO2(X,TODO)   { MACRODO1((X),TODO)   MACRODO1(((X)+1),TODO) }
