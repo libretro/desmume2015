@@ -62,7 +62,6 @@ public:
 	~BackupDevice();
 
 	//signals the save system that we are in MOVIE mode. doesnt load up a rom, and never saves it. initializes for that case.
-	void movie_mode();
 	void reset();
 	void close_rom();
 	void forceManualBackupType();
@@ -129,13 +128,9 @@ public:
 	bool export_raw(const char* filename);
 	bool no_gba_unpack(u8 *&buf, u32 &size);
 	
-	bool load_movie(EMUFILE* is);
-
 	struct {
 			u32 size,padSize,type,addr_size,mem_size;
 		} info;
-
-	bool isMovieMode;
 
 	u32 importDataSize(const char *filename);
 	bool importData(const char *filename, u32 force_size = 0);

@@ -25,7 +25,6 @@
 #include "common.h"
 #include "armcpu.h"
 #include "debug.h"
-#include "movie.h"
 #include "MMU.h"
 #include "readwrite.h"
 #include "NDSSystem.h"
@@ -224,7 +223,6 @@ BackupDevice::BackupDevice()
 	fpMC = NULL;
 	fsize = 0;
 	addr_size = 0;
-	isMovieMode = false;
 
 	//default for most games; will be altered where appropriate
 	//usually 0xFF, but occasionally others. If these exceptions could be related to a particular backup memory type, that would be helpful.
@@ -499,44 +497,35 @@ bool  BackupDevice::write(u8 val)
 #ifdef _DONT_SAVE_BACKUP
 	return true;
 #endif
-	//never use save files if we are in movie mode
-	if (isMovieMode) return true;
-
 	return fwrite(&val, 1, 1, fpMC->get_fp())?true:false;
 }
 
 void BackupDevice::writeByte(u32 addr, u8 val)
 {
-	if (isMovieMode) return;
 	fpMC->fseek(addr, SEEK_SET);
 	fpMC->write8le(val);
 }
 void BackupDevice::writeWord(u32 addr, u16 val)
 {
-	if (isMovieMode) return;
 	fpMC->fseek(addr, SEEK_SET);
 	fpMC->write16le(val);
 }
 void BackupDevice::writeLong(u32 addr, u32 val)
 {
-	if (isMovieMode) return;
 	fpMC->fseek(addr, SEEK_SET);
 	fpMC->write32le(val);
 }
 
 void BackupDevice::writeByte(u8 val)
 {
-	if (isMovieMode) return;
 	fpMC->write8le(val);
 }
 void BackupDevice::writeWord(u16 val)
 {
-	if (isMovieMode) return;
 	fpMC->write16le(val);
 }
 void BackupDevice::writeLong(u32 val)
 {
-	if (isMovieMode) return;
 	fpMC->write32le(val);
 }
 
@@ -562,12 +551,6 @@ bool BackupDevice::saveBuffer(u8 *data, u32 size, bool _rewind, bool _truncate)
 	fwrite(data, 1, size, fpMC->get_fp());
 	ensure(size, fpMC);
 	return true;
-}
-
-void BackupDevice::movie_mode()
-{
-	isMovieMode = true;
-	reset();
 }
 
 void BackupDevice::reset_hardware()
@@ -1532,41 +1515,6 @@ bool BackupDevice::import_duc(const char* filename, u32 force_size)
 
 	return res;
 
-}
-
-bool BackupDevice::load_movie(EMUFILE* is) {
-
-	const s32 cookieLen = (s32)strlen(kDesmumeSaveCookie);
-
-	is->fseek(-cookieLen, SEEK_END);
-	is->fseek(-4, SEEK_CUR);
-
-	u32 version = 0xFFFFFFFF;
-	is->fread((char*)&version,4);
-	if(version!=0) {
-		printf("Unknown save file format\n");
-		return false;
-	}
-	is->fseek(-24, SEEK_CUR);
-
-	struct{
-		u32 size,padSize,type,addr_size,mem_size;
-	}info;
-
-	is->fread((char*)&info.size,4);
-	is->fread((char*)&info.padSize,4);
-	is->fread((char*)&info.type,4);
-	is->fread((char*)&info.addr_size,4);
-	is->fread((char*)&info.mem_size,4);
-
-	is->fseek(0, SEEK_SET);
-	fpMC = (EMUFILE_FILE*)&is;
-
-	state = RUNNING;
-	addr_size = info.addr_size;
-	//none of the other fields are used right now
-
-	return true;
 }
 
 void BackupDevice::forceManualBackupType()
