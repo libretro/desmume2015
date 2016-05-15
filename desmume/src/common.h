@@ -21,6 +21,7 @@
 #define _COMMON_H_
 
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <string>
 
@@ -87,11 +88,11 @@ extern msgBoxInterface *msgbox;
 
 struct MAKER
 {
-	u16 code;
+	uint16_t code;
 	const char* name;
 };
 
-std::string getDeveloperNameByID(u16 id);
+const char *getDeveloperNameByID(uint16_t id);
 
 void* malloc_alignedCacheLine(size_t length);
 

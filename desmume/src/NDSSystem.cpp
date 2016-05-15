@@ -651,7 +651,9 @@ int NDS_LoadROM(const char *filename, const char *physicalName, const char *logi
 		INFO("ROM internal name: %s\n", gameInfo.ROMname);
 		if (gameInfo.isDSiEnhanced()) INFO("ROM DSi Enhanced\n");
 	}
-	INFO("ROM developer: %s\n", ((gameInfo.header.makerCode == 0) && gameInfo.isHomebrew())?"Homebrew":getDeveloperNameByID(gameInfo.header.makerCode).c_str());
+	INFO("ROM developer: %s\n", ((gameInfo.header.makerCode == 0) && gameInfo.isHomebrew())
+         ? "Homebrew" : 
+         getDeveloperNameByID(gameInfo.header.makerCode));
 #endif
 
 	buf[0] = gameInfo.header.gameCode[0];

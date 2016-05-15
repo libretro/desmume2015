@@ -373,7 +373,7 @@ static MAKER makerCodes[] = {
 	{ 0x4849, "Yojigen" },
 };
 
-std::string getDeveloperNameByID(u16 id)
+const char *getDeveloperNameByID(uint16_t id)
 {
    uint32_t i;
 
