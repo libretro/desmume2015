@@ -31,7 +31,7 @@ public:
 	typedef void * (*TWork)(void *);
 
 	// initialize task runner
-	void start(bool spinlock);
+	void start(void);
 
 	//execute some work
 	void execute(const TWork &work, void* param);
@@ -46,7 +46,5 @@ public:
 	Impl *impl;
 
 };
-
-int getOnlineCores (void);
 
 #endif

@@ -1209,7 +1209,7 @@ SoftRasterizerRenderer::SoftRasterizerRenderer()
 				rasterizerUnit[i]._debug_thisPoly = false;
 				rasterizerUnit[i].SLI_MASK = (rasterizerCores - 1);
 				rasterizerUnit[i].SLI_VALUE = i;
-				rasterizerUnitTask[i].start(false);
+				rasterizerUnitTask[i].start();
 				
 				postprocessParam[i].renderer = this;
 				postprocessParam[i].startLine = i * linesPerThread;

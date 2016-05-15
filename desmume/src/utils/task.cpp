@@ -30,7 +30,7 @@ public:
 	Impl();
 	~Impl();
 
-	void start(bool spinlock);
+	void start(void);
 	void execute(const TWork &work, void *param);
 	void* finish();
 	void shutdown();
@@ -50,10 +50,10 @@ static void taskProc(void *arg)
 	do {
 		slock_lock(ctx->mutex);
 
-		while (ctx->workFunc == NULL && !ctx->exitThread)
+		while (!ctx->workFunc && !ctx->exitThread)
 			scond_wait(ctx->condWork, ctx->mutex);
 
-		if (ctx->workFunc != NULL)
+		if (ctx->workFunc)
 			ctx->ret = ctx->workFunc(ctx->workFuncParam);
       else
 			ctx->ret = NULL;
@@ -69,13 +69,13 @@ static void taskProc(void *arg)
 Task::Impl::Impl()
 {
 	_isThreadRunning = false;
-	workFunc = NULL;
-	workFuncParam = NULL;
-	ret = NULL;
-	exitThread = false;
+	workFunc         = NULL;
+	workFuncParam    = NULL;
+	ret              = NULL;
+	exitThread       = false;
 
-	mutex = slock_new();
-   condWork = scond_new();
+	mutex            = slock_new();
+   condWork         = scond_new();
 }
 
 Task::Impl::~Impl()
@@ -85,21 +85,22 @@ Task::Impl::~Impl()
 	scond_free(condWork);
 }
 
-void Task::Impl::start(bool spinlock)
+void Task::Impl::start(void)
 {
 	slock_lock(this->mutex);
 
-	if (this->_isThreadRunning) {
+	if (this->_isThreadRunning)
+   {
 		slock_unlock(this->mutex);
 		return;
 	}
 
-	this->workFunc = NULL;
-	this->workFuncParam = NULL;
-	this->ret = NULL;
-	this->exitThread = false;
-	this->_thread = (sthread_t*)sthread_create(&taskProc, this);
+	this->workFunc         = NULL;
+	this->workFuncParam    = NULL;
+	this->ret              = NULL;
+	this->exitThread       = false;
 	this->_isThreadRunning = true;
+	this->_thread          = (sthread_t*)sthread_create(&taskProc, this);
 
 	slock_unlock(this->mutex);
 }
@@ -108,16 +109,14 @@ void Task::Impl::execute(const TWork &work, void *param)
 {
 	slock_lock(this->mutex);
 
-	if (work == NULL || !this->_isThreadRunning)
-   {
-		slock_unlock(this->mutex);
-		return;
-	}
+	if (!work || !this->_isThreadRunning)
+      goto end;
 
-	this->workFunc = work;
+	this->workFunc      = work;
 	this->workFuncParam = param;
 	scond_signal(this->condWork);
 
+end:
 	slock_unlock(this->mutex);
 }
 
@@ -127,16 +126,15 @@ void* Task::Impl::finish()
 
 	slock_lock(this->mutex);
 
-	if (!this->_isThreadRunning) {
-		slock_unlock(this->mutex);
-		return returnValue;
-	}
+	if (!this->_isThreadRunning)
+      goto end;
 
 	while (this->workFunc != NULL)
 		scond_wait(this->condWork, this->mutex);
 
 	returnValue = this->ret;
 
+end:
 	slock_unlock(this->mutex);
 
 	return returnValue;
@@ -147,26 +145,23 @@ void Task::Impl::shutdown()
 	slock_lock(this->mutex);
 
 	if (!this->_isThreadRunning)
-   {
-		slock_unlock(this->mutex);
-		return;
-	}
+      goto end;
 
-	this->workFunc = NULL;
+	this->workFunc   = NULL;
 	this->exitThread = true;
 	scond_signal(this->condWork);
 
 	slock_unlock(this->mutex);
-
 	sthread_join(this->_thread);
 
 	slock_lock(this->mutex);
 	this->_isThreadRunning = false;
 
+end:
 	slock_unlock(this->mutex);
 }
 
-void Task::start(bool spinlock) { impl->start(spinlock); }
+void Task::start(void) { impl->start(); }
 void Task::shutdown() { impl->shutdown(); }
 Task::Task() : impl(new Task::Impl()) {}
 Task::~Task() { delete impl; }
