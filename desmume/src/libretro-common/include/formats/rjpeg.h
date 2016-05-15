@@ -1,7 +1,7 @@
-/* Copyright  (C) 2010-2015 The RetroArch team
+/* Copyright  (C) 2010-2016 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (rpng.h).
+ * The following license statement only applies to this file (rjpeg.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -20,8 +20,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __LIBRETRO_SDK_FORMAT_RPNG_H__
-#define __LIBRETRO_SDK_FORMAT_RPNG_H__
+#ifndef __LIBRETRO_SDK_FORMAT_RJPEG_H__
+#define __LIBRETRO_SDK_FORMAT_RJPEG_H__
 
 #include <stdint.h>
 #include <stddef.h>
@@ -29,35 +29,22 @@
 #include <retro_common_api.h>
 
 #include <boolean.h>
-#include <file/archive_file.h>
 
 RETRO_BEGIN_DECLS
 
-typedef struct rpng rpng_t;
+typedef struct rjpeg rjpeg_t;
 
-rpng_t *rpng_init(const char *path);
+int rjpeg_process_image(rjpeg_t *rjpeg, void **buf,
+      size_t size, unsigned *width, unsigned *height);
 
-bool rpng_is_valid(rpng_t *rpng);
+bool rjpeg_image_load(uint8_t *buf, void *data, size_t size,
+      unsigned a_shift, unsigned r_shift, unsigned g_shift, unsigned b_shift);
 
-bool rpng_set_buf_ptr(rpng_t *rpng, void *data);
+bool rjpeg_set_buf_ptr(rjpeg_t *rjpeg, void *data);
 
-rpng_t *rpng_alloc(void);
+void rjpeg_free(rjpeg_t *rjpeg);
 
-void rpng_free(rpng_t *rpng);
-
-bool rpng_iterate_image(rpng_t *rpng);
-
-int rpng_process_image(rpng_t *rpng,
-      void **data, size_t size, unsigned *width, unsigned *height);
-
-bool rpng_start(rpng_t *rpng);
-
-#ifdef HAVE_ZLIB_DEFLATE
-bool rpng_save_image_argb(const char *path, const uint32_t *data,
-      unsigned width, unsigned height, unsigned pitch);
-bool rpng_save_image_bgr24(const char *path, const uint8_t *data,
-      unsigned width, unsigned height, unsigned pitch);
-#endif
+rjpeg_t *rjpeg_alloc(void);
 
 RETRO_END_DECLS
 

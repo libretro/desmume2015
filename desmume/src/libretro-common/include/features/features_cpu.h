@@ -1,7 +1,7 @@
-/* Copyright  (C) 2010-2015 The RetroArch team
+/* Copyright  (C) 2010-2016 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (rpng.h).
+ * The following license statement only applies to this file (features_cpu.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -20,46 +20,52 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __LIBRETRO_SDK_FORMAT_RPNG_H__
-#define __LIBRETRO_SDK_FORMAT_RPNG_H__
-
-#include <stdint.h>
-#include <stddef.h>
+#ifndef _LIBRETRO_SDK_CPU_INFO_H
+#define _LIBRETRO_SDK_CPU_INFO_H
 
 #include <retro_common_api.h>
 
-#include <boolean.h>
-#include <file/archive_file.h>
+#include <stdint.h>
+
+#include <libretro.h>
 
 RETRO_BEGIN_DECLS
 
-typedef struct rpng rpng_t;
+/**
+ * cpu_features_get_perf_counter:
+ *
+ * Gets performance counter.
+ *
+ * Returns: performance counter.
+ **/
+retro_perf_tick_t cpu_features_get_perf_counter(void);
 
-rpng_t *rpng_init(const char *path);
+/**
+ * cpu_features_get_time_usec:
+ *
+ * Gets time in microseconds.  *
+ * Returns: time in microseconds.
+ **/
+retro_time_t cpu_features_get_time_usec(void);
 
-bool rpng_is_valid(rpng_t *rpng);
+/**
+ * cpu_features_get:
+ *
+ * Gets CPU features..
+ *
+ * Returns: bitmask of all CPU features available.
+ **/
+uint64_t cpu_features_get(void);
 
-bool rpng_set_buf_ptr(rpng_t *rpng, void *data);
-
-rpng_t *rpng_alloc(void);
-
-void rpng_free(rpng_t *rpng);
-
-bool rpng_iterate_image(rpng_t *rpng);
-
-int rpng_process_image(rpng_t *rpng,
-      void **data, size_t size, unsigned *width, unsigned *height);
-
-bool rpng_start(rpng_t *rpng);
-
-#ifdef HAVE_ZLIB_DEFLATE
-bool rpng_save_image_argb(const char *path, const uint32_t *data,
-      unsigned width, unsigned height, unsigned pitch);
-bool rpng_save_image_bgr24(const char *path, const uint8_t *data,
-      unsigned width, unsigned height, unsigned pitch);
-#endif
+/**
+ * cpu_features_get_core_amount:
+ *
+ * Gets the amount of available CPU cores.
+ *
+ * Returns: amount of CPU cores available.
+ **/
+unsigned cpu_features_get_core_amount(void);
 
 RETRO_END_DECLS
 
 #endif
-
