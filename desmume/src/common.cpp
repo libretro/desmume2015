@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <map>
 
-extern unsigned long crc32(unsigned long, const unsigned char*,unsigned int);
+#include <retro_miscellaneous.h>
 
 char *trim(char *s, int len)
 {
@@ -373,17 +373,16 @@ static MAKER makerCodes[] = {
 	{ 0x4849, "Yojigen" },
 };
 
-#define makerNum sizeof(makerCodes) / sizeof(makerCodes[0])
-
 std::string getDeveloperNameByID(u16 id)
 {
-	for (u32 i = 0; i < makerNum; i++)
+   uint32_t i;
+
+	for (i = 0; i < ARRAY_SIZE(makerCodes); i++)
 	{
 		if (makerCodes[i].code == id)
-		{
 			return makerCodes[i].name;
-		}
 	}
+
 	return "Unknown";
 }
 
