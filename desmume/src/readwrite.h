@@ -22,6 +22,8 @@
 #include <cstdio>
 #include <vector>
 
+#include <retro_assert.h>
+
 #include "types.h"
 
 class EMUFILE;
@@ -72,7 +74,7 @@ int read16le(u16 *Bufo, std::istream *is);
 template<typename T>
 static INLINE int readle(T *Bufo, EMUFILE*is)
 {
-	CTASSERT(sizeof(T)==1||sizeof(T)==2||sizeof(T)==4||sizeof(T)==8);
+	retro_assert(sizeof(T)==1||sizeof(T)==2||sizeof(T)==4||sizeof(T)==8);
 	switch(sizeof(T))
    {
 		case 1:

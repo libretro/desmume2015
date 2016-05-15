@@ -32,6 +32,9 @@
 #define EMUFAT_H
 
 #include <stdio.h>
+
+#include <retro_assert.h>
+
 #include "../types.h"
 
 class EMUFILE;
@@ -573,7 +576,7 @@ private:
 
   void ctassert()
   {
-	  CTASSERT(!((F_UNUSED | F_FILE_UNBUFFERED_READ | F_FILE_DIR_DIRTY) & F_OFLAG));
+	  retro_assert(!((F_UNUSED | F_FILE_UNBUFFERED_READ | F_FILE_DIR_DIRTY) & F_OFLAG));
   }
 
   // private data

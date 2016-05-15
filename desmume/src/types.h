@@ -400,12 +400,7 @@ static INLINE u16 de16lsb(u8 *morp)
 //B32(10000000,11111111,10101010,01010101) = 2164238933
 //---------------------------
 
-#ifndef CTASSERT
-#define	CTASSERT(x)		typedef char __assert ## y[(x) ? 1 : -1]
-#endif
-
 static const char hexValid[23] = {"0123456789ABCDEFabcdef"};
-
 
 template<typename T> inline void reconstruct(T* t) { 
 	t->~T();

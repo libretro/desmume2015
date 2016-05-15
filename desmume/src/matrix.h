@@ -22,6 +22,8 @@
 #include <math.h>
 #include <string.h>
 
+#include <retro_assert.h>
+
 #include "types.h"
 #include "mem.h"
 
@@ -319,9 +321,10 @@ FORCEINLINE void MatrixScale(float *matrix, const float *ptr)
 template<int NUM_ROWS>
 FORCEINLINE void vector_fix2float(float* matrix, const float divisor)
 {
-	CTASSERT(NUM_ROWS==3 || NUM_ROWS==4);
+   __m128 val;
+	retro_assert(NUM_ROWS==3 || NUM_ROWS==4);
 
-	const __m128 val = _mm_set_ps1(divisor);
+	val = _mm_set_ps1(divisor);
 
 	_mm_store_ps(matrix,_mm_div_ps(_mm_load_ps(matrix),val));
 	_mm_store_ps(matrix+4,_mm_div_ps(_mm_load_ps(matrix+4),val));
