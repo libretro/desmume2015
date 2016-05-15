@@ -32,24 +32,32 @@
 char *trim(char *s, int len)
 {
 	char *ptr = NULL;
-	if (!s) return NULL;
-	if (!*s) return s;
+
+	if (!s)
+      return NULL;
+	if (!*s)
+      return s;
 	
 	if(len==-1)
 		ptr = s + strlen(s) - 1;
-	else ptr = s+len - 1;
+	else
+      ptr = s+len - 1;
 	for (; (ptr >= s) && (!*ptr || isspace((u8)*ptr)) ; ptr--);
 	ptr[1] = '\0';
+
 	return s;
 }
 
 char *removeSpecialChars(char *s)
 {
+   uint32_t i;
 	char	*buf = s;
-	if (!s) return NULL;
-	if (!*s) return s;
+	if (!s)
+      return NULL;
+	if (!*s)
+      return s;
 
-	for (u32 i = 0; i < strlen(s); i++)
+	for (i = 0; i < strlen(s); i++)
 	{
 		if (isspace((u8)s[i]) && (s[i] != 0x20))
 			*buf = 0x20;
@@ -57,7 +65,9 @@ char *removeSpecialChars(char *s)
 			*buf = s[i];
 		buf++;
 	}
+
 	*buf = 0;
+
 	return s;
 }
 
@@ -389,31 +399,37 @@ const char *getDeveloperNameByID(uint16_t id)
 // ===============================================================================
 // Message dialogs
 // ===============================================================================
-#define MSG_PRINT { \
-	va_list args; \
-	va_start (args, fmt); \
-	vprintf (fmt, args); \
-	va_end (args); \
-}
 void msgFakeInfo(const char *fmt, ...)
 {
-	MSG_PRINT;
+	va_list args;
+	va_start (args, fmt);
+	vprintf (fmt, args);
+	va_end (args);
 }
 
 bool msgFakeConfirm(const char *fmt, ...)
 {
-	MSG_PRINT;
+	va_list args;
+	va_start (args, fmt);
+	vprintf (fmt, args);
+	va_end (args);
 	return true;
 }
 
 void msgFakeError(const char *fmt, ...)
 {
-	MSG_PRINT;
+	va_list args;
+	va_start (args, fmt);
+	vprintf (fmt, args);
+	va_end (args);
 }
 
 void msgFakeWarn(const char *fmt, ...)
 {
-	MSG_PRINT;
+	va_list args;
+	va_start (args, fmt);
+	vprintf (fmt, args);
+	va_end (args);
 }
 
 msgBoxInterface msgBoxFake = {

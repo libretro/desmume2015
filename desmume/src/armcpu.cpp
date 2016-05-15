@@ -645,16 +645,17 @@ void setIF(int PROCNUM, u32 flag)
 char* decodeIntruction(bool thumb_mode, u32 instr)
 {
 	char txt[20] = {0};
-	u32 tmp = 0;
 	if (thumb_mode == true)
 	{
-		tmp = (instr >> 6);
-		strcpy(txt, intToBin((u16)tmp)+6);
+		uint32_t tmp = (instr >> 6);
+      char *_instr = integer_to_binary(tmp, sizeof(uint16_t));
+		strcpy(txt, _instr + 6);
 	}
 	else
 	{
-		tmp = ((instr >> 16) & 0x0FF0) | ((instr >> 4) & 0x0F);
-		strcpy(txt, intToBin((u32)tmp)+20);
+		uint32_t tmp = ((instr >> 16) & 0x0FF0) | ((instr >> 4) & 0x0F);
+      char *_instr = integer_to_binary(tmp, sizeof(uint32_t));
+		strcpy(txt, _instr + 20);
 	}
 	return strdup(txt);
 }

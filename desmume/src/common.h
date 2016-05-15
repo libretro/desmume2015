@@ -39,33 +39,18 @@
 	#define sscanf_s sscanf
 #endif
 
-template<typename T>
-T reverseBits(T x)
+static INLINE char *integer_to_binary(uint32_t val, size_t len)
 {
-	T h = 0;
-	T i = 0;
-
-	for (i = 0; i < sizeof(T)*8; i++)
-	{
-		h = (h << 1) + (x & 1); 
-		x >>= 1; 
-	}
-
-	return h;
-}
-
-template<typename T>
-char *intToBin(T val)
-{
+   unsigned i, t;
 	char buf[256] = {0};
-	for (int i = sizeof(T)*8, t = 0;  i > 0; --i, t++)
-	{
+
+	for (i = len * 8, t = 0;  i > 0; --i, t++)
 		buf[i-1] = (val & (1<<t))?'1':'0';
-	}
+
 	return strdup(buf);
 }
 
-extern char *trim(char *s, int len=-1);
+extern char *trim(char *s, int len);
 extern char *removeSpecialChars(char *s);
 
 // ===============================================================================
