@@ -70,15 +70,6 @@ void Vector2Subtract(float *dst, const float *src);
 float Vector2Dot(const float *a, const float *b);
 float Vector2Cross(const float *a, const float *b);
 
-float Vector3Dot(const float *a, const float *b);
-void Vector3Cross(float* dst, const float *a, const float *b);
-float Vector3Length(const float *a);
-void Vector3Add(float *dst, const float *src);
-void Vector3Subtract(float *dst, const float *src);
-void Vector3Scale(float *dst, const float scale);
-void Vector3Copy(float *dst, const float *src);
-void Vector3Normalize(float *dst);
-
 void Vector4Copy(float *dst, const float *src);
 
 //these functions are an unreliable, inaccurate floor.

@@ -24,6 +24,8 @@
 #include "matrix.h"
 #include "MMU.h"
 
+#include <gfx/math/vector_3.h>
+
 void _NOSSE_MatrixMultVec4x4 (const float *matrix, float *vecPtr)
 {
 	float x = vecPtr[0];
@@ -317,60 +319,6 @@ float Vector2Cross(const float *a, const float *b)
 	return (a[0]*b[1]) - (a[1]*b[0]);
 }
 
-float Vector3Dot(const float *a, const float *b) 
-{
-	return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
-}
-
-void Vector3Cross(float* dst, const float *a, const float *b) 
-{
-	dst[0] = a[1]*b[2] - a[2]*b[1];
-	dst[1] = a[2]*b[0] - a[0]*b[2];
-	dst[2] = a[0]*b[1] - a[1]*b[0];
-}
-
-
-float Vector3Length(const float *a)
-{
-	float lengthSquared = Vector3Dot(a,a);
-	float length = sqrt(lengthSquared);
-	return length;
-}
-
-void Vector3Add(float *dst, const float *src)
-{
-	dst[0] += src[0];
-	dst[1] += src[1];
-	dst[2] += src[2];
-}
-
-void Vector3Subtract(float *dst, const float *src)
-{
-	dst[0] -= src[0];
-	dst[1] -= src[1];
-	dst[2] -= src[2];
-}
-
-void Vector3Scale(float *dst, const float scale)
-{
-	dst[0] *= scale;
-	dst[1] *= scale;
-	dst[2] *= scale;
-}
-
-void Vector3Copy(float *dst, const float *src)
-{
-	dst[0] = src[0];
-	dst[1] = src[1];
-	dst[2] = src[2];
-}
-
-void Vector3Normalize(float *dst)
-{
-	float length = Vector3Length(dst);
-	Vector3Scale(dst,1.0f/length);
-}
-
 void Vector4Copy(float *dst, const float *src)
 {
 	dst[0] = src[0];
@@ -378,7 +326,6 @@ void Vector4Copy(float *dst, const float *src)
 	dst[2] = src[2];
 	dst[3] = src[3];
 }
-
 
 void MatrixMultiply (s32 *matrix, const s32 *rightMatrix)
 {
