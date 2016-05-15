@@ -35,10 +35,6 @@ extern retro_environment_t environ_cb;
 	#define ALL_DIRECTORY_DELIMITER_STRING "/"
 #endif
 
-#ifdef HOST_WINDOWS
-void FCEUD_MakePathDirs(const char *fname);
-#endif
-
 class Path
 {
 public:
@@ -264,9 +260,6 @@ public:
 			}
 
 			strncpy(buffer, thePath.c_str(), PATH_MAX_LENGTH);
-			#ifdef HOST_WINDOWS
-			FCEUD_MakePathDirs(buffer);
-			#endif
 		}
 		else if(action == SET)
 		{
