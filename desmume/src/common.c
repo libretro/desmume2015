@@ -22,10 +22,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <ctype.h>
-#include <string>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <map>
 
 #include <retro_miscellaneous.h>
 
@@ -42,7 +40,7 @@ char *trim(char *s, int len)
 		ptr = s + strlen(s) - 1;
 	else
       ptr = s+len - 1;
-	for (; (ptr >= s) && (!*ptr || isspace((u8)*ptr)) ; ptr--);
+	for (; (ptr >= s) && (!*ptr || isspace((uint8_t)*ptr)) ; ptr--);
 	ptr[1] = '\0';
 
 	return s;
@@ -59,7 +57,7 @@ char *removeSpecialChars(char *s)
 
 	for (i = 0; i < strlen(s); i++)
 	{
-		if (isspace((u8)s[i]) && (s[i] != 0x20))
+		if (isspace((uint8_t)s[i]) && (s[i] != 0x20))
 			*buf = 0x20;
 		else
 			*buf = s[i];
@@ -71,7 +69,7 @@ char *removeSpecialChars(char *s)
 	return s;
 }
 
-static MAKER makerCodes[] = {
+static struct MAKER makerCodes[] = {
 	{ 0x3130, "Nintendo" },
 	{ 0x3230, "Rocket Games, Ajinomoto" },
 	{ 0x3330, "Imagineer-Zoom" },

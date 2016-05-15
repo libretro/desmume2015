@@ -7,7 +7,6 @@ SOURCES_CXX += \
 	$(CORE_DIR)/arm_instructions.cpp \
 	$(CORE_DIR)/bios.cpp \
 	$(CORE_DIR)/cp15.cpp \
-	$(CORE_DIR)/common.cpp \
 	$(CORE_DIR)/emufile.cpp \
 	$(CORE_DIR)/encrypt.cpp \
 	$(CORE_DIR)/FIFO.cpp \
@@ -81,6 +80,7 @@ SOURCES_CXX += \
 	$(CORE_DIR)/libretro/scrc32.cpp
 
 SOURCES_C += $(CORE_DIR)/utils/ConvertUTF.c \
+				 $(CORE_DIR)/common.c \
 				 $(CORE_DIR)/utils/dlditool.c \
 				 $(CORE_DIR)/libretro-common/memmap/memalign.c \
 				 $(CORE_DIR)/libretro-common/features/features_cpu.c \

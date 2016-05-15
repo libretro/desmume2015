@@ -23,11 +23,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <string>
 
+#include <boolean.h>
+#include <retro_inline.h>
 #include <memalign.h>
-
-#include "types.h"
 
 #if defined(WIN32)
 	#define CLASSNAME "DeSmuME"
@@ -37,6 +36,10 @@
 	#endif
 #else		// non Windows
 	#define sscanf_s sscanf
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 static INLINE char *integer_to_binary(uint32_t val, size_t len)
@@ -74,11 +77,15 @@ extern msgBoxInterface *msgbox;
 struct MAKER
 {
 	uint16_t code;
-	const char* name;
+	const char *name;
 };
 
 const char *getDeveloperNameByID(uint16_t id);
 
 void* malloc_alignedCacheLine(size_t length);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
