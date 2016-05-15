@@ -64,8 +64,6 @@ s32*	MatrixStackGetPos			(MatrixStack *stack, const size_t pos);
 s32*	MatrixStackGet				(MatrixStack *stack);
 void	MatrixStackLoadMatrix		(MatrixStack *stack, const size_t pos, const s32 *ptr);
 
-void Vector4Copy(float *dst, const float *src);
-
 //these functions are an unreliable, inaccurate floor.
 //it should only be used for positive numbers
 //this isnt as fast as it could be if we used a visual c++ intrinsic, but those appear not to be universally available

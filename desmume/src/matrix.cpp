@@ -290,14 +290,6 @@ void MatrixStackLoadMatrix (MatrixStack *stack, const size_t pos, const s32 *ptr
    MatrixCopy(&stack->matrix[pos*16], ptr);
 }
 
-void Vector4Copy(float *dst, const float *src)
-{
-	dst[0] = src[0];
-	dst[1] = src[1];
-	dst[2] = src[2];
-	dst[3] = src[3];
-}
-
 void MatrixMultiply (s32 *matrix, const s32 *rightMatrix)
 {
 	s32 tmpMatrix[16];
