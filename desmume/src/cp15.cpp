@@ -234,7 +234,7 @@ BOOL armcp15_t::moveCP2ARM(u32 * R, u8 CRn, u8 CRm, u8 opcode1, u8 opcode2)
 				return TRUE;
 			}
 		}
-		return FALSE;
+      break;
 	case 1:
 		if((opcode1==0) && (opcode2==0) && (CRm==0))
 		{
@@ -242,7 +242,7 @@ BOOL armcp15_t::moveCP2ARM(u32 * R, u8 CRn, u8 CRm, u8 opcode1, u8 opcode2)
 			//LOG("CP15: CPtoARM ctrl %08X\n", ctrl);
 			return TRUE;
 		}
-		return FALSE;
+      break;
 
 	case 2:
 		if((opcode1==0) && (CRm==0))
@@ -256,10 +256,10 @@ BOOL armcp15_t::moveCP2ARM(u32 * R, u8 CRn, u8 CRm, u8 opcode1, u8 opcode2)
 				*R = ICConfig;
 				return TRUE;
 			default:
-				return FALSE;
+            break;
 			}
 		}
-		return FALSE;
+      break;
 	case 3:
 		if((opcode1==0) && (opcode2==0) && (CRm==0))
 		{
@@ -267,7 +267,7 @@ BOOL armcp15_t::moveCP2ARM(u32 * R, u8 CRn, u8 CRm, u8 opcode1, u8 opcode2)
 			//LOG("CP15: CPtoARM writeBuffer ctrl %08X\n", writeBuffCtrl);
 			return TRUE;
 		}
-		return FALSE;
+      break;
 	case 5:
 		if((opcode1==0) && (CRm==0))
 		{
@@ -280,10 +280,10 @@ BOOL armcp15_t::moveCP2ARM(u32 * R, u8 CRn, u8 CRm, u8 opcode1, u8 opcode2)
 				*R = IaccessPerm;
 				return TRUE;
 			default:
-				return FALSE;
+            break;
 			}
 		}
-		return FALSE;
+      break;
 	case 6:
 		if((opcode1==0) && (opcode2==0))
 		{
@@ -293,7 +293,7 @@ BOOL armcp15_t::moveCP2ARM(u32 * R, u8 CRn, u8 CRm, u8 opcode1, u8 opcode2)
 				return TRUE;
 			}
 		}
-		return FALSE;
+      break;
 	case 9:
 		if(opcode1==0)
 		{
@@ -309,7 +309,7 @@ BOOL armcp15_t::moveCP2ARM(u32 * R, u8 CRn, u8 CRm, u8 opcode1, u8 opcode2)
 					*R = IcacheLock;
 					return TRUE;
 				default:
-					return FALSE;
+               break;
 				}
 			case 1:
 				switch(opcode2)
@@ -321,137 +321,142 @@ BOOL armcp15_t::moveCP2ARM(u32 * R, u8 CRn, u8 CRm, u8 opcode1, u8 opcode2)
 					*R = ITCMRegion;
 					return TRUE;
 				default:
-					return FALSE;
+               break;
 				}
 			}
 		}
-		return FALSE;
+      break;
 	default:
 		LOG("Unsupported CP15 operation : MRC\n");
-		return FALSE;
+      break;
 	}
+
+   return FALSE;
 }
 
 BOOL armcp15_t::moveARM2CP(u32 val, u8 CRn, u8 CRm, u8 opcode1, u8 opcode2)
 {
-	if(NDS_ARM9.CPSR.bits.mode == USR) return FALSE;
+	if(NDS_ARM9.CPSR.bits.mode == USR)
+      return FALSE;
 
 	switch(CRn)
-	{
-	case 1:
-		if((opcode1==0) && (opcode2==0) && (CRm==0))
-		{
+   {
+      case 1:
+         if((opcode1==0) && (opcode2==0) && (CRm==0))
+         {
 
-			//On the NDS bit0,2,7,12..19 are R/W, Bit3..6 are always set, all other bits are always zero.
-			ctrl = (val & 0x000FF085) | 0x00000078;
-			MMU.ARM9_RW_MODE = BIT7(val);
-			//zero 31-jan-2010: change from 0x0FFF0000 to 0xFFFF0000 per gbatek
-			NDS_ARM9.intVector = 0xFFFF0000 * (BIT13(val));
-			NDS_ARM9.LDTBit = !BIT15(val); //TBit
-			//LOG("CP15: ARMtoCP ctrl %08X (val %08X)\n", ctrl, val);
-			return TRUE;
-		}
-		return FALSE;
-	case 2:
-		if((opcode1==0) && (CRm==0))
-		{
-			switch(opcode2)
-			{
-			case 0:
-				DCConfig = val;
-				return TRUE;
-			case 1:
-				ICConfig = val;
-				return TRUE;
-			default:
-				return FALSE;
-			}
-		}
-		return FALSE;
-	case 3:
-		if((opcode1==0) && (opcode2==0) && (CRm==0))
-		{
-			writeBuffCtrl = val;
-			//LOG("CP15: ARMtoCP writeBuffer ctrl %08X\n", writeBuffCtrl);
-			return TRUE;
-		}
-		return FALSE;
-	case 5:
-		if((opcode1==0) && (CRm==0))
-		{
-			switch(opcode2)
-			{
-			case 2:
-				DaccessPerm = val;
-				maskPrecalc();
-				return TRUE;
-			case 3:
-				IaccessPerm = val;
-				maskPrecalc();
-				return TRUE;
-			default:
-				return FALSE;
-			}
-		}
-		return FALSE;
-	case 6:
-		if((opcode1==0) && (opcode2==0))
-		{
-			if (CRm < 8)
-			{
-				protectBaseSize[CRm] = val;
-				maskPrecalc();
-				return TRUE;
-			}
-		}
-		return FALSE;
-	case 7:
-		if((CRm==0)&&(opcode1==0)&&((opcode2==4)))
-		{
-			//CP15wait4IRQ;
-			NDS_ARM9.waitIRQ = TRUE;
-			NDS_ARM9.halt_IE_and_IF = TRUE;
-			//IME set deliberately omitted: only SWI sets IME to 1
-			return TRUE;
-		}
-		return FALSE;
-	case 9:
-		if((opcode1==0))
-		{
-			switch(CRm)
-			{
-			case 0:
-				switch(opcode2)
-				{
-				case 0:
-					DcacheLock = val;
-					return TRUE;
-				case 1:
-					IcacheLock = val;
-					return TRUE;
-				default:
-					return FALSE;
-				}
-			case 1:
-				switch(opcode2)
-				{
-				case 0:
-					MMU.DTCMRegion = DTCMRegion = val & 0x0FFFF000;
-					return TRUE;
-				case 1:
-					ITCMRegion = val;
-					//ITCM base is not writeable!
-					MMU.ITCMRegion = 0;
-					return TRUE;
-				default:
-					return FALSE;
-				}
-			}
-		}
-		return FALSE;
-	default:
-		return FALSE;
-	}
+            //On the NDS bit0,2,7,12..19 are R/W, Bit3..6 are always set, all other bits are always zero.
+            ctrl = (val & 0x000FF085) | 0x00000078;
+            MMU.ARM9_RW_MODE = BIT7(val);
+            //zero 31-jan-2010: change from 0x0FFF0000 to 0xFFFF0000 per gbatek
+            NDS_ARM9.intVector = 0xFFFF0000 * (BIT13(val));
+            NDS_ARM9.LDTBit = !BIT15(val); //TBit
+            //LOG("CP15: ARMtoCP ctrl %08X (val %08X)\n", ctrl, val);
+            return TRUE;
+         }
+         break;
+      case 2:
+         if((opcode1==0) && (CRm==0))
+         {
+            switch(opcode2)
+            {
+               case 0:
+                  DCConfig = val;
+                  return TRUE;
+               case 1:
+                  ICConfig = val;
+                  return TRUE;
+               default:
+                  break;
+            }
+         }
+         break;
+      case 3:
+         if((opcode1==0) && (opcode2==0) && (CRm==0))
+         {
+            writeBuffCtrl = val;
+            //LOG("CP15: ARMtoCP writeBuffer ctrl %08X\n", writeBuffCtrl);
+            return TRUE;
+         }
+         break;
+      case 5:
+         if((opcode1==0) && (CRm==0))
+         {
+            switch(opcode2)
+            {
+               case 2:
+                  DaccessPerm = val;
+                  maskPrecalc();
+                  return TRUE;
+               case 3:
+                  IaccessPerm = val;
+                  maskPrecalc();
+                  return TRUE;
+               default:
+                  break;
+            }
+         }
+         return FALSE;
+      case 6:
+         if((opcode1==0) && (opcode2==0))
+         {
+            if (CRm < 8)
+            {
+               protectBaseSize[CRm] = val;
+               maskPrecalc();
+               return TRUE;
+            }
+         }
+         break;
+      case 7:
+         if((CRm==0)&&(opcode1==0)&&((opcode2==4)))
+         {
+            //CP15wait4IRQ;
+            NDS_ARM9.waitIRQ = TRUE;
+            NDS_ARM9.halt_IE_and_IF = TRUE;
+            //IME set deliberately omitted: only SWI sets IME to 1
+            return TRUE;
+         }
+         break;
+      case 9:
+         if((opcode1==0))
+         {
+            switch(CRm)
+            {
+               case 0:
+                  switch(opcode2)
+                  {
+                     case 0:
+                        DcacheLock = val;
+                        return TRUE;
+                     case 1:
+                        IcacheLock = val;
+                        return TRUE;
+                     default:
+                        break;
+                  }
+               case 1:
+                  switch(opcode2)
+                  {
+                     case 0:
+                        MMU.DTCMRegion = DTCMRegion = val & 0x0FFFF000;
+                        return TRUE;
+                     case 1:
+                        ITCMRegion = val;
+                        //ITCM base is not writeable!
+                        MMU.ITCMRegion = 0;
+                        return TRUE;
+                     default:
+                        break;
+                  }
+            }
+         }
+         break;
+      default:
+         break;
+   }
+
+   return FALSE;
 }
 
 // Save state
