@@ -31,8 +31,8 @@
 #ifndef EMUFAT_H
 #define EMUFAT_H
 
-#include "emufat_types.h"
 #include <stdio.h>
+#include "../types.h"
 
 class EMUFILE;
 
