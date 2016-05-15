@@ -64,12 +64,6 @@ s32*	MatrixStackGetPos			(MatrixStack *stack, const size_t pos);
 s32*	MatrixStackGet				(MatrixStack *stack);
 void	MatrixStackLoadMatrix		(MatrixStack *stack, const size_t pos, const s32 *ptr);
 
-void Vector2Copy(float *dst, const float *src);
-void Vector2Add(float *dst, const float *src);
-void Vector2Subtract(float *dst, const float *src);
-float Vector2Dot(const float *a, const float *b);
-float Vector2Cross(const float *a, const float *b);
-
 void Vector4Copy(float *dst, const float *src);
 
 //these functions are an unreliable, inaccurate floor.
