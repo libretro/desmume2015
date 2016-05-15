@@ -27,9 +27,9 @@
 
 void *memalign_alloc(size_t boundary, size_t size)
 {
-   void **place;
+   void **place   = NULL;
    uintptr_t addr = 0;
-   void *ptr = malloc(boundary + size + sizeof(uintptr_t));
+   void *ptr      = (void*)malloc(boundary + size + sizeof(uintptr_t));
    if (!ptr)
       return NULL;
 
@@ -43,8 +43,10 @@ void *memalign_alloc(size_t boundary, size_t size)
 
 void memalign_free(void *ptr)
 {
+   void **p = NULL;
    if (!ptr)
       return;
-   void **p = (void**)ptr;
+
+   p = (void**)ptr;
    free(p[-1]);
 }
