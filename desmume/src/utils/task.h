@@ -18,6 +18,8 @@
 #ifndef _TASK_H_
 #define _TASK_H_
 
+#include <features/features_cpu.h>
+
 //Sort of like a single-thread thread pool.
 //You hand it a worker function and then call finish() to synch with its completion
 class Task

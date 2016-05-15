@@ -21,41 +21,6 @@
 
 #include <rthreads/rthreads.h>
 
-#ifdef _WIN32
-#ifdef _XBOX
-#include <xtl.h>
-#else
-#include <windows.h>
-#endif
-#else
-#if defined HOST_LINUX
-#include <unistd.h>
-#elif defined HOST_BSD || defined HOST_DARWIN
-#include <sys/sysctl.h>
-#endif
-#endif // _WIN32
-
-// http://stackoverflow.com/questions/150355/programmatically-find-the-number-of-cores-on-a-machine
-int getOnlineCores (void)
-{
-// TODO LIBRETRO - might want to handle this libretro-side
-#ifdef _WIN32
-	SYSTEM_INFO sysinfo;
-	GetSystemInfo(&sysinfo);
-	return sysinfo.dwNumberOfProcessors;
-#elif defined HOST_LINUX
-	return sysconf(_SC_NPROCESSORS_ONLN);
-#elif defined HOST_BSD || defined HOST_DARWIN
-	int cores;
-	int mib[4] = { CTL_HW, HW_NCPU, 0, 0 };
-	size_t len = sizeof(cores); //don't make this const, i guess sysctl can't take a const *
-	sysctl(mib, 2, &cores, &len, NULL, 0);
-	return (cores < 1) ? 1 : cores;
-#else
-	return 1;
-#endif
-}
-
 class Task::Impl {
 private:
 	sthread_t *_thread;

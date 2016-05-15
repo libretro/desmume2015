@@ -36,6 +36,8 @@
 #include <retro_stat.h>
 #include <file/file_path.h>
 
+static char retro_dir[PATH_MAX_LENGTH];
+
 enum EListCallbackArg {
 	EListCallbackArg_Item, EListCallbackArg_Pop
 };
@@ -52,6 +54,7 @@ static void list_files(const char *filepath, ListCallback list_callback)
    RDIR *rdir = retro_opendir(filepath);
    if (!rdir)
       return;
+   strcpy(retro_dir, filepath);
    if (retro_dirent_error(rdir))
       goto end;
 
@@ -64,7 +67,7 @@ static void list_files(const char *filepath, ListCallback list_callback)
       const char *fname = retro_dirent_get_name(rdir);
       list_callback(rdir,EListCallbackArg_Item);
 
-      if (retro_dirent_is_dir(rdir) && (strcmp(fname, ".")) && strcmp(fname, ".."))
+      if (retro_dirent_is_dir(rdir, filepath) && (strcmp(fname, ".")) && strcmp(fname, ".."))
       {
          std::string subdir = (std::string)filepath + path_default_slash() + fname;
          list_files(subdir.c_str(), list_callback);
@@ -79,9 +82,10 @@ end:
 static unsigned long dataSectors = 0;
 void count_ListCallback(RDIR *rdir, EListCallbackArg arg)
 {
-	if(arg == EListCallbackArg_Pop) return;
+	if(arg == EListCallbackArg_Pop)
+      return;
 	u32 sectors = 1;
-   if (!retro_dirent_is_dir(rdir))
+   if (!retro_dirent_is_dir(rdir, retro_dir))
    {
       /* allocate sectors for file */
       int32_t fileSize = path_get_size(retro_dirent_get_name(rdir));
@@ -108,7 +112,7 @@ void build_ListCallback(RDIR *rdir, EListCallbackArg arg)
 		return;
 	}
 	
-   if (retro_dirent_is_dir(rdir))
+   if (retro_dirent_is_dir(rdir, retro_dir))
 	{
 		if(!strcmp(fname,".")) return;
 		if(!strcmp(fname,"..")) return;

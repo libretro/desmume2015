@@ -102,9 +102,10 @@ void Desmume_InitOnce()
 	initOnce = true;
 }
 
-int NDS_GetCPUCoreCount()
+int NDS_GetCPUCoreCount(void)
 {
-	return getOnlineCores();
+   int amount = cpu_features_get_core_amount();
+   return amount;
 }
 
 void NDS_SetupDefaultFirmware()
