@@ -2045,7 +2045,7 @@ Render3DError SoftRasterizerRenderer::SetFramebufferSize(size_t w, size_t h)
 		}
 	}
 	
-	free_aligned(oldFramebufferColor);
+	memalign_free(oldFramebufferColor);
 	delete oldFramebufferAttributes;
 	
 	return RENDER3DERROR_NOERR;

@@ -138,12 +138,12 @@ FragmentAttributesBuffer::FragmentAttributesBuffer(size_t newCount)
 
 FragmentAttributesBuffer::~FragmentAttributesBuffer()
 {
-	free_aligned(depth);
-	free_aligned(opaquePolyID);
-	free_aligned(translucentPolyID);
-	free_aligned(stencil);
-	free_aligned(isFogged);
-	free_aligned(isTranslucentPoly);
+	memalign_free(depth);
+	memalign_free(opaquePolyID);
+	memalign_free(translucentPolyID);
+	memalign_free(stencil);
+	memalign_free(isFogged);
+	memalign_free(isTranslucentPoly);
 }
 
 void FragmentAttributesBuffer::SetAtIndex(const size_t index, const FragmentAttributes &attr)
@@ -217,7 +217,7 @@ Render3D::Render3D()
 
 Render3D::~Render3D()
 {
-	free_aligned(_framebufferColor);
+	memalign_free(_framebufferColor);
 }
 
 RendererID Render3D::GetRenderID()
@@ -261,7 +261,7 @@ Render3DError Render3D::SetFramebufferSize(size_t w, size_t h)
 	this->_framebufferColorSizeBytes = newFramebufferColorSizeBytes;
 	this->_framebufferColor = newFramebufferColor;
 	
-	free_aligned(oldFramebufferColor);
+	memalign_free(oldFramebufferColor);
 	
 	return RENDER3DERROR_NOERR;
 }

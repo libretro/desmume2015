@@ -43,6 +43,8 @@ void *memalign_alloc(size_t boundary, size_t size)
 
 void memalign_free(void *ptr)
 {
+   if (!ptr)
+      return;
    void **p = (void**)ptr;
    free(p[-1]);
 }

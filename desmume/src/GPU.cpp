@@ -358,10 +358,11 @@ GPUEngineBase::GPUEngineBase()
 
 GPUEngineBase::~GPUEngineBase()
 {
-	free_aligned(this->workingScanline);
+   memalign_free(this->workingScanline);
+   memalign_free(this->_bgPixels);
+
 	this->workingScanline = NULL;
-	free_aligned(this->_bgPixels);
-	this->_bgPixels = NULL;
+	this->_bgPixels       = NULL;
 }
 
 void GPUEngineBase::_Reset_Base()
@@ -2673,8 +2674,8 @@ void GPUEngineBase::SetCustomFramebufferSize(size_t w, size_t h)
 	this->_VRAMaddrCustom = GPU->GetCustomVRAMBuffer() + (this->_vramBlock * _gpuCaptureLineIndex[GPU_VRAM_BLOCK_LINES] * w);
 	this->customBuffer = GPU->GetCustomFramebuffer(this->_targetDisplayID);
 	
-	free_aligned(oldWorkingScanline);
-	free_aligned(oldBGPixels);
+	memalign_free(oldWorkingScanline);
+	memalign_free(oldBGPixels);
 }
 
 void GPUEngineBase::BlitNativeToCustomFramebuffer()
@@ -2747,8 +2748,8 @@ GPUEngineA::GPUEngineA()
 
 GPUEngineA::~GPUEngineA()
 {
-	free_aligned(this->_3DFramebufferRGBA6665);
-	free_aligned(this->_3DFramebufferRGBA5551);
+	memalign_free(this->_3DFramebufferRGBA6665);
+	memalign_free(this->_3DFramebufferRGBA5551);
 	gfx3d_Update3DFramebuffers(NULL, NULL);
 }
 
@@ -2866,8 +2867,8 @@ void GPUEngineA::SetCustomFramebufferSize(size_t w, size_t h)
 	this->_3DFramebufferRGBA5551 = newColorRGBA5551;
 	gfx3d_Update3DFramebuffers(this->_3DFramebufferRGBA6665, this->_3DFramebufferRGBA5551);
 	
-	free_aligned(oldColorRGBA6665Buffer);
-	free_aligned(oldColorRGBA5551Buffer);
+	memalign_free(oldColorRGBA6665Buffer);
+	memalign_free(oldColorRGBA5551Buffer);
 }
 
 template<bool ISCUSTOMRENDERINGNEEDED>
@@ -4165,10 +4166,10 @@ GPUSubsystem::GPUSubsystem()
 
 GPUSubsystem::~GPUSubsystem()
 {
-	free_aligned(this->_customFramebuffer);
-	free_aligned(this->_customVRAM);
-	
-	free_aligned(_gpuDstToSrcIndex);
+	memalign_free(this->_customFramebuffer);
+	memalign_free(this->_customVRAM);
+	memalign_free(_gpuDstToSrcIndex);
+
 	_gpuDstToSrcIndex = NULL;
 	
 	delete _displayMain;
@@ -4470,9 +4471,9 @@ void GPUSubsystem::SetCustomFramebufferSize(size_t w, size_t h)
 		this->_displayInfo.renderedHeight[NDSDisplayID_Touch] = this->_displayInfo.customHeight;
 	}
 	
-	free_aligned(oldCustomFramebuffer);
-	free_aligned(oldGpuDstToSrcIndexPtr);
-	free_aligned(oldCustomVRAM);
+	memalign_free(oldCustomFramebuffer);
+	memalign_free(oldGpuDstToSrcIndexPtr);
+	memalign_free(oldCustomVRAM);
 }
 
 u16* GPUSubsystem::GetCustomVRAMBuffer()
