@@ -31,29 +31,8 @@
 
 //------------------------------------------------------------
 
-// Basic Functions
-OGLEXT(PFNGLGETSTRINGIPROC, glGetStringi) // Core in v3.0
-OGLEXT(PFNGLCLEARBUFFERFVPROC, glClearBufferfv) // Core in v3.0
-OGLEXT(PFNGLCLEARBUFFERFIPROC, glClearBufferfi) // Core in v3.0
-
-// FBO
-OGLEXT(PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC, glRenderbufferStorageMultisample) // Core in v3.0
-
-// TBO
-OGLEXT(PFNGLTEXBUFFERPROC, glTexBuffer) // Core in v3.1
-
 void OGLLoadEntryPoints_3_2()
 {
-	// Basic Functions
-	INITOGLEXT(PFNGLGETSTRINGIPROC, glGetStringi)
-	INITOGLEXT(PFNGLCLEARBUFFERFVPROC, glClearBufferfv)
-	INITOGLEXT(PFNGLCLEARBUFFERFIPROC, glClearBufferfi)
-	
-	// FBO
-	INITOGLEXT(PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC, glRenderbufferStorageMultisample) // Promote to core version
-	
-	// TBO
-	INITOGLEXT(PFNGLTEXBUFFERPROC, glTexBuffer)
 }
 
 // Vertex shader for geometry, GLSL 1.50

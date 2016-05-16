@@ -85,16 +85,6 @@ bool (*oglrender_framebufferDidResizeCallback)(size_t w, size_t h) = NULL;
 void (*OGLLoadEntryPoints_3_2_Func)() = NULL;
 void (*OGLCreateRenderer_3_2_Func)(OpenGLRenderer **rendererPtr) = NULL;
 
-//------------------------------------------------------------
-
-// Shaders
-OGLEXT(PFNGLVALIDATEPROGRAMPROC, glValidateProgram) // Core in v2.0
-OGLEXT(PFNGLUNIFORM1IVPROC, glUniform1iv) // Core in v2.0
-OGLEXT(PFNGLUNIFORM1FVPROC, glUniform1fv) // Core in v2.0
-
-// FBO
-OGLEXT(PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC, glRenderbufferStorageMultisampleEXT)
-
 static void OGLLoadEntryPoints_Legacy()
 {
 }
