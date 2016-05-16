@@ -87,8 +87,9 @@ void count_ListCallback(RDIR *rdir, EListCallbackArg arg)
 	u32 sectors = 1;
    if (!retro_dirent_is_dir(rdir, retro_dir))
    {
+      const char *path = retro_dirent_get_name(rdir);
       /* allocate sectors for file */
-      int32_t fileSize = path_get_size(retro_dirent_get_name(rdir));
+      int32_t fileSize = path_get_size(path);
       sectors += (fileSize+511)/512 + 1;
    }
 
