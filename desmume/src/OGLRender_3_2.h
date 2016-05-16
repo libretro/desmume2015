@@ -20,33 +20,6 @@
 #ifndef OGLRENDER_3_2_H
 #define OGLRENDER_3_2_H
 
-#if defined(_WIN32)
-	#define WIN32_LEAN_AND_MEAN
-	#include <windows.h>
-	#include <GL/gl.h>
-	#include <GL/glcorearb.h>
-
-	#define OGLEXT(procPtr, func)		procPtr func = NULL;
-	#define INITOGLEXT(procPtr, func)	func = (procPtr)wglGetProcAddress(#func);
-	#define EXTERNOGLEXT(procPtr, func)	extern procPtr func;
-#elif defined(__APPLE__)
-	#include <OpenGL/gl3.h>
-	#include <OpenGL/gl3ext.h>
-
-	// Ignore dynamic linking on Apple OS
-	#define OGLEXT(procPtr, func)
-	#define INITOGLEXT(procPtr, func)
-	#define EXTERNOGLEXT(procPtr, func)
-#else
-	#include <GL/gl.h>
-	#include <GL/glx.h>
-	#include "utils/glcorearb.h"
-
-	#define OGLEXT(procPtr, func)		procPtr func = NULL;
-	#define INITOGLEXT(procPtr, func)	func = (procPtr)glXGetProcAddress((const GLubyte *) #func);
-	#define EXTERNOGLEXT(procPtr, func)	extern procPtr func;
-#endif
-
 // Check minimum OpenGL header version
 #if !defined(GL_VERSION_3_2)
 	#error OpenGL requires v3.2 headers or later.
