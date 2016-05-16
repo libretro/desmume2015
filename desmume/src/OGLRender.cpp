@@ -483,17 +483,13 @@ static void OGLGetDriverVersion(const char *oglVersionString,
 	size_t versionStringLength = 0;
 	
 	if (oglVersionString == NULL)
-	{
 		return;
-	}
 	
 	// First, check for the dot in the revision string. There should be at
 	// least one present.
 	const char *versionStrEnd = strstr(oglVersionString, ".");
 	if (versionStrEnd == NULL)
-	{
 		return;
-	}
 	
 	// Next, check for the space before the vendor-specific info (if present).
 	versionStrEnd = strstr(oglVersionString, " ");
@@ -524,19 +520,13 @@ static void OGLGetDriverVersion(const char *oglVersionString,
 	versionSubstring = NULL;
 	
 	if (versionMajor != NULL)
-	{
 		*versionMajor = major;
-	}
 	
 	if (versionMinor != NULL)
-	{
 		*versionMinor = minor;
-	}
 	
 	if (versionRevision != NULL)
-	{
 		*versionRevision = revision;
-	}
 }
 
 void texDeleteCallback(TexCacheItem *texItem, void *param1, void *param2)
@@ -552,14 +542,10 @@ static Render3D* OpenGLRendererCreate()
 	Render3DError error = OGLERROR_NOERR;
 	
 	if (oglrender_init == NULL)
-	{
 		return NULL;
-	}
 	
 	if (!oglrender_init())
-	{
 		return NULL;
-	}
 	
 	if (!BEGINGL())
 	{
@@ -786,9 +772,7 @@ OpenGLRenderer::~OpenGLRenderer()
 bool OpenGLRenderer::IsExtensionPresent(const std::set<std::string> *oglExtensionSet, const std::string extensionName) const
 {
 	if (oglExtensionSet == NULL || oglExtensionSet->size() == 0)
-	{
 		return false;
-	}
 	
 	return (oglExtensionSet->find(extensionName) != oglExtensionSet->end());
 }
@@ -862,9 +846,7 @@ void OpenGLRenderer::SetVersion(unsigned int major, unsigned int minor, unsigned
 Render3DError OpenGLRenderer::_FlushFramebufferConvertOnCPU(const FragmentColor *__restrict srcFramebuffer, FragmentColor *__restrict dstFramebuffer, u16 *__restrict dstRGBA5551)
 {
 	if ( ((dstFramebuffer == NULL) && (dstRGBA5551 == NULL)) || (srcFramebuffer == NULL) )
-	{
 		return RENDER3DERROR_NOERR;
-	}
 	
 	// Convert from 32-bit BGRA8888 format to 32-bit RGBA6665 reversed format. OpenGL
 	// stores pixels using a flipped Y-coordinate, so this needs to be flipped back
@@ -1148,12 +1130,8 @@ Render3DError OpenGLRenderer::FlushFramebuffer(const FragmentColor *__restrict s
 		return Render3D::FlushFramebuffer(srcFramebuffer, NULL, dstRGBA5551);
 #endif
 	}
-	else
-	{
-		return this->_FlushFramebufferConvertOnCPU(srcFramebuffer, dstFramebuffer, dstRGBA5551);
-	}
-	
-	return RENDER3DERROR_NOERR;
+
+   return this->_FlushFramebufferConvertOnCPU(srcFramebuffer, dstFramebuffer, dstRGBA5551);
 }
 
 FragmentColor* OpenGLRenderer::GetFramebuffer()
@@ -1351,9 +1329,7 @@ Render3DError OpenGLRenderer_1_2::CreateVBOs()
 void OpenGLRenderer_1_2::DestroyVBOs()
 {
 	if (!this->isVBOSupported)
-	{
 		return;
-	}
 	
 	OGLRenderRef &OGLRef = *this->ref;
 	

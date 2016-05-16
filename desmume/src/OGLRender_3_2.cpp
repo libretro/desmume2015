@@ -852,9 +852,7 @@ Render3DError OpenGLRenderer_3_2::CreateFBOs()
 void OpenGLRenderer_3_2::DestroyFBOs()
 {
 	if (!this->isFBOSupported)
-	{
 		return;
-	}
 	
 	OGLRenderRef &OGLRef = *this->ref;
 	
@@ -896,10 +894,9 @@ Render3DError OpenGLRenderer_3_2::CreateMultisampledFBO()
 		INFO("OpenGL: GPU does not support at least 2x multisampled FBOs. Multisample antialiasing will be disabled.\n");
 		return OGLERROR_FEATURE_UNSUPPORTED;
 	}
-	else if (maxSamples > OGLRENDER_MAX_MULTISAMPLES)
-	{
+
+	if (maxSamples > OGLRENDER_MAX_MULTISAMPLES)
 		maxSamples = OGLRENDER_MAX_MULTISAMPLES;
-	}
 	
 	OGLRenderRef &OGLRef = *this->ref;
 	
@@ -957,9 +954,7 @@ Render3DError OpenGLRenderer_3_2::CreateMultisampledFBO()
 void OpenGLRenderer_3_2::DestroyMultisampledFBO()
 {
 	if (!this->isMultisampledFBOSupported)
-	{
 		return;
-	}
 	
 	OGLRenderRef &OGLRef = *this->ref;
 	
@@ -1013,9 +1008,7 @@ Render3DError OpenGLRenderer_3_2::CreateVAOs()
 void OpenGLRenderer_3_2::DestroyVAOs()
 {
 	if (!this->isVAOSupported)
-	{
 		return;
-	}
 	
 	OGLRenderRef &OGLRef = *this->ref;
 	
@@ -1096,9 +1089,7 @@ Render3DError OpenGLRenderer_3_2::InitGeometryProgramShaderLocations()
 void OpenGLRenderer_3_2::DestroyGeometryProgram()
 {
 	if(!this->isShaderSupported)
-	{
 		return;
-	}
 	
 	OGLRenderRef &OGLRef = *this->ref;
 	
@@ -1240,9 +1231,7 @@ Render3DError OpenGLRenderer_3_2::BeginRender(const GFX3D &engine)
 	OGLRenderRef &OGLRef = *this->ref;
 	
 	if (!BEGINGL())
-	{
 		return OGLERROR_BEGINGL_FAILED;
-	}
 	
 	// Since glReadPixels() is called at the end of every render, we know that rendering
 	// must be synchronized at that time. Therefore, GL_MAP_UNSYNCHRONIZED_BIT should be
@@ -1669,14 +1658,10 @@ Render3DError OpenGLRenderer_3_2::SetFramebufferSize(size_t w, size_t h)
 	OGLRenderRef &OGLRef = *this->ref;
 	
 	if (w < GPU_FRAMEBUFFER_NATIVE_WIDTH || h < GPU_FRAMEBUFFER_NATIVE_HEIGHT)
-	{
 		return OGLERROR_NOERR;
-	}
 	
 	if (!BEGINGL())
-	{
 		return OGLERROR_BEGINGL_FAILED;
-	}
 	
 	if (this->_mappedFramebuffer != NULL)
 	{
@@ -1736,9 +1721,7 @@ Render3DError OpenGLRenderer_3_2::SetFramebufferSize(size_t w, size_t h)
 	this->_framebufferColor = NULL; // Don't need to make a client-side buffer since we will be reading directly from the PBO.
 	
 	if (oglrender_framebufferDidResizeCallback != NULL)
-	{
 		oglrender_framebufferDidResizeCallback(w, h);
-	}
 	
 	ENDGL();
 	
