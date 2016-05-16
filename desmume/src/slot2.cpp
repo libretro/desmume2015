@@ -97,7 +97,8 @@ void slot2_Disconnect()
 void slot2_Reset()
 {
 	//disconnect existing device
-	if(slot2_device != NULL) slot2_device->disconnect();
+	if(slot2_device != NULL)
+      slot2_device->disconnect();
 	
 	//connect new device
 	slot2_device = slot2_List[slot2_device_type];
@@ -110,49 +111,38 @@ bool slot2_Change(NDS_SLOT2_TYPE changeToType)
 		return false;
 	
 	if (slot2_device_type == changeToType)
-	{
 		return false;
-	}
-	else if (slot2_device_type != NDS_SLOT2_AUTO && changeToType == NDS_SLOT2_AUTO)
+
+	if (slot2_device_type != NDS_SLOT2_AUTO && changeToType == NDS_SLOT2_AUTO)
 	{
 		const NDS_SLOT2_TYPE prevDeviceType = slot2_device_type;
 		const NDS_SLOT2_TYPE autoDeviceType = slot2_DetermineType();
 		
 		if (prevDeviceType != autoDeviceType && slot2_device != NULL)
-		{
 			slot2_device->disconnect();
-		}
 		
 		slot2_setDeviceByType(changeToType);
 		slot2_selected_type = autoDeviceType;
 		
 		if (prevDeviceType != autoDeviceType)
-		{
 			slot2_device->connect();
-		}
 	}
 	else if (slot2_device_type == NDS_SLOT2_AUTO && changeToType != NDS_SLOT2_AUTO)
 	{
 		const NDS_SLOT2_TYPE autoDeviceType = slot2_DetermineType();
 		
 		if (autoDeviceType != changeToType && slot2_device != NULL)
-		{
 			slot2_device->disconnect();
-		}
 		
 		slot2_setDeviceByType(changeToType);
 		
 		if (autoDeviceType != changeToType)
-		{
 			slot2_device->connect();
-		}
 	}
 	else //(slot2_device_type != NDS_SLOT2_AUTO && changeToType != NDS_SLOT2_AUTO)
 	{
 		if (slot2_device != NULL)
-		{
 			slot2_device->disconnect();
-		}
 		
 		slot2_setDeviceByType(changeToType);
 		slot2_device->connect();
@@ -164,9 +154,7 @@ bool slot2_Change(NDS_SLOT2_TYPE changeToType)
 void slot2_setDeviceByType(NDS_SLOT2_TYPE theType)
 {
 	if (theType > NDS_SLOT2_COUNT || theType < 0)
-	{
 		return;
-	}
 	
 	slot2_device_type = theType;
 	slot2_device = slot2_List[slot2_device_type];
@@ -208,23 +196,14 @@ NDS_SLOT2_TYPE slot2_GetSelectedType()
 
 NDS_SLOT2_TYPE slot2_DetermineType()
 {
-	NDS_SLOT2_TYPE theType = NDS_SLOT2_NONE;
-	
 	//check game ID in core emulator and select right implementation
 	if (gameInfo.romsize == 0)
-	{
-		return theType;
-	}
-	else if (gameInfo.isHomebrew())
-	{
-		theType = NDS_SLOT2_PASSME;
-	}
-	else
-	{
-		theType = slot2_DetermineTypeByGameCode(gameInfo.header.gameCode);
-	}
-	
-	return theType;
+		return NDS_SLOT2_NONE;
+
+	if (gameInfo.isHomebrew())
+		return NDS_SLOT2_PASSME;
+
+	return slot2_DetermineTypeByGameCode(gameInfo.header.gameCode);
 }
 
 NDS_SLOT2_TYPE slot2_DetermineTypeByGameCode(const char *theGameCode)
@@ -336,4 +315,3 @@ template bool slot2_read<0, u32>(u32 addr, u32 &val);
 template bool slot2_read<1, u8> (u32 addr, u8  &val);
 template bool slot2_read<1, u16>(u32 addr, u16 &val);
 template bool slot2_read<1, u32>(u32 addr, u32 &val);
-
