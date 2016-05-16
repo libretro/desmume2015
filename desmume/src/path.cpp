@@ -42,13 +42,11 @@ static bool dirEqualsVolume = (DIRECTORY_DELIMITER_CHAR == VolumeSeparatorChar);
 
 bool Path::IsPathRooted (const std::string &path)
 {
-	if (path.empty()) {
+	if (path.empty())
 		return false;
-	}
 	
-	if (path.find_first_of(InvalidPathChars) != std::string::npos) {
+	if (path.find_first_of(InvalidPathChars) != std::string::npos)
 		return false;
-	}
 	
 	char c = path[0];
 	return (c == DIRECTORY_DELIMITER_CHAR 	||
@@ -102,15 +100,13 @@ std::string Path::GetFileNameFromPath(std::string filePath)
 
 std::string Path::GetFileNameWithoutExt(std::string fileName)
 {
-	if (fileName.empty()) {
+	if (fileName.empty())
 		return "";
-	}
 	
 	#if !defined(HOST_WINDOWS)
 	size_t i = fileName.find_last_of(FILE_EXT_DELIMITER_CHAR);
-	if (i == std::string::npos) {
+	if (i == std::string::npos)
 		return fileName;
-	}
 	
 	return fileName.substr(0, i);
 	#else
@@ -184,9 +180,8 @@ std::string Path::ScrubInvalid(std::string str)
 
 std::string Path::GetFileNameFromPathWithoutExt(std::string filePath)
 {
-	if (filePath.empty()) {
+	if (filePath.empty())
 		return "";
-	}
 	
 	std::string fileName = GetFileNameFromPath(filePath);
 	
@@ -195,15 +190,13 @@ std::string Path::GetFileNameFromPathWithoutExt(std::string filePath)
 
 std::string Path::GetFileExt(std::string fileName)
 {
-	if (fileName.empty()) {
+	if (fileName.empty())
 		return "";
-	}
 	
 	#if !defined(HOST_WINDOWS)
 	size_t i = fileName.find_last_of(FILE_EXT_DELIMITER_CHAR);
-	if (i == std::string::npos) {
+	if (i == std::string::npos)
 		return fileName;
-	}
 	
 	return fileName.substr(i + 1);
 	#else

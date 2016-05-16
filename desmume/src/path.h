@@ -159,10 +159,10 @@ public:
 	{
 #ifdef HOST_WINDOWS
 		GetPrivateProfileString(SECTION, key, key, pathToRead, PATH_MAX_LENGTH, IniName);
-		if(strcmp(pathToRead, key) == 0) {
-			//since the variables are all intialized in this file they all use PATH_MAX_LENGTH
+
+      //since the variables are all intialized in this file they all use PATH_MAX_LENGTH
+		if(strcmp(pathToRead, key) == 0)
 			GetDefaultPath(pathToRead, key, PATH_MAX_LENGTH);
-		}
 #else
 		//since the variables are all intialized in this file they all use PATH_MAX_LENGTH
 		GetDefaultPath(pathToRead, key, PATH_MAX_LENGTH);
@@ -414,13 +414,11 @@ public:
 	{
 		size_t i = fileName.find_last_of(FILE_EXT_DELIMITER_CHAR);
 		
-		if (i != std::string::npos) {
+		if (i != std::string::npos)
 			fileName = fileName.substr(i - 2);
-		}
 		
-		if(fileName == "ds.gba") {
+		if(fileName == "ds.gba")
 			return true;
-		}
 		
 		return false;
 	}
