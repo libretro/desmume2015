@@ -82,8 +82,6 @@ struct MAKER
 
 const char *getDeveloperNameByID(uint16_t id);
 
-void* malloc_alignedCacheLine(size_t length);
-
 #ifdef __cplusplus
 }
 #endif

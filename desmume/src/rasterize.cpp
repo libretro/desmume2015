@@ -1959,7 +1959,7 @@ Render3DError SoftRasterizerRenderer::SetFramebufferSize(size_t w, size_t h)
 	
 	const size_t newFramebufferColorSizeBytes = w * h * sizeof(FragmentColor);
 	FragmentColor *oldFramebufferColor = this->_framebufferColor;
-	FragmentColor *newFramebufferColor = (FragmentColor *)malloc_alignedCacheLine(newFramebufferColorSizeBytes);
+	FragmentColor *newFramebufferColor = (FragmentColor *)memalign_alloc_aligned(newFramebufferColorSizeBytes);
 	FragmentAttributesBuffer *oldFramebufferAttributes = this->_framebufferAttributes;
 	FragmentAttributesBuffer *newFramebufferAttributes = new FragmentAttributesBuffer(w * h);
 	

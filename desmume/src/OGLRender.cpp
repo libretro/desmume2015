@@ -3172,7 +3172,7 @@ Render3DError OpenGLRenderer_1_2::SetFramebufferSize(size_t w, size_t h)
 	else
 	{
 		FragmentColor *oldFramebufferColor = this->_framebufferColor;
-		FragmentColor *newFramebufferColor = (FragmentColor *)malloc_alignedCacheLine(newFramebufferColorSizeBytes);
+		FragmentColor *newFramebufferColor = (FragmentColor *)memalign_alloc_aligned(newFramebufferColorSizeBytes);
 		this->_framebufferColor = newFramebufferColor;
 		free_aligned(oldFramebufferColor);
 	}
@@ -3352,7 +3352,7 @@ Render3DError OpenGLRenderer_1_3::SetFramebufferSize(size_t w, size_t h)
 	else
 	{
 		FragmentColor *oldFramebufferColor = this->_framebufferColor;
-		FragmentColor *newFramebufferColor = (FragmentColor *)malloc_alignedCacheLine(newFramebufferColorSizeBytes);
+		FragmentColor *newFramebufferColor = (FragmentColor *)memalign_alloc_aligned(newFramebufferColorSizeBytes);
 		this->_framebufferColor = newFramebufferColor;
 		free_aligned(oldFramebufferColor);
 	}

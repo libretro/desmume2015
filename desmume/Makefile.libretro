@@ -236,7 +236,7 @@ ifeq ($(X432R_CUSTOMRENDERER_ENABLED),1)
 endif
 
 OBJECTS		= $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
-CXXFLAGS	   += -D__LIBRETRO__ $(fpic) $(INCDIR)
+CXXFLAGS	   += -D__LIBRETRO__ -fpermissive $(fpic) $(INCDIR)
 CFLAGS		+= -std=gnu99 -D__LIBRETRO__ $(fpic) $(INCDIR)
 
 ifeq ($(platform), theos_ios)

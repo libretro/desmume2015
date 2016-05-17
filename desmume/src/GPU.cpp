@@ -2666,8 +2666,8 @@ void GPUEngineBase::SetCustomFramebufferSize(size_t w, size_t h)
 {
 	u16 *oldWorkingScanline = this->workingScanline;
 	u8 *oldBGPixels = this->_bgPixels;
-	u16 *newWorkingScanline = (u16 *)malloc_alignedCacheLine(w * _gpuLargestDstLineCount * sizeof(u16));
-	u8 *newBGPixels = (u8 *)malloc_alignedCacheLine(w * _gpuLargestDstLineCount * 4 * sizeof(u8)); // yes indeed, this is oversized. map debug tools try to write to it
+	u16 *newWorkingScanline = (u16 *)memalign_alloc_aligned(w * _gpuLargestDstLineCount * sizeof(u16));
+	u8 *newBGPixels = (u8 *)memalign_alloc_aligned(w * _gpuLargestDstLineCount * 4 * sizeof(u8)); // yes indeed, this is oversized. map debug tools try to write to it
 	
 	this->workingScanline = newWorkingScanline;
 	this->_bgPixels = newBGPixels;
@@ -2741,8 +2741,8 @@ GPUEngineA::GPUEngineA()
 	_sprMem = MMU_AOBJ;
 	dispx_st = (REG_DISPx *)MMU.ARM9_REG;
 	
-	_3DFramebufferRGBA6665 = (FragmentColor *)malloc_alignedCacheLine(GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT * sizeof(FragmentColor));
-	_3DFramebufferRGBA5551 = (u16 *)malloc_alignedCacheLine(GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT * sizeof(u16));
+	_3DFramebufferRGBA6665 = (FragmentColor *)memalign_alloc_aligned(GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT * sizeof(FragmentColor));
+	_3DFramebufferRGBA5551 = (u16 *)memalign_alloc_aligned(GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT * sizeof(u16));
 	gfx3d_Update3DFramebuffers(_3DFramebufferRGBA6665, _3DFramebufferRGBA5551);
 }
 
@@ -2860,8 +2860,8 @@ void GPUEngineA::SetCustomFramebufferSize(size_t w, size_t h)
 	
 	FragmentColor *oldColorRGBA6665Buffer = this->_3DFramebufferRGBA6665;
 	u16 *oldColorRGBA5551Buffer = this->_3DFramebufferRGBA5551;
-	FragmentColor *newColorRGBA6665Buffer = (FragmentColor *)malloc_alignedCacheLine(w * h * sizeof(FragmentColor));
-	u16 *newColorRGBA5551 = (u16 *)malloc_alignedCacheLine(w * h * sizeof(u16));
+	FragmentColor *newColorRGBA6665Buffer = (FragmentColor *)memalign_alloc_aligned(w * h * sizeof(FragmentColor));
+	u16 *newColorRGBA5551 = (u16 *)memalign_alloc_aligned(w * h * sizeof(u16));
 	
 	this->_3DFramebufferRGBA6665 = newColorRGBA6665Buffer;
 	this->_3DFramebufferRGBA5551 = newColorRGBA5551;
@@ -4140,7 +4140,7 @@ GPUSubsystem::GPUSubsystem()
 	
 	_customVRAM = NULL;
 	_customVRAMBlank = NULL;
-	_customFramebuffer = (u16 *)malloc_alignedCacheLine(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * sizeof(u16) * 2);
+	_customFramebuffer = (u16 *)memalign_alloc_aligned(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * sizeof(u16) * 2);
    _displayInfo.customWidth = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
 	_displayInfo.customHeight = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
 	
@@ -4415,7 +4415,7 @@ void GPUSubsystem::SetCustomFramebufferSize(size_t w, size_t h)
 		currentLineCount += lineCount;
 	}
 	
-	u16 *newGpuDstToSrcIndex = (u16 *)malloc_alignedCacheLine(w * h * sizeof(u16));
+	u16 *newGpuDstToSrcIndex = (u16 *)memalign_alloc_aligned(w * h * sizeof(u16));
 	for (size_t y = 0; y < GPU_FRAMEBUFFER_NATIVE_HEIGHT; y++)
 	{
 		for (size_t x = 0; x < GPU_FRAMEBUFFER_NATIVE_WIDTH; x++)
@@ -4430,12 +4430,12 @@ void GPUSubsystem::SetCustomFramebufferSize(size_t w, size_t h)
 		}
 	}
 	
-	u16 *newCustomFramebuffer = (u16 *)malloc_alignedCacheLine(w * h * sizeof(u16) * 2);
+	u16 *newCustomFramebuffer = (u16 *)memalign_alloc_aligned(w * h * sizeof(u16) * 2);
 	memset_u16(newCustomFramebuffer, 0x8000, w * h * 2);
 	
 	const size_t newCustomVRAMBlockSize = _gpuCaptureLineIndex[GPU_VRAM_BLOCK_LINES] * w;
 	const size_t newCustomVRAMBlankSize = newGpuLargestDstLineCount * w;
-	u16 *newCustomVRAM = (u16 *)malloc_alignedCacheLine(((newCustomVRAMBlockSize * 4) + newCustomVRAMBlankSize) * sizeof(u16));
+	u16 *newCustomVRAM = (u16 *)memalign_alloc_aligned(((newCustomVRAMBlockSize * 4) + newCustomVRAMBlankSize) * sizeof(u16));
 	memset(newCustomVRAM, 0, ((newCustomVRAMBlockSize * 4) + newCustomVRAMBlankSize) * sizeof(u16));
 	
 	_gpuLargestDstLineCount = newGpuLargestDstLineCount;

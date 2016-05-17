@@ -438,14 +438,3 @@ msgBoxInterface msgBoxFake = {
 };
 
 msgBoxInterface *msgbox = &msgBoxFake;
-
-void* malloc_alignedCacheLine(size_t length)
-{
-#if defined(HOST_32)
-   return memalign_alloc(32, length);
-#elif defined(HOST_64)
-   return memalign_alloc(64, length);
-#else
-   return memalign_alloc(16, length);
-#endif
-}

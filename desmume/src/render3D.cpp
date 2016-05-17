@@ -128,12 +128,12 @@ FragmentAttributesBuffer::FragmentAttributesBuffer(size_t newCount)
 {
 	count = newCount;
 	
-	depth = (u32 *)malloc_alignedCacheLine(count * sizeof(u32));
-	opaquePolyID = (u8 *)malloc_alignedCacheLine(count * sizeof(u8));
-	translucentPolyID = (u8 *)malloc_alignedCacheLine(count * sizeof(u8));
-	stencil = (u8 *)malloc_alignedCacheLine(count * sizeof(u8));
-	isFogged = (u8 *)malloc_alignedCacheLine(count * sizeof(u8));
-	isTranslucentPoly = (u8 *)malloc_alignedCacheLine(count * sizeof(u8));
+	depth             = (u32 *)memalign_alloc_aligned(count * sizeof(u32));
+	opaquePolyID      = (u8 *)memalign_alloc_aligned(count * sizeof(u8));
+	translucentPolyID = (u8 *)memalign_alloc_aligned(count * sizeof(u8));
+	stencil           = (u8 *)memalign_alloc_aligned(count * sizeof(u8));
+	isFogged          = (u8 *)memalign_alloc_aligned(count * sizeof(u8));
+	isTranslucentPoly = (u8 *)memalign_alloc_aligned(count * sizeof(u8));
 }
 
 FragmentAttributesBuffer::~FragmentAttributesBuffer()
@@ -254,7 +254,7 @@ Render3DError Render3D::SetFramebufferSize(size_t w, size_t h)
 	
 	const size_t newFramebufferColorSizeBytes = w * h * sizeof(FragmentColor);
 	FragmentColor *oldFramebufferColor = this->_framebufferColor;
-	FragmentColor *newFramebufferColor = (FragmentColor *)malloc_alignedCacheLine(newFramebufferColorSizeBytes);
+	FragmentColor *newFramebufferColor = (FragmentColor *)memalign_alloc_aligned(newFramebufferColorSizeBytes);
 	
 	this->_framebufferWidth = w;
 	this->_framebufferHeight = h;
