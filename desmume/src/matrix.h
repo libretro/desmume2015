@@ -247,20 +247,6 @@ FORCEINLINE __m128 _util_MatrixMultVec4x4_(const SSE_MATRIX &mat, __m128 vec)
 	return xmm4;
 }
 
-FORCEINLINE void MatrixMultiply(float * matrix, const float * rightMatrix)
-{
-	//this seems to generate larger code, including many movaps, but maybe it is less harsh on the registers than the
-	//more hand-tailored approach
-	__m128 row0 = _util_MatrixMultVec4x4_((SSE_MATRIX)matrix,_mm_load_ps(rightMatrix)); 
-	__m128 row1 = _util_MatrixMultVec4x4_((SSE_MATRIX)matrix,_mm_load_ps(rightMatrix+4));
-	__m128 row2 = _util_MatrixMultVec4x4_((SSE_MATRIX)matrix,_mm_load_ps(rightMatrix+8)); 
-	__m128 row3 = _util_MatrixMultVec4x4_((SSE_MATRIX)matrix,_mm_load_ps(rightMatrix+12));
-	_mm_store_ps(matrix,row0); 
-	_mm_store_ps(matrix+4,row1); 
-	_mm_store_ps(matrix+8,row2);
-	_mm_store_ps(matrix+12,row3);
-}
-
 FORCEINLINE void MatrixMultVec4x4(const float *matrix, float *vecPtr)
 {
 	_mm_store_ps(vecPtr,_util_MatrixMultVec4x4_((SSE_MATRIX)matrix,_mm_load_ps(vecPtr)));
@@ -342,7 +328,6 @@ FORCEINLINE void vector_fix2float(float* matrix, const float divisor)
 
 void MatrixMultVec4x4 (const float *matrix, float *vecPtr);
 void MatrixMultVec3x3(const float * matrix, float * vecPtr);
-void MatrixMultiply(float * matrix, const float * rightMatrix);
 void MatrixTranslate(float *matrix, const float *ptr);
 void MatrixScale(float * matrix, const float * ptr);
 
