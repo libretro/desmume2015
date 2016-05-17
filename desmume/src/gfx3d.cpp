@@ -141,14 +141,12 @@ public:
 		//0x00000000 (dummy for 0x41)
 		//0x00000017 (next packed command)
 
-		u8 currCommand = shiftCommand & 0xFF;
+		u8 currCommand     = shiftCommand & 0xFF;
 		u8 currCommandType = gfx3d_commandTypes[currCommand];
 
 		//if the current command is invalid, receive a new packed command.
 		if(currCommandType == GFX_INVALID_COMMAND)
-		{
 			shiftCommand = val;
-		}
 
 		//finish receiving args
 		if(paramCounter>0)
@@ -157,7 +155,8 @@ public:
 			paramCounter--;
 			if(paramCounter <= 0)
 				shiftCommand >>= 8;
-			else return;
+			else
+            return;
 		}
 
 		//analyze current packed commands
@@ -435,17 +434,18 @@ static void twiddleLists(void)
 
 static BOOL flushPending = FALSE;
 static BOOL drawPending = FALSE;
-//------------------------------------------------------------
 
-static void makeTables() {
+//produce the color bits of a 24bpp color from a DS RGB15 using bit logic (internal use only)
+#define RGB15TO24_BITLOGIC(col) ( (material_5bit_to_8bit[((col)>>10)&0x1F]<<16) | (material_5bit_to_8bit[((col)>>5)&0x1F]<<8) | material_5bit_to_8bit[(col)&0x1F] )
 
-	//produce the color bits of a 24bpp color from a DS RGB15 using bit logic (internal use only)
-	#define RGB15TO24_BITLOGIC(col) ( (material_5bit_to_8bit[((col)>>10)&0x1F]<<16) | (material_5bit_to_8bit[((col)>>5)&0x1F]<<8) | material_5bit_to_8bit[(col)&0x1F] )
-	
-	//produce the color bits of a 24bpp color from a DS RGB15 using bit logic (internal use only). RGB are reverse of usual
-	#define RGB15TO24_BITLOGIC_REVERSE(col) ( (material_5bit_to_8bit[(col)&0x1F]<<16) | (material_5bit_to_8bit[((col)>>5)&0x1F]<<8) | material_5bit_to_8bit[((col)>>10)&0x1F] )
+//produce the color bits of a 24bpp color from a DS RGB15 using bit logic (internal use only). RGB are reverse of usual
+#define RGB15TO24_BITLOGIC_REVERSE(col) ( (material_5bit_to_8bit[(col)&0x1F]<<16) | (material_5bit_to_8bit[((col)>>5)&0x1F]<<8) | material_5bit_to_8bit[((col)>>10)&0x1F] )
 
-	for (size_t i = 0; i < 32768; i++)
+static void makeTables(void)
+{
+   size_t i, r, oldr, a;
+
+	for (i = 0; i < 32768; i++)
 	{
 		color_15bit_to_24bit[i] = LE_TO_LOCAL_32( RGB15TO24_BITLOGIC(i) );
 		color_15bit_to_24bit_reverse[i] = LE_TO_LOCAL_32( RGB15TO24_BITLOGIC_REVERSE(i) );
@@ -455,21 +455,21 @@ static void makeTables() {
 		dsDepthExtend_15bit_to_24bit[i] = LE_TO_LOCAL_32( (i*0x200)+((i+1)>>15)*0x01FF );
 	}
 
-	for (size_t i = 0; i < 65536; i++)
+	for (i = 0; i < 65536; i++)
 		float16table[i] = fix2float((signed short)i);
 
-	for (size_t i = 0; i < 1024; i++)
+	for (i = 0; i < 1024; i++)
 		float10Table[i] = ((signed short)(i<<6)) / (float)(1<<12);
 
-	for (size_t i = 0; i < 1024; i++)
+	for (i = 0; i < 1024; i++)
 		float10RelTable[i] = ((signed short)(i<<6)) / (float)(1<<18);
 
-	for (size_t i = 0; i < 1024; i++)
+	for (i = 0; i < 1024; i++)
 		normalTable[i] = ((signed short)(i<<6)) / (float)(1<<15);
 
-	for (size_t r = 0; r <= 31; r++)
-		for (size_t oldr = 0; oldr <= 31; oldr++)
-			for (size_t a = 0; a <= 31; a++)
+	for (r = 0; r <= 31; r++)
+		for (oldr = 0; oldr <= 31; oldr++)
+			for (a = 0; a <= 31; a++)
 			{
 				int temp = (r*a + oldr*(31-a)) / 31;
 				mixTable555[a][r][oldr] = temp;
@@ -666,7 +666,8 @@ void gfx3d_reset()
 //=================================================================================
 //=================================================================================
 
-inline float vec3dot(float* a, float* b) {
+inline float vec3dot(float* a, float* b)
+{
 	return (((a[0]) * (b[0])) + ((a[1]) * (b[1])) + ((a[2]) * (b[2])));
 }
 
@@ -734,9 +735,7 @@ static void SetVertex()
 	//VERT &vert = tempVertList.list[tempVertList.count];
 	const size_t vertIndex = vertlist->count + tempVertInfo.count - continuation;
 	if (vertIndex >= VERTLIST_SIZE)
-	{
 		printf("wtf\n");
-	}
 	
 	VERT &vert = vertlist->list[vertIndex];
 
@@ -754,13 +753,13 @@ static void SetVertex()
 
 	vert.texcoord[0] = last_s/16.0f;
 	vert.texcoord[1] = last_t/16.0f;
-	vert.coord[0] = coordTransformed[0]/4096.0f;
-	vert.coord[1] = coordTransformed[1]/4096.0f;
-	vert.coord[2] = coordTransformed[2]/4096.0f;
-	vert.coord[3] = coordTransformed[3]/4096.0f;
-	vert.color[0] = GFX3D_5TO6(colorRGB[0]);
-	vert.color[1] = GFX3D_5TO6(colorRGB[1]);
-	vert.color[2] = GFX3D_5TO6(colorRGB[2]);
+	vert.coord[0]    = coordTransformed[0]/4096.0f;
+	vert.coord[1]    = coordTransformed[1]/4096.0f;
+	vert.coord[2]    = coordTransformed[2]/4096.0f;
+	vert.coord[3]    = coordTransformed[3]/4096.0f;
+	vert.color[0]    = GFX3D_5TO6(colorRGB[0]);
+	vert.color[1]    = GFX3D_5TO6(colorRGB[1]);
+	vert.color[2]    = GFX3D_5TO6(colorRGB[2]);
 	vert.color_to_float();
 	tempVertInfo.map[tempVertInfo.count] = vertlist->count + tempVertInfo.count - continuation;
 	tempVertInfo.count++;
@@ -848,21 +847,28 @@ static void SetVertex()
 			
 			poly.vtxFormat = vtxFormat;
 
-			// Line segment detect
-			// Tested" Castlevania POR - warp stone, trajectory of ricochet, "Eye of Decay"
+			/* Line segment detect
+			 * Tested" Castlevania POR - warp stone, 
+          * trajectory of ricochet, "Eye of Decay" */
 			if (!(textureFormat & (7 << 26)))	// no texture
 			{
-				bool duplicated = false;
+				bool duplicated   = false;
 				const VERT &vert0 = vertlist->list[poly.vertIndexes[0]];
 				const VERT &vert1 = vertlist->list[poly.vertIndexes[1]];
 				const VERT &vert2 = vertlist->list[poly.vertIndexes[2]];
-				if ( (vert0.x == vert1.x) && (vert0.y == vert1.y) ) duplicated = true;
+
+				if ( (vert0.x == vert1.x) && (vert0.y == vert1.y) )
+               duplicated = true;
 				else
-					if ( (vert1.x == vert2.x) && (vert1.y == vert2.y) ) duplicated = true;
+					if ( (vert1.x == vert2.x) && (vert1.y == vert2.y) )
+                  duplicated = true;
 					else
-						if ( (vert0.y == vert1.y) && (vert1.y == vert2.y) ) duplicated = true;
+						if ( (vert0.y == vert1.y) && (vert1.y == vert2.y) )
+                     duplicated = true;
 						else
-							if ( (vert0.x == vert1.x) && (vert1.x == vert2.x) ) duplicated = true;
+							if ( (vert0.x == vert1.x) && (vert1.x == vert2.x) )
+                        duplicated = true;
+
 				if (duplicated)
 				{
 					//printf("Line Segmet detected (poly type %i, mode %i, texparam %08X)\n", poly.type, poly.vtxFormat, textureFormat);
@@ -870,10 +876,10 @@ static void SetVertex()
 				}
 			}
 
-			poly.polyAttr = polyAttr;
-			poly.texParam = textureFormat;
+			poly.polyAttr   = polyAttr;
+			poly.texParam   = textureFormat;
 			poly.texPalette = texturePalette;
-			poly.viewport = viewport;
+			poly.viewport   = viewport;
 			polylist->count++;
 		}
 	}
@@ -881,13 +887,11 @@ static void SetVertex()
 
 static void gfx3d_glPolygonAttrib_cache(void)
 {
-	// Light enable/disable
-	lightMask = (polyAttr&0xF);
-
-	// texture environment
-	envMode = (polyAttr&0x30)>>4;
-
-	// back face culling
+	/* Light enable/disable */
+	lightMask   = (polyAttr&0xF);
+	/* texture environment */
+	envMode     = (polyAttr&0x30)>>4;
+	/* back face culling */
 	cullingMask = (polyAttr>>6)&3;
 }
 
@@ -898,8 +902,9 @@ static void gfx3d_glTexImage_cache(void)
 
 static void gfx3d_glLightDirection_cache(const size_t index)
 {
+   size_t i;
+   s32 lineOfSight[4] = {0, 0, (-1)<<12, 0};
 	s32 v = lightDirection[index];
-
 	s16 x = ((v<<22)>>22)<<3;
 	s16 y = ((v<<12)>>22)<<3;
 	s16 z = ((v<<2)>>22)<<3;
@@ -909,25 +914,23 @@ static void gfx3d_glLightDirection_cache(const size_t index)
 	cacheLightDirection[index][2] = z;
 	cacheLightDirection[index][3] = 0;
 
-	//Multiply the vector by the directional matrix
+	/* Multiply the vector by the directional matrix */
 	MatrixMultVec3x3_fixed(mtxCurrent[2], cacheLightDirection[index]);
 
-	//Calculate the half angle vector
-	s32 lineOfSight[4] = {0, 0, (-1)<<12, 0};
-	for (size_t i = 0; i < 4; i++)
-	{
+	/* Calculate the half angle vector */
+	for (i = 0; i < 4; i++)
 		cacheHalfVector[index][i] = ((cacheLightDirection[index][i] + lineOfSight[i]));
-	}
 
-	//normalize the half angle vector
-	//can't believe the hardware really does this... but yet it seems...
+	/* normalize the half angle vector
+	 * can't believe the hardware really does this... but yet it seems... */
 	s32 halfLength = ((s32)(sqrt((double)vec3dot_fixed32(cacheHalfVector[index],cacheHalfVector[index]))))<<6;
 
 	if (halfLength != 0)
 	{
 		halfLength = abs(halfLength);
 		halfLength >>= 6;
-		for (size_t i = 0; i < 4; i++)
+
+		for (i = 0; i < 4; i++)
 		{
 			s32 temp = cacheHalfVector[index][i];
 			temp <<= 6;
@@ -963,7 +966,8 @@ static void gfx3d_glPopMatrix(s32 i)
 {
 	// The stack has only one level (at address 0) in projection mode, 
 	// in that mode, the parameter value is ignored, the offset is always +1 in that mode.
-	if (mode == MATRIXMODE_PROJECTION) i = 1;
+	if (mode == MATRIXMODE_PROJECTION)
+      i = 1;
 
 	//this command always works on both pos and vector when either pos or pos-vector are the current mtx mode
 	const MatrixMode mymode = ((mode == MATRIXMODE_POSITION) ? MATRIXMODE_POSITION_VECTOR : mode);
@@ -1056,7 +1060,8 @@ static BOOL gfx3d_glLoadMatrix4x4(s32 v)
 	mtxCurrent[mode][ML4x4ind] = v;
 
 	++ML4x4ind;
-	if(ML4x4ind<16) return FALSE;
+	if(ML4x4ind<16)
+      return FALSE;
 	ML4x4ind = 0;
 
 	GFX_DELAY(19);
@@ -1075,8 +1080,10 @@ static BOOL gfx3d_glLoadMatrix4x3(s32 v)
 	mtxCurrent[mode][ML4x3ind] = v;
 
 	ML4x3ind++;
-	if((ML4x3ind & 0x03) == 3) ML4x3ind++;
-	if(ML4x3ind<16) return FALSE;
+	if((ML4x3ind & 0x03) == 3)
+      ML4x3ind++;
+	if(ML4x3ind<16)
+      return FALSE;
 	ML4x3ind = 0;
 
 	//vector_fix2float<4>(mtxCurrent[mode], 4096.f);
@@ -1098,7 +1105,8 @@ static BOOL gfx3d_glMultMatrix4x4(s32 v)
 	mtxTemporal[MM4x4ind] = v;
 
 	MM4x4ind++;
-	if(MM4x4ind<16) return FALSE;
+	if(MM4x4ind<16)
+      return FALSE;
 	MM4x4ind = 0;
 
 	GFX_DELAY(35);
@@ -1124,8 +1132,10 @@ static BOOL gfx3d_glMultMatrix4x3(s32 v)
 	mtxTemporal[MM4x3ind] = v;
 
 	MM4x3ind++;
-	if ((MM4x3ind & 0x03) == 3) MM4x3ind++;
-	if (MM4x3ind < 16) return FALSE;
+	if ((MM4x3ind & 0x03) == 3)
+      MM4x3ind++;
+	if (MM4x3ind < 16)
+      return FALSE;
 	MM4x3ind = 0;
 
 	GFX_DELAY(31);
@@ -1156,8 +1166,10 @@ static BOOL gfx3d_glMultMatrix3x3(s32 v)
 	mtxTemporal[MM3x3ind] = v;
 	
 	MM3x3ind++;
-	if ((MM3x3ind & 0x03) == 3) MM3x3ind++;
-	if (MM3x3ind<12) return FALSE;
+	if ((MM3x3ind & 0x03) == 3)
+      MM3x3ind++;
+	if (MM3x3ind<12)
+      return FALSE;
 	MM3x3ind = 0;
 
 	GFX_DELAY(28);
@@ -1191,7 +1203,8 @@ static BOOL gfx3d_glScale(s32 v)
 
 	++scaleind;
 
-	if (scaleind < 3) return FALSE;
+	if (scaleind < 3)
+      return FALSE;
 	scaleind = 0;
 
 	MatrixScale(mtxCurrent[(mode == MATRIXMODE_POSITION_VECTOR ? MATRIXMODE_POSITION : mode)], scale);
@@ -1213,7 +1226,8 @@ static BOOL gfx3d_glTranslate(s32 v)
 
 	++transind;
 
-	if (transind < 3) return FALSE;
+	if (transind < 3)
+      return FALSE;
 	transind = 0;
 
 	MatrixTranslate(mtxCurrent[mode], trans);
@@ -1241,6 +1255,8 @@ static void gfx3d_glColor3b(u32 v)
 
 static void gfx3d_glNormal(s32 v)
 {
+   size_t i;
+   size_t c;
 	s16 nx = ((v<<22)>>22)<<3;
 	s16 ny = ((v<<12)>>22)<<3;
 	s16 nz = ((v<<2)>>22)<<3;
@@ -1280,9 +1296,10 @@ static void gfx3d_glNormal(s32 v)
 
 	int vertexColor[3] = { emission[0], emission[1], emission[2] };
 
-	for (size_t i = 0; i < 4; i++)
+	for (i = 0; i < 4; i++)
 	{
-		if (!((lightMask>>i)&1)) continue;
+		if (!((lightMask>>i)&1))
+         continue;
 
 		u8 _lightColor[3] = {
 			(u8)( lightColor[i]        & 0x1F),
@@ -1320,19 +1337,17 @@ static void gfx3d_glNormal(s32 v)
 			fixedshininess = gfx3d.state.shininessTable[fixedshininess>>5]<<4;
 		}
 
-		for (size_t c = 0; c < 3; c++)
+		for (c = 0; c < 3; c++)
 		{
-			s32 specComp = ((specular[c] * _lightColor[c] * fixedshininess)>>17);  //5 bits for color*color and 12 bits for the shininess
-			s32 diffComp = ((diffuse[c] * _lightColor[c] * fixed_diffuse)>>17); //5bits for the color*color and 12 its for the diffuse
-			s32 ambComp = ((ambient[c] * _lightColor[c])>>5); //5bits for color*color
+			s32 specComp    = ((specular[c] * _lightColor[c] * fixedshininess)>>17);  //5 bits for color*color and 12 bits for the shininess
+			s32 diffComp    = ((diffuse[c] * _lightColor[c] * fixed_diffuse)>>17); //5bits for the color*color and 12 its for the diffuse
+			s32 ambComp     = ((ambient[c] * _lightColor[c])>>5); //5bits for color*color
 			vertexColor[c] += specComp + diffComp + ambComp;
 		}
 	}
 
-	for (size_t c = 0; c < 3; c++)
-	{
+	for (c = 0; c < 3; c++)
 		colorRGB[c] = std::min(31,vertexColor[c]);
-	}
 
 	GFX_DELAY(9);
 	GFX_DELAY_M2((lightMask) & 0x01);
@@ -1481,7 +1496,7 @@ static void gfx3d_glMaterial1(u32 val)
 */
 static void gfx3d_glLightDirection(u32 v)
 {
-	const size_t index = v >> 30;
+	const size_t index    = v >> 30;
 
 	lightDirection[index] = (s32)(v & 0x3FFFFFFF);
 	gfx3d_glLightDirection_cache(index);
@@ -1491,7 +1506,7 @@ static void gfx3d_glLightDirection(u32 v)
 static void gfx3d_glLightColor(u32 v)
 {
 	const size_t index = v >> 30;
-	lightColor[index] = v;
+	lightColor[index]  = v;
 	GFX_DELAY(1);
 }
 
@@ -1502,7 +1517,8 @@ static BOOL gfx3d_glShininess(u32 val)
 	gfx3d.state.shininessTable[shininessInd++] = (((val >> 16) & 0xFF));
 	gfx3d.state.shininessTable[shininessInd++] = (((val >> 24) & 0xFF));
 
-	if (shininessInd < 128) return FALSE;
+	if (shininessInd < 128)
+      return FALSE;
 	shininessInd = 0;
 	GFX_DELAY(32);
 	return TRUE;
@@ -1510,12 +1526,12 @@ static BOOL gfx3d_glShininess(u32 val)
 
 static void gfx3d_glBegin(u32 v)
 {
-	inBegin = TRUE;
-	vtxFormat = (PolygonPrimitiveType)(v & 0x03);
-	triStripToggle = 0;
+	inBegin            = TRUE;
+	vtxFormat          = (PolygonPrimitiveType)(v & 0x03);
+	triStripToggle     = 0;
 	tempVertInfo.count = 0;
 	tempVertInfo.first = true;
-	polyAttr = polyAttrPending;
+	polyAttr           = polyAttrPending;
 	gfx3d_glPolygonAttrib_cache();
 	GFX_DELAY(1);
 }
@@ -1657,10 +1673,12 @@ static BOOL gfx3d_glBoxTest(u32 v)
 		}
 	}
 
+#if 0
 	if (MMU_new.gxstat.tr == 0)
 	{
 		//printf("%06d FAIL %d\n",boxcounter,gxFIFO.size);
 	}
+#endif
 	
 	return TRUE;
 }
@@ -1929,11 +1947,13 @@ static void gfx3d_execute(u8 cmd, u32 param)
 
 void gfx3d_execute3D()
 {
-	u8	cmd = 0;
+   size_t i;
+	u8	cmd      = 0;
 	u32	param = 0;
 
 #ifndef FLUSHMODE_HACK
-	if (isSwapBuffers) return;
+	if (isSwapBuffers)
+      return;
 #endif
 
 	//this is a SPEED HACK
@@ -1941,32 +1961,32 @@ void gfx3d_execute3D()
 	//without this batch size the emuloop will escape way too often to run fast.
 	static const size_t HACK_FIFO_BATCH_SIZE = 64;
 
-	for (size_t i = 0; i < HACK_FIFO_BATCH_SIZE; i++)
-	{
-		if (GFX_PIPErecv(&cmd, &param))
-		{
-			//if (isSwapBuffers) printf("Executing while swapbuffers is pending: %d:%08X\n",cmd,param);
+	for (i = 0; i < HACK_FIFO_BATCH_SIZE; i++)
+   {
+      if (!GFX_PIPErecv(&cmd, &param))
+         break;
 
-			//since we did anything at all, incur a pipeline motion cost.
-			//also, we can't let gxfifo sequencer stall until the fifo is empty.
-			//see...
-			GFX_DELAY(1); 
+      //if (isSwapBuffers) printf("Executing while swapbuffers is pending: %d:%08X\n",cmd,param);
 
-			//..these guys will ordinarily set a delay, but multi-param operations won't
-			//for the earlier params.
-			//printf("%05d:%03d:%12lld: executed 3d: %02X %08X\n",currFrameCounter, nds.VCount, nds_timer , cmd, param);
-			gfx3d_execute(cmd, param);
+      //since we did anything at all, incur a pipeline motion cost.
+      //also, we can't let gxfifo sequencer stall until the fifo is empty.
+      //see...
+      GFX_DELAY(1); 
 
-			//this is a COMPATIBILITY HACK.
-			//this causes 3d to take virtually no time whatsoever to execute.
-			//this was done for marvel nemesis, but a similar family of 
-			//hacks for ridiculously fast 3d execution has proven necessary for a number of games.
-			//the true answer is probably dma bus blocking.. but lets go ahead and try this and
-			//check the compatibility, at the very least it will be nice to know if any games suffer from
-			//3d running too fast
-			MMU.gfx3dCycles = nds_timer+1;
-		} else break;
-	}
+      //..these guys will ordinarily set a delay, but multi-param operations won't
+      //for the earlier params.
+      //printf("%05d:%03d:%12lld: executed 3d: %02X %08X\n",currFrameCounter, nds.VCount, nds_timer , cmd, param);
+      gfx3d_execute(cmd, param);
+
+      //this is a COMPATIBILITY HACK.
+      //this causes 3d to take virtually no time whatsoever to execute.
+      //this was done for marvel nemesis, but a similar family of 
+      //hacks for ridiculously fast 3d execution has proven necessary for a number of games.
+      //the true answer is probably dma bus blocking.. but lets go ahead and try this and
+      //check the compatibility, at the very least it will be nice to know if any games suffer from
+      //3d running too fast
+      MMU.gfx3dCycles = nds_timer+1;
+   }
 
 }
 
@@ -2014,10 +2034,14 @@ static inline bool gfx3d_ysort_compare_kalven(int num1, int num2)
 
 	//this may be verified by checking the game create menus in harvest moon island of happiness
 	//also the buttons in the knights in the nightmare frontend depend on this and the perspective division
-	if (poly1.maxy < poly2.maxy) return true;
-	if (poly1.maxy > poly2.maxy) return false;
-	if (poly1.miny < poly2.miny) return true;
-	if (poly1.miny > poly2.miny) return false;
+	if (poly1.maxy < poly2.maxy)
+      return true;
+	if (poly1.maxy > poly2.maxy)
+      return false;
+	if (poly1.miny < poly2.miny)
+      return true;
+	if (poly1.miny > poly2.miny)
+      return false;
 	//notably, the main shop interface in harvest moon will not have a correct RTN button
 	//i think this is due to a math error rounding its position to one pixel too high and it popping behind
 	//the bar that it sits on.
@@ -2032,13 +2056,15 @@ static inline bool gfx3d_ysort_compare_kalven(int num1, int num2)
 static bool gfx3d_ysort_compare(int num1, int num2)
 {
 	bool original = gfx3d_ysort_compare_orig(num1,num2);
-	bool kalven = gfx3d_ysort_compare_kalven(num1,num2);
+	bool kalven   = gfx3d_ysort_compare_kalven(num1,num2);
 	assert(original == kalven);
 	return original;
 }
 
-static void gfx3d_doFlush()
+static void gfx3d_doFlush(void)
 {
+   size_t i;
+
 	gfx3d.frameCtr++;
 
 	//the renderer will get the lists we just built
@@ -2089,7 +2115,8 @@ static void gfx3d_doFlush()
 	//TODO - this _MUST_ be moved later in the pipeline, after clipping.
 	//the w-division here is just an approximation to fix the shop in harvest moon island of happiness
 	//also the buttons in the knights in the nightmare frontend depend on this
-	for (size_t i = 0; i < polycount; i++)
+   
+	for (i = 0; i < polycount; i++)
 	{
 		// TODO: Possible divide by zero with the w-coordinate.
 		// Is the vertex being read correctly? Is 0 a valid value for w?
@@ -2115,7 +2142,8 @@ static void gfx3d_doFlush()
 	//we need to sort the poly list with alpha polys last
 	//first, look for opaque polys
 	size_t ctr = 0;
-	for (size_t i = 0; i < polycount; i++)
+
+	for (i = 0; i < polycount; i++)
 	{
 		const POLY &poly = polylist->list[i];
 		if (!poly.isTranslucent())
@@ -2123,8 +2151,8 @@ static void gfx3d_doFlush()
 	}
 	const size_t opaqueCount = ctr;
 	
-	//then look for translucent polys
-	for (size_t i = 0; i < polycount; i++)
+	/* then look for translucent polygons */
+	for (i = 0; i < polycount; i++)
 	{
 		const POLY &poly = polylist->list[i];
 		if (poly.isTranslucent())
@@ -2178,8 +2206,8 @@ void gfx3d_VBlankSignal()
 
 void gfx3d_VBlankEndSignal(bool skipFrame)
 {
-	if (!drawPending) return;
-	if (skipFrame) return;
+	if (!drawPending || skipFrame)
+      return;
 
 	drawPending = FALSE;
 
@@ -2294,6 +2322,8 @@ void gfx3d_Control(u32 v)
 //other misc stuff
 void gfx3d_glGetMatrix(const MatrixMode m_mode, int index, float *dst)
 {
+   size_t i;
+
 	//if(index == -1)
 	//{
 	//	MatrixCopy(dest, mtxCurrent[m_mode]);
@@ -2304,7 +2334,7 @@ void gfx3d_glGetMatrix(const MatrixMode m_mode, int index, float *dst)
 	
 	const s32 *src = (index == -1) ? mtxCurrent[m_mode] : MatrixStackGetPos(&mtxStack[m_mode], index);
 	
-	for (size_t i = 0; i < 16; i++)
+	for (i = 0; i < 16; i++)
 		dst[i] = src[i]/4096.0f;
 }
 
@@ -2807,9 +2837,12 @@ FORCEINLINE void GFX3D_Clipper::clipSegmentVsPlane(VERT** verts, const int coord
 
 FORCEINLINE void GFX3D_Clipper::clipPolyVsPlane(const int coord, int which)
 {
+   size_t i;
+
 	outClippedPoly.type = 0;
 	CLIPLOG2("Clipping coord %d against %f\n",coord,x);
-	for (size_t i = 0; i < tempClippedPoly.type; i++)
+
+	for (i = 0; i < tempClippedPoly.type; i++)
 	{
 		VERT *testverts[2] = { &tempClippedPoly.clipVerts[i], &tempClippedPoly.clipVerts[(i+1)%tempClippedPoly.type] };
 		clipSegmentVsPlane(testverts, coord, which);

@@ -189,7 +189,8 @@ Render3D::Render3D()
 	
 	if (needTableInit)
 	{
-		for (size_t i = 0; i < 32768; i++)
+      size_t i;
+		for (i = 0; i < 32768; i++)
 			dsDepthToD24_LUT[i] = (u32)DS_DEPTH15TO24(i);
 		
 		needTableInit = false;
@@ -279,10 +280,11 @@ Render3DError Render3D::EndRender(const u64 frameCount)
 
 Render3DError Render3D::FlushFramebuffer(FragmentColor *__restrict dstRGBA6665, u16 *__restrict dstRGBA5551)
 {
+   size_t i;
 	memcpy(dstRGBA6665, this->_framebufferColor, this->_framebufferColorSizeBytes);
 	
-	// Convert to RGBA5551
-	for (size_t i = 0; i < (this->_framebufferWidth * this->_framebufferHeight); i++)
+	/* Convert to RGBA5551 */
+	for (i = 0; i < (this->_framebufferWidth * this->_framebufferHeight); i++)
 	{
 		dstRGBA5551[i] = R6G6B6TORGB15(
             this->_framebufferColor[i].r,
@@ -331,7 +333,9 @@ Render3DError Render3D::ClearFramebuffer(const GFX3D_State &renderState)
 		
 		if (xScroll == 0 && yScroll == 0)
 		{
-			for (size_t i = 0; i < GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT; i++)
+         size_t i;
+
+			for (i = 0; i < GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT; i++)
 			{
 				this->clearImageColor16Buffer[i] = clearColorBuffer[i];
 				this->clearImageDepthBuffer[i]   = dsDepthToD24_LUT[clearDepthBuffer[i] & 0x7FFF];
@@ -341,11 +345,14 @@ Render3DError Render3D::ClearFramebuffer(const GFX3D_State &renderState)
 		}
 		else
 		{
-			for (size_t dstIndex = 0, iy = 0; iy < GPU_FRAMEBUFFER_NATIVE_HEIGHT; iy++)
+         size_t dstIndex;
+         size_t iy = 0;
+			for (dstIndex = 0; iy < GPU_FRAMEBUFFER_NATIVE_HEIGHT; iy++)
 			{
+            size_t ix;
 				const size_t y = ((iy + yScroll) & 0xFF) << 8;
 				
-				for (size_t ix = 0; ix < GPU_FRAMEBUFFER_NATIVE_WIDTH; dstIndex++, ix++)
+				for (ix = 0; ix < GPU_FRAMEBUFFER_NATIVE_WIDTH; dstIndex++, ix++)
 				{
 					const size_t x = (ix + xScroll) & 0xFF;
 					const size_t srcIndex = y | x;
@@ -477,13 +484,12 @@ Render3DError Render3D::VramReconfigureSignal()
 
 Render3DError Render3D_SSE2::FlushFramebuffer(FragmentColor *__restrict dstRGBA6665, u16 *__restrict dstRGBA5551)
 {
+	size_t i;
 	const __m128i zero_vec128 = _mm_setzero_si128();
-	
-	size_t i = 0;
 	const size_t pixCount = this->_framebufferWidth * this->_framebufferHeight;
 	const size_t ssePixCount = pixCount - (pixCount % 4);
 	
-	for (; i < ssePixCount; i += 4)
+	for (i = 0; i < ssePixCount; i += 4)
 	{
 		// Copy the framebufferColor buffer
 		__m128i color = _mm_load_si128((__m128i *)(this->_framebufferColor + i));
@@ -569,11 +575,12 @@ Render3DError Render3D_SSE2::ClearFramebuffer(const GFX3D_State &renderState)
 				
 		if (xScroll == 0 && yScroll == 0)
 		{
+         size_t i;
 			const __m128i depthBitMask_vec128 = _mm_set1_epi16(0x7FFF);
 			const __m128i fogBufferBitMask_vec128 = _mm_set1_epi16(BIT(15));
 			const __m128i opaquePolyID_vec128 = _mm_set1_epi8(clearFragment.opaquePolyID);
 			
-			for (size_t i = 0; i < GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT; i += 16)
+			for (i = 0; i < GPU_FRAMEBUFFER_NATIVE_WIDTH * GPU_FRAMEBUFFER_NATIVE_HEIGHT; i += 16)
 			{
 				// Copy the colors to the color buffer. Since we can only copy 8 elements at once,
 				// we need to load-store twice.
@@ -619,16 +626,19 @@ Render3DError Render3D_SSE2::ClearFramebuffer(const GFX3D_State &renderState)
 		}
 		else
 		{
+         size_t dstIndex;
 			const __m128i addrOffset          = _mm_set_epi16(7, 6, 5, 4, 3, 2, 1, 0);
 			const __m128i addrRolloverMask    = _mm_set1_epi16(0x00FF);
 			const __m128i opaquePolyID_vec128 = _mm_set1_epi8(clearFragment.opaquePolyID);
+         size_t iy = 0;
 			
-			for (size_t dstIndex = 0, iy = 0; iy < GPU_FRAMEBUFFER_NATIVE_HEIGHT; iy++)
+			for (dstIndex = 0; iy < GPU_FRAMEBUFFER_NATIVE_HEIGHT; iy++)
 			{
+            size_t ix;
 				const size_t y   = ((iy + yScroll) & 0xFF) << 8;
 				__m128i y_vec128 = _mm_set1_epi16(y);
 				
-				for (size_t ix = 0; ix < GPU_FRAMEBUFFER_NATIVE_WIDTH; dstIndex += 8, ix += 8)
+				for (ix = 0; ix < GPU_FRAMEBUFFER_NATIVE_WIDTH; dstIndex += 8, ix += 8)
 				{
 					__m128i addr_vec128 = _mm_set1_epi16(ix + xScroll);
 					addr_vec128         = _mm_add_epi16(addr_vec128, addrOffset);

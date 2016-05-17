@@ -207,28 +207,24 @@ int MatrixCompare (const s32* matrixDST, const s32* matrixSRC)
 
 void MatrixStackInit(MatrixStack *stack)
 {
-	for (int i = 0; i < stack->size; i++)
-	{
+   unsigned i;
+	for (i = 0; i < stack->size; i++)
 		MatrixInit(&stack->matrix[i*16]);
-	}
 	stack->position = 0;
 }
 
 void MatrixStackSetMaxSize (MatrixStack *stack, int size)
 {
-	int i;
+	unsigned i;
 
 	stack->size = (size + 1);
 
-	if (stack->matrix != NULL) {
+	if (stack->matrix != NULL)
 		free (stack->matrix);
-	}
 	stack->matrix = new s32[stack->size*16*sizeof(s32)];
 
 	for (i = 0; i < stack->size; i++)
-	{
 		MatrixInit (&stack->matrix[i*16]);
-	}
 
 	stack->size--;
 }
