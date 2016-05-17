@@ -174,27 +174,6 @@ void MatrixSet (s32 *matrix, int x, int y, s32 value)
 	matrix [x+(y<<2)] = value;
 }
 
-void MatrixCopy (float* matrixDST, const float* matrixSRC)
-{
-	matrixDST[0] = matrixSRC[0];
-	matrixDST[1] = matrixSRC[1];
-	matrixDST[2] = matrixSRC[2];
-	matrixDST[3] = matrixSRC[3];
-	matrixDST[4] = matrixSRC[4];
-	matrixDST[5] = matrixSRC[5];
-	matrixDST[6] = matrixSRC[6];
-	matrixDST[7] = matrixSRC[7];
-	matrixDST[8] = matrixSRC[8];
-	matrixDST[9] = matrixSRC[9];
-	matrixDST[10] = matrixSRC[10];
-	matrixDST[11] = matrixSRC[11];
-	matrixDST[12] = matrixSRC[12];
-	matrixDST[13] = matrixSRC[13];
-	matrixDST[14] = matrixSRC[14];
-	matrixDST[15] = matrixSRC[15];
-
-}
-
 void MatrixCopy (s32* matrixDST, const s32* matrixSRC)
 {
 	memcpy(matrixDST,matrixSRC,sizeof(s32)*16);
