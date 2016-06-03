@@ -32,6 +32,7 @@
 #include "FIFO.h"
 #include "driver.h"
 #include "saves.h"
+#include "emufile.h"
 #include "MMU.h"
 #include "NDSSystem.h"
 #include "render3D.h"

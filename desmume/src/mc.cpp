@@ -29,6 +29,7 @@
 #include "readwrite.h"
 #include "NDSSystem.h"
 #include "path.h"
+#include "emufile.h"
 #include "utils/advanscene.h"
 
 //#define _DONT_SAVE_BACKUP
