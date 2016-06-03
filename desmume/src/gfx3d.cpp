@@ -36,6 +36,8 @@
 #include <algorithm>
 #include <queue>
 
+#include <math/fxp.h>
+
 #include "armcpu.h"
 #include "common.h"
 #include "driver.h"

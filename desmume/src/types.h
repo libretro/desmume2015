@@ -19,8 +19,6 @@
 #ifndef TYPES_HPP
 #define TYPES_HPP
 
-#include <math/fxp.h>
-
 //analyze microsoft compilers
 #ifdef _MSC_VER
 #define HOST_WINDOWS

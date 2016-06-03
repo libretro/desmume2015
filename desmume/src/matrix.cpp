@@ -24,6 +24,7 @@
 #include "matrix.h"
 #include "MMU.h"
 
+#include <math/fxp.h>
 #include <gfx/math/vector_3.h>
 
 void _NOSSE_MatrixMultVec4x4 (const float *matrix, float *vecPtr)
