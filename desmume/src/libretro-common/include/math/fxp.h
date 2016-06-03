@@ -1,7 +1,7 @@
-/* Copyright  (C) 2010-2015 The RetroArch team
+/* Copyright  (C) 2010-2016 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (rpng.h).
+ * The following license statement only applies to this file (fxp.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -20,45 +20,43 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __LIBRETRO_SDK_FORMAT_RPNG_H__
-#define __LIBRETRO_SDK_FORMAT_RPNG_H__
+#ifndef __LIBRETRO_SDK_MATH_FXP_H__
+#define __LIBRETRO_SDK_MATH_FXP_H__
 
 #include <stdint.h>
-#include <stddef.h>
 
-#include <retro_common_api.h>
-
-#include <boolean.h>
-
-RETRO_BEGIN_DECLS
-
-typedef struct rpng rpng_t;
-
-rpng_t *rpng_init(const char *path);
-
-bool rpng_is_valid(rpng_t *rpng);
-
-bool rpng_set_buf_ptr(rpng_t *rpng, void *data);
-
-rpng_t *rpng_alloc(void);
-
-void rpng_free(rpng_t *rpng);
-
-bool rpng_iterate_image(rpng_t *rpng);
-
-int rpng_process_image(rpng_t *rpng,
-      void **data, size_t size, unsigned *width, unsigned *height);
-
-bool rpng_start(rpng_t *rpng);
-
-#ifdef HAVE_ZLIB_DEFLATE
-bool rpng_save_image_argb(const char *path, const uint32_t *data,
-      unsigned width, unsigned height, unsigned pitch);
-bool rpng_save_image_bgr24(const char *path, const uint8_t *data,
-      unsigned width, unsigned height, unsigned pitch);
+#ifdef _MSC_VER
+#include <intrin.h>
 #endif
 
-RETRO_END_DECLS
+#include <retro_inline.h>
+
+static INLINE int64_t fx32_mul(const int32_t a, const int32_t b)
+{
+#ifdef _MSC_VER
+   return __emul(a, b);
+#else
+   return ((int64_t)a) * ((int64_t)b);
+#endif
+}
+
+static INLINE int32_t fx32_shiftdown(const int64_t a)
+{
+#ifdef _MSC_VER
+	return (int32_t)__ll_rshift(a, 12);
+#else
+	return (int32_t)(a >> 12);
+#endif
+}
+
+static INLINE int64_t fx32_shiftup(const int32_t a)
+{
+#ifdef _MSC_VER
+	return __ll_lshift(a, 12);
+#else
+	return ((int64_t)a) << 12;
+#endif
+}
 
 #endif
 

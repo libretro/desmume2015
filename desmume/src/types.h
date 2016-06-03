@@ -19,6 +19,8 @@
 #ifndef TYPES_HPP
 #define TYPES_HPP
 
+#include <math/fxp.h>
+
 //analyze microsoft compilers
 #ifdef _MSC_VER
 #define HOST_WINDOWS
@@ -405,39 +407,6 @@ static const char hexValid[23] = {"0123456789ABCDEFabcdef"};
 template<typename T> inline void reconstruct(T* t) { 
 	t->~T();
 	new(t) T();
-}
-
-//-------------fixed point speedup macros
-
-#ifdef _MSC_VER
-#include <intrin.h>
-#endif
-
-FORCEINLINE s64 fx32_mul(const s32 a, const s32 b)
-{
-#ifdef _MSC_VER
-	return __emul(a,b);
-#else
-	return ((s64)a)*((s64)b);
-#endif
-}
-
-FORCEINLINE s32 fx32_shiftdown(const s64 a)
-{
-#ifdef _MSC_VER
-	return (s32)__ll_rshift(a,12);
-#else
-	return (s32)(a>>12);
-#endif
-}
-
-FORCEINLINE s64 fx32_shiftup(const s32 a)
-{
-#ifdef _MSC_VER
-	return __ll_lshift(a,12);
-#else
-	return ((s64)a)<<12;
-#endif
 }
 
 #endif

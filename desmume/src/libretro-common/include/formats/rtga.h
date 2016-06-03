@@ -1,7 +1,7 @@
 /* Copyright  (C) 2010-2016 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (file_stream.h).
+ * The following license statement only applies to this file (rtga.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -20,62 +20,28 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __LIBRETRO_SDK_FILE_STREAM_H
-#define __LIBRETRO_SDK_FILE_STREAM_H
+#ifndef __LIBRETRO_SDK_FORMAT_RTGA_H__
+#define __LIBRETRO_SDK_FORMAT_RTGA_H__
 
 #include <stdint.h>
 #include <stddef.h>
 
-#include <sys/types.h>
-
 #include <retro_common_api.h>
+
 #include <boolean.h>
 
 RETRO_BEGIN_DECLS
 
-typedef struct RFILE RFILE;
+typedef struct rtga rtga_t;
 
-enum
-{
-   RFILE_MODE_READ = 0,
-   RFILE_MODE_READ_TEXT,
-   RFILE_MODE_WRITE,
-   RFILE_MODE_READ_WRITE,
+int rtga_process_image(rtga_t *rtga, void **buf,
+      size_t size, unsigned *width, unsigned *height);
 
-   /* There is no garantee these requests will be attended. */
-   RFILE_HINT_UNBUFFERED = 1<<8,
-   RFILE_HINT_MMAP       = 1<<9  /* requires RFILE_MODE_READ */
-};
+bool rtga_set_buf_ptr(rtga_t *rtga, void *data);
 
-RFILE *filestream_open(const char *path, unsigned mode, ssize_t len);
+void rtga_free(rtga_t *rtga);
 
-ssize_t filestream_seek(RFILE *stream, ssize_t offset, int whence);
-
-ssize_t filestream_read(RFILE *stream, void *data, size_t len);
-
-ssize_t filestream_write(RFILE *stream, const void *data, size_t len);
-
-ssize_t filestream_tell(RFILE *stream);
-
-void filestream_rewind(RFILE *stream);
-
-int filestream_close(RFILE *stream);
-
-int filestream_read_file(const char *path, void **buf, ssize_t *len);
-
-char *filestream_gets(RFILE *stream, char *s, size_t len);
-
-char *filestream_getline(RFILE *stream);
-
-int filestream_getc(RFILE *stream);
-
-int filestream_eof(RFILE *stream);
-
-bool filestream_write_file(const char *path, const void *data, ssize_t size);
-
-int filestream_putc(RFILE *stream, int c);
-
-int filestream_get_fd(RFILE *stream);
+rtga_t *rtga_alloc(void);
 
 RETRO_END_DECLS
 
