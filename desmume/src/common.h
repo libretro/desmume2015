@@ -53,7 +53,6 @@ static INLINE char *integer_to_binary(uint32_t val, size_t len)
 	return strdup(buf);
 }
 
-extern char *trim(char *s, int len);
 extern char *removeSpecialChars(char *s);
 
 // ===============================================================================

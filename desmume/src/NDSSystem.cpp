@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <math.h>
+
+#include <string/stdstring.h>
 extern unsigned long crc32(unsigned long, const unsigned char*,unsigned int);
 
 #include "utils/dlditool.h"
@@ -328,7 +330,7 @@ void GameInfo::populate()
 	//rom name is probably set even in homebrew, so do it regardless
 	memset(ROMname, 0, sizeof(ROMname));
 	memcpy(ROMname, header.gameTile, 12);
-	trim(ROMname,20);
+	string_trim_whitespace(ROMname);
 
 		/*if(header.IconOff < romsize)
 		{

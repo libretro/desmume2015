@@ -27,25 +27,6 @@
 
 #include <retro_miscellaneous.h>
 
-char *trim(char *s, int len)
-{
-	char *ptr = NULL;
-
-	if (!s)
-      return NULL;
-	if (!*s)
-      return s;
-	
-	if(len==-1)
-		ptr = s + strlen(s) - 1;
-	else
-      ptr = s+len - 1;
-	for (; (ptr >= s) && (!*ptr || isspace((uint8_t)*ptr)) ; ptr--);
-	ptr[1] = '\0';
-
-	return s;
-}
-
 char *removeSpecialChars(char *s)
 {
    uint32_t i;
