@@ -90,6 +90,7 @@ SOURCES_C += $(CORE_DIR)/utils/ConvertUTF.c \
 				 $(CORE_DIR)/libretro-common/file/retro_dirent.c \
 				 $(CORE_DIR)/libretro-common/file/retro_stat.c \
 				 $(CORE_DIR)/libretro-common/file/file_path.c \
+				 $(CORE_DIR)/libretro-common/string/stdstring.c \
 				 $(CORE_DIR)/version.c
 
 ifeq ($(DESMUME_JIT_ARM),1)
