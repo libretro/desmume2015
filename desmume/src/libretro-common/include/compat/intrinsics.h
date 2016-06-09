@@ -1,7 +1,7 @@
-/* Copyright  (C) 2010-2015 The RetroArch team
+/* Copyright  (C) 2010-2016 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (stdstring.h).
+ * The following license statement only applies to this file (intrinsics.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -20,41 +20,69 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __LIBRETRO_SDK_STDSTRING_H
-#define __LIBRETRO_SDK_STDSTRING_H
+#ifndef __LIBRETRO_SDK_COMPAT_INTRINSICS_H
+#define __LIBRETRO_SDK_COMPAT_INTRINSICS_H
 
-#include <stdlib.h>
+#include <stdint.h>
 #include <stddef.h>
 #include <string.h>
-#include <boolean.h>
 
 #include <retro_common_api.h>
+#include <retro_inline.h>
+
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
 
 RETRO_BEGIN_DECLS
 
-bool string_is_empty(const char *data);
+/* Count Leading Zero, unsigned 16bit input value */
+static INLINE unsigned compat_clz_u16(uint16_t val)
+{
+#ifdef __GNUC__
+   return __builtin_clz(val << 16 | 0x8000);
+#else
+   unsigned ret = 0;
 
-bool string_is_equal(const char *a, const char *b);
+   while(!(val & 0x8000) && ret < 16)
+   {
+      val <<= 1;
+      ret++;
+   }
 
-bool string_is_equal_noncase(const char *a, const char *b);
+   return ret;
+#endif
+}
 
-char *string_to_upper(char *s);
-
-char *string_to_lower(char *s);
-
-char *string_ucwords(char* s);
-
-char *string_replace_substring(const char *in, const char *pattern,
-      const char *by);
-
-/* Remove leading whitespaces */
-char *string_trim_whitespace_left(char *const s);
-
-/* Remove trailing whitespaces */
-char *string_trim_whitespace_right(char *const s);
-
-/* Remove leading and trailing whitespaces */
-char *string_trim_whitespace(char *const s);
+/* Count Trailing Zero */
+#if defined(__GNUC__) 
+static INLINE int compat_ctz(unsigned x)
+{
+   return __builtin_ctz(x);
+}
+#elif _MSC_VER >= 1400
+static INLINE int compat_ctz(unsigned x)
+{
+   unsigned long r = 0;
+   _BitScanReverse((unsigned long*)&r, x);
+   return (int)r;
+}
+#else
+/* Only checks at nibble granularity, 
+ * because that's what we need. */
+static INLINE int compat_ctz(unsigned x)
+{
+   if (x & 0x000f)
+      return 0;
+   if (x & 0x00f0)
+      return 4;
+   if (x & 0x0f00)
+      return 8;
+   if (x & 0xf000)
+      return 12;
+   return 16;
+}
+#endif
 
 RETRO_END_DECLS
 
