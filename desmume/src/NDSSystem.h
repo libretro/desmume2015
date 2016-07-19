@@ -61,13 +61,13 @@ struct buttonstruct {
 	};
 };
 
-extern volatile bool execute;
+extern volatile int execute;
 extern BOOL click;
 
 #if defined(LOG_ARM9) || defined(LOG_ARM7)
 void emu_halt();
 #else
-#define emu_halt() (execute = false)
+#define emu_halt() (execute = 0)
 #endif
 /*
  * The firmware language values

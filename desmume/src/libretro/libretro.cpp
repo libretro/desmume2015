@@ -23,7 +23,7 @@ static retro_input_state_t input_cb = NULL;
 retro_audio_sample_batch_t audio_batch_cb = NULL;
 retro_environment_t environ_cb = NULL;
 
-volatile bool execute = false;
+volatile int execute = 0;
 
 static int delay_timer = 0;
 static bool quick_switch_enable = false;
@@ -1079,9 +1079,12 @@ bool retro_load_game(const struct retro_game_info *game)
 
    execute = NDS_LoadROM(game->path);
 
+   if (execute == -1)
+      return false;
+
    screen_buf = (uint16_t*)malloc(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + NDS_MAX_SCREEN_GAP) * 2 * sizeof(uint16_t));
 
-   return execute;
+   return true;
 }
 
 bool retro_load_game_special(unsigned game_type, const struct retro_game_info *info, size_t num_info)
@@ -1104,7 +1107,7 @@ void retro_unload_game (void)
     if (screen_buf)
        free(screen_buf);
     screen_buf = NULL;
-    execute = false;
+    execute    = 0;
 }
 
 // Stubs
