@@ -1,7 +1,7 @@
 /* Copyright  (C) 2010-2016 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (vector_3.h).
+ * The following license statement only applies to this file (complex.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -19,29 +19,62 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-#ifndef __LIBRETRO_SDK_GFX_MATH_VECTOR_3_H__
-#define __LIBRETRO_SDK_GFX_MATH_VECTOR_3_H__
+#ifndef __LIBRETRO_SDK_MATH_COMPLEX_H__
+#define __LIBRETRO_SDK_MATH_COMPLEX_H__
 
 #include <stdint.h>
 
-typedef float vec3_t[3];
+#include <retro_inline.h>
 
-float vec3_dot(const float *a, const float *b);
+typedef struct
+{
+   float real;
+   float imag;
+} fft_complex_t;
 
-void vec3_cross(float* dst, const float *a, const float *b);
+static INLINE fft_complex_t fft_complex_mul(fft_complex_t a,
+      fft_complex_t b)
+{
+   fft_complex_t out = {
+      a.real * b.real - a.imag * b.imag,
+      a.imag * b.real + a.real * b.imag,
+   };
 
-float vec3_length(const float *a);
+   return out;
 
-void vec3_add(float *dst, const float *src);
+}
 
-void vec3_subtract(float *dst, const float *src);
+static INLINE fft_complex_t fft_complex_add(fft_complex_t a,
+      fft_complex_t b)
+{
+   fft_complex_t out = {
+      a.real + b.real,
+      a.imag + b.imag,
+   };
 
-void vec3_scale(float *dst, const float scale);
+   return out;
 
-void vec3_copy(float *dst, const float *src);
+}
 
-void vec3_normalize(float *dst);
+static INLINE fft_complex_t fft_complex_sub(fft_complex_t a,
+      fft_complex_t b)
+{
+   fft_complex_t out = {
+      a.real - b.real,
+      a.imag - b.imag,
+   };
+
+   return out;
+
+}
+
+static INLINE fft_complex_t fft_complex_conj(fft_complex_t a)
+{
+   fft_complex_t out = {
+      a.real, -a.imag,
+   };
+
+   return out;
+}
 
 #endif
-

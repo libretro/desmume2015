@@ -36,8 +36,6 @@
    goto end; \
 } while(0)
 
-#ifdef HAVE_ZLIB_DEFLATE
-
 static void dword_write_be(uint8_t *buf, uint32_t val)
 {
    *buf++ = (uint8_t)(val >> 24);
@@ -349,8 +347,8 @@ static bool rpng_save_image(const char *path,
    stream_backend->stream_compress_free(stream);
 
    memcpy(deflate_buf + 4, "IDAT", 4);
-   dword_write_be(deflate_buf + 0,        stream_backend->stream_get_total_out(stream));
-   if (!png_write_idat(file, deflate_buf, stream_backend->stream_get_total_out(stream) + 8))
+   dword_write_be(deflate_buf + 0,        ((uint32_t)stream_backend->stream_get_total_out(stream)));
+   if (!png_write_idat(file, deflate_buf, ((size_t)stream_backend->stream_get_total_out(stream) + 8)))
       GOTO_END_ERROR();
 
    if (!png_write_iend(file))
@@ -385,5 +383,3 @@ bool rpng_save_image_bgr24(const char *path, const uint8_t *data,
    return rpng_save_image(path, (const uint8_t*)data,
          width, height, pitch, 3);
 }
-
-#endif
