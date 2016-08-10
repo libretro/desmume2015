@@ -131,7 +131,7 @@ bool BackupDevice::save_state(EMUFILE* os)
 		printf(
 			"Expected %u bytes from saved state but read %lu.\n",
 			fsize,
-			elements_read
+			(long unsigned int)elements_read
 		);
 
 	//v0
@@ -1304,7 +1304,7 @@ bool BackupDevice::export_no_gba(const char* fname)
 		printf(
 			"Expected %u bytes from saved state but read %lu.\n",
 			fsize,
-			elements_read
+			(long unsigned int)elements_read
 		);
 	fpMC->fseek(pos, SEEK_SET);
 
@@ -1341,7 +1341,7 @@ bool BackupDevice::export_raw(const char* filename)
 		printf(
 			"Expected %u bytes from saved state but read %lu.\n",
 			fsize,
-			elements_read
+			(long unsigned int)elements_read
 		);
 	fpMC->fseek(pos, SEEK_SET);
 
@@ -1478,7 +1478,7 @@ bool BackupDevice::import_duc(const char* filename, u32 force_size)
 	// Make sure we really have the right file
 	elements_read = fread((void *)id, sizeof(char), 16, file);
 	if (elements_read != 16)
-		printf("DUC file should be 16 bytes, not %lu bytes.\n", elements_read);
+		printf("DUC file should be 16 bytes, not %lu bytes.\n", (long unsigned int)elements_read);
 
 	if (memcmp(id, "ARDS000000000001", 16) != 0)
 	{
