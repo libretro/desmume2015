@@ -26,8 +26,8 @@ THE SOFTWARE.
 #include <unistd.h>
 #endif
 
-#ifdef PSP
-//forward declaration - PSP doesn't have this so have to bake it in
+#if defined(PSP) || defined(VITA)
+//forward declaration - PSP/Vita doesn't have this so have to bake it in
 int ftruncate(int fd, off_t length);
 #endif
 
