@@ -1142,7 +1142,7 @@ void retro_cheat_set(unsigned index, bool enabled, const char *code)
 
 unsigned retro_get_region (void) { return RETRO_REGION_NTSC; }
 
-#ifdef PSP
+#if defined(PSP) || defined(VITA)
 int ftruncate(int fd, off_t length)
 {
    int ret;
