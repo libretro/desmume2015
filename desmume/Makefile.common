@@ -1,8 +1,6 @@
-SOURCES_CXX :=
+INCDIR := -I$(CORE_DIR)/libretro-common/include
 
-INCDIR += -I$(CORE_DIR)/libretro-common/include
-
-SOURCES_CXX += \
+SOURCES_CXX := \
 	$(CORE_DIR)/armcpu.cpp \
 	$(CORE_DIR)/arm_instructions.cpp \
 	$(CORE_DIR)/bios.cpp \
@@ -75,6 +73,7 @@ SOURCES_CXX += \
 	$(CORE_DIR)/driver.cpp \
 	$(CORE_DIR)/libretro/libretro.cpp \
 	$(CORE_DIR)/libretro/scrc32.cpp
+SOURCES_C :=
 
 ifeq ($(platform), vita)
 SOURCES_CXX += $(CORE_DIR)/utils/task_vita.cpp

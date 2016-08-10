@@ -5,23 +5,28 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 CORE_DIR = ../..
+JIT=
+DESMUME_JIT=0
 
 ifeq ($(TARGET_ARCH),arm)
 LOCAL_CXXFLAGS := -DANDROID_ARM
 LOCAL_ARM_MODE := arm
 
 DESMUME_JIT_ARM = 1
-JIT += -D__RETRO_ARM__
-JIT += -DHAVE_JIT
+JIT = -D__RETRO_ARM__ -DHAVE_JIT
 endif
 
 ifeq ($(TARGET_ARCH),x86)
 LOCAL_CXXFLAGS :=  -DANDROID_X86
 DESMUME_JIT = 1
-JIT += -DHAVE_JIT
+JIT = -DHAVE_JIT
 endif
 
 ifeq ($(TARGET_ARCH),mips)
+LOCAL_CXXFLAGS := -DANDROID_MIPS -D__mips__ -D__MIPSEL__
+endif
+
+ifeq ($(TARGET_ARCH),mips64)
 LOCAL_CXXFLAGS := -DANDROID_MIPS -D__mips__ -D__MIPSEL__
 endif
 
