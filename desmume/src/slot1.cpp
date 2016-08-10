@@ -106,7 +106,9 @@ void slot1_Init()
 	slot1_List[NDS_SLOT1_R4] = construct_Slot1_R4();
 	slot1_List[NDS_SLOT1_RETAIL_NAND] = construct_Slot1_Retail_NAND();
 	slot1_List[NDS_SLOT1_RETAIL_MCROM] = construct_Slot1_Retail_MCROM();
+#ifndef VITA
 	slot1_List[NDS_SLOT1_RETAIL_DEBUG] = construct_Slot1_Retail_DEBUG();
+#endif
 }
 
 void slot1_Shutdown()

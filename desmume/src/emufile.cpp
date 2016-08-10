@@ -26,9 +26,14 @@ THE SOFTWARE.
 #include <unistd.h>
 #endif
 
-#if defined(PSP) || defined(VITA)
+#if defined(PSP)
 //forward declaration - PSP/Vita doesn't have this so have to bake it in
 int ftruncate(int fd, off_t length);
+#elif defined(VITA)
+int ftruncate(int fd, off_t length)
+{
+   /* TODO/FIXME - can't be bothered to implement this right now - doesn't seem to matter either */
+}
 #endif
 
 

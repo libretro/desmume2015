@@ -30,7 +30,6 @@ SOURCES_CXX += \
 	$(CORE_DIR)/utils/advanscene.cpp \
 	$(CORE_DIR)/utils/datetime.cpp \
 	$(CORE_DIR)/utils/emufat.cpp \
-	$(CORE_DIR)/utils/fsnitro.cpp \
 	$(CORE_DIR)/utils/xstring.cpp \
 	$(CORE_DIR)/utils/decrypt/crc.cpp \
 	$(CORE_DIR)/utils/decrypt/decrypt.cpp \
@@ -67,7 +66,6 @@ SOURCES_CXX += \
 	$(CORE_DIR)/addons/slot1comp_rom.cpp \
 	$(CORE_DIR)/addons/slot1comp_protocol.cpp \
 	$(CORE_DIR)/addons/slot1_retail_mcrom.cpp \
-	$(CORE_DIR)/addons/slot1_retail_mcrom_debug.cpp \
 	$(CORE_DIR)/addons/slot1_retail_nand.cpp \
 	$(CORE_DIR)/addons/slot1_retail_auto.cpp \
 	$(CORE_DIR)/cheatSystem.cpp \
@@ -81,6 +79,10 @@ SOURCES_CXX += \
 ifeq ($(platform), vita)
 SOURCES_CXX += $(CORE_DIR)/utils/task_vita.cpp
 else
+# We can only stop excluding this for Vita once we have more
+# filesystem functions implemented 
+SOURCES_CXX += $(CORE_DIR)/addons/slot1_retail_mcrom_debug.cpp \
+					$(CORE_DIR)/utils/fsnitro.cpp
 SOURCES_CXX += $(CORE_DIR)/utils/task.cpp
 SOURCES_C   += $(CORE_DIR)/libretro-common/rthreads/rthreads.c
 endif
