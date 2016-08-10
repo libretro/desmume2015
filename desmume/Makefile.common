@@ -35,7 +35,6 @@ SOURCES_CXX += \
 	$(CORE_DIR)/utils/decrypt/crc.cpp \
 	$(CORE_DIR)/utils/decrypt/decrypt.cpp \
 	$(CORE_DIR)/utils/decrypt/header.cpp \
-	$(CORE_DIR)/utils/task.cpp \
 	$(CORE_DIR)/utils/vfat.cpp \
 	$(CORE_DIR)/utils/libfat/cache.cpp \
 	$(CORE_DIR)/utils/libfat/directory.cpp \
@@ -79,13 +78,19 @@ SOURCES_CXX += \
 	$(CORE_DIR)/libretro/libretro.cpp \
 	$(CORE_DIR)/libretro/scrc32.cpp
 
+ifeq ($(platform), vita)
+SOURCES_CXX += $(CORE_DIR)/utils/task_vita.cpp
+else
+SOURCES_CXX += $(CORE_DIR)/utils/task.cpp
+SOURCES_C   += $(CORE_DIR)/libretro-common/rthreads/rthreads.c
+endif
+
 SOURCES_C += $(CORE_DIR)/utils/ConvertUTF.c \
 				 $(CORE_DIR)/common.c \
 				 $(CORE_DIR)/utils/dlditool.c \
 				 $(CORE_DIR)/libretro-common/memmap/memalign.c \
 				 $(CORE_DIR)/libretro-common/streams/file_stream.c \
 				 $(CORE_DIR)/libretro-common/features/features_cpu.c \
-				 $(CORE_DIR)/libretro-common/rthreads/rthreads.c \
 				 $(CORE_DIR)/libretro-common/compat/compat_strl.c \
 				 $(CORE_DIR)/libretro-common/file/retro_dirent.c \
 				 $(CORE_DIR)/libretro-common/file/retro_stat.c \
