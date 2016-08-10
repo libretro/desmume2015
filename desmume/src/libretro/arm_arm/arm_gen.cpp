@@ -3,9 +3,19 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
-
+#include <malloc.h>
 #include "arm_gen.h"
+
+#ifdef _3DS
+# include <malloc.h>
+# include "3ds/memory.h"
+#elif defined(__vita__)
+# include <psp2/kernel/sysmem.h>
+# define RW_INIT sceKernelOpenVMDomain
+# define RW_END sceKernelCloseVMDomain
+#else
+# include <sys/mman.h>
+#endif
 
 // __clear_cache(start, end)
 #ifdef __BLACKBERRY_QNX__
@@ -19,10 +29,20 @@ static void __clear_cache(void *start, void *end) {
   sys_dcache_flush(start, len);
   sys_icache_invalidate(start, len);
 }
+#elif defined(_3DS)
+#undef __clear_cache
+#define __clear_cache(start,end)FlushInvalidateCache();
+#elif defined(__vita__)
+#undef __clear_cache
+#define __clear_cache(start,end)sceKernelSyncVMDomain(block, start, (char *)end - (char *)start)
 #endif
 
 namespace arm_gen
 {
+
+#ifdef _3DS
+uint32_t* _instructions = 0;
+#endif
 
 code_pool::code_pool(uint32_t icount) :
    instruction_count(icount),
@@ -30,6 +50,8 @@ code_pool::code_pool(uint32_t icount) :
    next_instruction(0),
    flush_start(0)
 {
+
+   printf("\n\ncode_pool icount: %i\n\n", icount);
    memset(labels, 0, sizeof(labels));
    memset(branches, 0, sizeof(branches));
 
@@ -37,6 +59,30 @@ code_pool::code_pool(uint32_t icount) :
    if (posix_memalign((void**)&instructions, 4096, instruction_count * 4))
    {
       fprintf(stderr, "posix_memalign failed\n");
+      abort();
+   }
+#elif defined(_3DS)
+   if(!_instructions){
+      _instructions = (uint32_t*)memalign(4096, instruction_count * 4);
+      if (!_instructions)
+      {
+         fprintf(stderr, "memalign failed\n");
+         abort();
+      }
+      ReprotectMemory((unsigned int*)_instructions, (instruction_count * 4) / 4096, 7);
+   }
+   instructions = _instructions;
+#elif defined(__vita__)
+   block = sceKernelAllocMemBlockForVM("desmume_rwx_block", instruction_count * 4);
+   if (block < 0)
+   {
+      fprintf(stderr, "sceKernelAllocMemBlockForVM failed\n");
+      abort();
+   }
+
+   if (sceKernelGetMemBlockBase(block, (void **)&instructions) < 0)
+   {
+      fprintf(stderr, "sceKernelGetMemBlockBase failed\n");
       abort();
    }
 #else
@@ -48,17 +94,25 @@ code_pool::code_pool(uint32_t icount) :
    }
 #endif
 
+#if !defined(_3DS) && !defined(__vita__)
    if (mprotect(instructions, instruction_count * 4, PROT_READ | PROT_WRITE | PROT_EXEC))
    {
       fprintf(stderr, "mprotect failed\n");
       abort();
    }
+#endif
 }
 
 code_pool::~code_pool()
 {
+   #ifdef _3DS
+   //ReprotectMemory((unsigned int*)instructions, (instruction_count * 4) / 4096, 3);
+   #elif defined(__vita__)
+   sceKernelFreeMemBlock(block);
+   #else
    mprotect(instructions, instruction_count * 4, PROT_READ | PROT_WRITE);
    free(instructions);
+   #endif
 }
 
 void* code_pool::fn_pointer()
@@ -98,6 +152,7 @@ void code_pool::set_label(const char* name)
 
 void code_pool::resolve_label(const char* name)
 {
+   RW_INIT();
    for (int i = 0; i < TARGET_COUNT; i ++)
    {
       if (labels[i].name != name)
@@ -122,6 +177,7 @@ void code_pool::resolve_label(const char* name)
       labels[i].name = 0;
       break;
    }
+   RW_END();
 }
 
 // Code Gen: Generic
@@ -138,8 +194,9 @@ void code_pool::insert_raw_instruction(uint32_t op)
       fprintf(stderr, "code_pool overflow\n");
       abort();
    }
-
+   RW_INIT();
    instructions[next_instruction ++] = op;
+   RW_END();
 }
 
 void code_pool::alu_op(AG_ALU_OP op, reg_t rd, reg_t rn,

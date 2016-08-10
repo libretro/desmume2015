@@ -2,6 +2,11 @@
 #define ARM_GEN_H_LR
 
 #include <assert.h>
+#include <stdio.h>
+
+#if defined(__vita__)
+# include <psp2/kernel/sysmem.h>
+#endif
 
 namespace arm_gen
 {
@@ -185,6 +190,12 @@ class code_pool
 
       // Inserts a movw; movt pair to load the constant, omits movt is constant fits in 16 bits.
       void load_constant(reg_t target_reg, uint32_t constant, AG_COND cond = AL);
+      void insert_constants();
+
+      void jmp(uint32_t offset);
+      void resolve_jmp(uint32_t instruction, uint32_t offset);
+
+      uint32_t get_next_instruction() { return next_instruction; };
 
    private:
       const uint32_t instruction_count;
@@ -192,6 +203,9 @@ class code_pool
 
       uint32_t next_instruction;
       uint32_t flush_start;
+
+      uint32_t literals[128][2];
+      uint32_t literal_count = 0;
 
       static const uint32_t TARGET_COUNT = 16;
 
@@ -203,6 +217,9 @@ class code_pool
 
       target labels[TARGET_COUNT];
       target branches[TARGET_COUNT];
+#if defined(__vita__)
+      SceUID block;
+#endif
 };
 } // namespace arm_gen
 

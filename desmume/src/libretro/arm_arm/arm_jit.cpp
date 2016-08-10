@@ -16,7 +16,7 @@
 	along with the this software.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "../../types.h"
+#include "types.h"
 
 #ifdef HAVE_JIT
 
@@ -38,19 +38,158 @@ using namespace arm_gen;
 
 u32 saveBlockSizeJIT = 0;
 
-enum OP_RESULT { OPR_CONTINUE, OPR_INTERPRET, OPR_BRANCHED };
+#ifdef MAPPED_JIT_FUNCS
+CACHE_ALIGN JIT_struct JIT;
+
+uintptr_t *JIT_struct::JIT_MEM[2][0x4000] = {{0}};
+
+static uintptr_t *JIT_MEM[2][32] = {
+   //arm9
+   {
+      /* 0X*/  DUP2(JIT.ARM9_ITCM),
+      /* 1X*/  DUP2(JIT.ARM9_ITCM), // mirror
+      /* 2X*/  DUP2(JIT.MAIN_MEM),
+      /* 3X*/  DUP2(JIT.SWIRAM),
+      /* 4X*/  DUP2(NULL),
+      /* 5X*/  DUP2(NULL),
+      /* 6X*/      NULL,
+                JIT.ARM9_LCDC,   // Plain ARM9-CPU Access (LCDC mode) (max 656KB)
+      /* 7X*/  DUP2(NULL),
+      /* 8X*/  DUP2(NULL),
+      /* 9X*/  DUP2(NULL),
+      /* AX*/  DUP2(NULL),
+      /* BX*/  DUP2(NULL),
+      /* CX*/  DUP2(NULL),
+      /* DX*/  DUP2(NULL),
+      /* EX*/  DUP2(NULL),
+      /* FX*/  DUP2(JIT.ARM9_BIOS)
+   },
+   //arm7
+   {
+      /* 0X*/  DUP2(JIT.ARM7_BIOS),
+      /* 1X*/  DUP2(NULL),
+      /* 2X*/  DUP2(JIT.MAIN_MEM),
+      /* 3X*/       JIT.SWIRAM,
+                   JIT.ARM7_ERAM,
+      /* 4X*/       NULL,
+                   JIT.ARM7_WIRAM,
+      /* 5X*/  DUP2(NULL),
+      /* 6X*/      JIT.ARM7_WRAM,      // VRAM allocated as Work RAM to ARM7 (max. 256K)
+                NULL,
+      /* 7X*/  DUP2(NULL),
+      /* 8X*/  DUP2(NULL),
+      /* 9X*/  DUP2(NULL),
+      /* AX*/  DUP2(NULL),
+      /* BX*/  DUP2(NULL),
+      /* CX*/  DUP2(NULL),
+      /* DX*/  DUP2(NULL),
+      /* EX*/  DUP2(NULL),
+      /* FX*/  DUP2(NULL)
+      }
+};
+
+static u32 JIT_MASK[2][32] = {
+   //arm9
+   {
+      /* 0X*/  DUP2(0x00007FFF),
+      /* 1X*/  DUP2(0x00007FFF),
+      /* 2X*/  DUP2(0x003FFFFF), // FIXME _MMU_MAIN_MEM_MASK
+      /* 3X*/  DUP2(0x00007FFF),
+      /* 4X*/  DUP2(0x00000000),
+      /* 5X*/  DUP2(0x00000000),
+      /* 6X*/      0x00000000,
+                0x000FFFFF,
+      /* 7X*/  DUP2(0x00000000),
+      /* 8X*/  DUP2(0x00000000),
+      /* 9X*/  DUP2(0x00000000),
+      /* AX*/  DUP2(0x00000000),
+      /* BX*/  DUP2(0x00000000),
+      /* CX*/  DUP2(0x00000000),
+      /* DX*/  DUP2(0x00000000),
+      /* EX*/  DUP2(0x00000000),
+      /* FX*/  DUP2(0x00007FFF)
+   },
+   //arm7
+   {
+      /* 0X*/  DUP2(0x00003FFF),
+      /* 1X*/  DUP2(0x00000000),
+      /* 2X*/  DUP2(0x003FFFFF),
+      /* 3X*/       0x00007FFF,
+                   0x0000FFFF,
+      /* 4X*/       0x00000000,
+                   0x0000FFFF,
+      /* 5X*/  DUP2(0x00000000),
+      /* 6X*/      0x0003FFFF,
+                0x00000000,
+      /* 7X*/  DUP2(0x00000000),
+      /* 8X*/  DUP2(0x00000000),
+      /* 9X*/  DUP2(0x00000000),
+      /* AX*/  DUP2(0x00000000),
+      /* BX*/  DUP2(0x00000000),
+      /* CX*/  DUP2(0x00000000),
+      /* DX*/  DUP2(0x00000000),
+      /* EX*/  DUP2(0x00000000),
+      /* FX*/  DUP2(0x00000000)
+      }
+};
+
+static void init_jit_mem()
+{
+   static bool inited = false;
+   if(inited)
+      return;
+   inited = true;
+   for(int proc=0; proc<2; proc++)
+      for(int i=0; i<0x4000; i++)
+         JIT.JIT_MEM[proc][i] = JIT_MEM[proc][i>>9] + (((i<<14) & JIT_MASK[proc][i>>9]) >> 1);
+}
+
+#else
+DS_ALIGN(4096) uintptr_t compiled_funcs[1<<26] = {0};
+#endif
+
+template<int PROCNUM, int thumb>
+static u32 FASTCALL OP_DECODE()
+{
+   u32 cycles;
+   u32 adr = ARMPROC.instruct_adr;
+   if(thumb)
+   {
+      ARMPROC.next_instruction = adr + 2;
+      ARMPROC.R[15] = adr + 4;
+      u32 opcode = _MMU_read16<PROCNUM, MMU_AT_CODE>(adr);
+      //_armlog(PROCNUM, adr, opcode);
+      cycles = thumb_instructions_set[PROCNUM][opcode>>6](opcode);
+   }
+   else
+   {
+      ARMPROC.next_instruction = adr + 4;
+      ARMPROC.R[15] = adr + 8;
+      u32 opcode = _MMU_read32<PROCNUM, MMU_AT_CODE>(adr);
+      //_armlog(PROCNUM, adr, opcode);
+      if(CONDITION(opcode) == 0xE || TEST_COND(CONDITION(opcode), CODE(opcode), ARMPROC.CPSR))
+         cycles = arm_instructions_set[PROCNUM][INSTRUCTION_INDEX(opcode)](opcode);
+      else
+         cycles = 1;
+   }
+   ARMPROC.instruct_adr = ARMPROC.next_instruction;
+   return cycles;
+}
+
+static const ArmOpCompiled op_decode[2][2] = { OP_DECODE<0,0>, OP_DECODE<0,1>, OP_DECODE<1,0>, OP_DECODE<1,1> };
+
+
+enum OP_RESULT { OPR_CONTINUE, OPR_INTERPRET, OPR_BRANCHED, OPR_RESULT_SIZE = 2147483647 };
 #define OPR_RESULT(result, cycles) (OP_RESULT)((result) | ((cycles) << 16));
 #define OPR_RESULT_CYCLES(result) ((result >> 16))
 #define OPR_RESULT_ACTION(result) ((result & 0xFF))
 
 typedef OP_RESULT (*ArmOpCompiler)(uint32_t pc, uint32_t opcode);
 
-static const uint32_t INSTRUCTION_COUNT = 0x400000;
+static const uint32_t INSTRUCTION_COUNT = 0xC0000;
 static code_pool* block;
 static register_manager* regman;
 static u8 recompile_counts[(1<<26)/16];
-
-DS_ALIGN(4096) uintptr_t compiled_funcs[1<<26] = {0};
 
 const reg_t RCPU = 12;
 const reg_t RCYC = 4;
@@ -158,7 +297,7 @@ static void arm_jit_prefetch(uint32_t pc, uint32_t opcode, bool thumb)
 /////////
 /// ARM
 /////////
-static OP_RESULT ARM_OP_PATCH_DELEGATE(uint32_t pc, uint32_t opcode, int AT16, int AT12, int AT8, int AT0, bool S, uint32_t CYC) 
+static OP_RESULT ARM_OP_PATCH_DELEGATE(uint32_t pc, uint32_t opcode, int AT16, int AT12, int AT8, int AT0, bool S, uint32_t CYC)
 {
    const reg_t at16 = bit(opcode, 16, 4);
    const reg_t at12 = bit(opcode, 12, 4);
@@ -405,7 +544,7 @@ static OP_RESULT ARM_OP_MEM(uint32_t pc, const uint32_t opcode)
       block->resolve_label("skip");
    }
 
-   // TODO: 
+   // TODO:
    return OPR_RESULT(OPR_CONTINUE, 3);
 }
 
@@ -431,7 +570,7 @@ ARM_MEM_OP_DEF(LDR);
 ARM_MEM_OP_DEF(STRB);
 ARM_MEM_OP_DEF(LDRB);
 
-// 
+//
 static OP_RESULT ARM_OP_MEM_HALF(uint32_t pc, uint32_t opcode)
 {
    const AG_COND cond = (AG_COND)bit(opcode, 28, 4);
@@ -523,7 +662,7 @@ static OP_RESULT ARM_OP_MEM_HALF(uint32_t pc, uint32_t opcode)
       block->resolve_label("skip");
    }
 
-   // TODO: 
+   // TODO:
    return OPR_RESULT(OPR_CONTINUE, 3);
 }
 
@@ -566,7 +705,7 @@ static OP_RESULT ARM_OP_B_BL(uint32_t pc, uint32_t opcode)
       block->b("skip");
       block->set_label("run");
    }
-   
+
    if (cond == EGG)
    {
       change_mode(true);
@@ -739,7 +878,7 @@ static OP_RESULT THUMB_OP_MCAS_IMM8(uint32_t pc, uint32_t opcode)
    int32_t regs[1] = { rd };
    regman->get(1, regs);
    const reg_t nrd = regs[0];
-   
+
    switch (op)
    {
       case 0: block->alu_op(MOVS, nrd, nrd, alu2::imm(imm)); break;
@@ -1231,6 +1370,8 @@ static bool instr_is_branch(bool thumb, u32 opcode)
           || (x & JIT_BYPASS);
 }
 
+
+
 template<int PROCNUM>
 static ArmOpCompiled compile_basicblock()
 {
@@ -1264,7 +1405,8 @@ static ArmOpCompiled compile_basicblock()
       ArmOpCompiler compiler = thumb ? thumb_instruction_compilers[opcode >> 6]
                                      : arm_instruction_compilers[INSTRUCTION_INDEX(opcode)];
 
-      OP_RESULT result = compiler ? compiler(pc, opcode) : OPR_INTERPRET;
+      int result = compiler ? compiler(pc, opcode) : OPR_INTERPRET;
+
       constant_cycles += OPR_RESULT_CYCLES(result);
       switch (OPR_RESULT_ACTION(result))
       {
@@ -1316,6 +1458,7 @@ static ArmOpCompiled compile_basicblock()
 
    block->load_constant(1, constant_cycles);
    block->add(0, 1, alu2::reg(RCYC));
+
    block->pop(0x8DF0);
 
    void* fn_ptr = block->fn_pointer();
@@ -1323,17 +1466,19 @@ static ArmOpCompiled compile_basicblock()
    return (ArmOpCompiled)fn_ptr;
 }
 
+
 template<int PROCNUM> u32 arm_jit_compile()
 {
    u32 adr = ARMPROC.instruct_adr;
    u32 mask_adr = (adr & 0x07FFFFFE) >> 4;
-// if(((recompile_counts[mask_adr >> 1] >> 4*(mask_adr & 1)) & 0xF) > 8)
-// {
-//    ArmOpCompiled f = op_decode[PROCNUM][cpu->CPSR.bits.T];
-//    JIT_COMPILED_FUNC(adr, PROCNUM) = (uintptr_t)f;
-//    return f();
-// }
-   recompile_counts[mask_adr >> 1] = 1;
+   if(((recompile_counts[mask_adr >> 1] >> 4*(mask_adr & 1)) & 0xF) > 8)
+   {
+      ArmOpCompiled f = op_decode[PROCNUM][ARMPROC.CPSR.bits.T];
+      JIT_COMPILED_FUNC(adr, PROCNUM) = (uintptr_t)f;
+      return f();
+   }
+
+   recompile_counts[mask_adr >> 1] += 1 << 4*(mask_adr & 1);
 
    if (block->instructions_remaining() < 1000)
    {
@@ -1350,17 +1495,38 @@ void arm_jit_reset(bool enable, bool suppress_msg)
 {
    if (!suppress_msg)
 	   printf("CPU mode: %s\n", enable?"JIT":"Interpreter");
+
    saveBlockSizeJIT = CommonSettings.jit_max_block_size;
 
    if (enable)
    {
-	   printf("JIT: max block size %d instruction(s)\n", CommonSettings.jit_max_block_size);
+      printf("JIT: max block size %d instruction(s)\n", CommonSettings.jit_max_block_size);
+
+#ifdef MAPPED_JIT_FUNCS
+
+      #define JITFREE(x) memset(x,0,sizeof(x));
+         JITFREE(JIT.MAIN_MEM);
+         JITFREE(JIT.SWIRAM);
+         JITFREE(JIT.ARM9_ITCM);
+         JITFREE(JIT.ARM9_LCDC);
+         JITFREE(JIT.ARM9_BIOS);
+         JITFREE(JIT.ARM7_BIOS);
+         JITFREE(JIT.ARM7_ERAM);
+         JITFREE(JIT.ARM7_WIRAM);
+         JITFREE(JIT.ARM7_WRAM);
+      #undef JITFREE
+
+      memset(recompile_counts, 0, sizeof(recompile_counts));
+      init_jit_mem();
+
+#else
       for(int i=0; i<sizeof(recompile_counts)/8; i++)
          if(((u64*)recompile_counts)[i])
          {
             ((u64*)recompile_counts)[i] = 0;
             memset(compiled_funcs+128*i, 0, 128*sizeof(*compiled_funcs));
          }
+#endif
 
       delete block;
       block = new code_pool(INSTRUCTION_COUNT);
