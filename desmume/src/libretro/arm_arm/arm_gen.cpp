@@ -9,7 +9,7 @@
 #ifdef _3DS
 # include <malloc.h>
 # include "3ds/memory.h"
-#elif defined(__vita__)
+#elif defined(VITA)
 # include <psp2/kernel/sysmem.h>
 # define RW_INIT sceKernelOpenVMDomain
 # define RW_END sceKernelCloseVMDomain
@@ -32,7 +32,7 @@ static void __clear_cache(void *start, void *end) {
 #elif defined(_3DS)
 #undef __clear_cache
 #define __clear_cache(start,end)FlushInvalidateCache();
-#elif defined(__vita__)
+#elif defined(VITA)
 #undef __clear_cache
 #define __clear_cache(start,end)sceKernelSyncVMDomain(block, start, (char *)end - (char *)start)
 #endif
@@ -52,6 +52,7 @@ code_pool::code_pool(uint32_t icount) :
 {
 
    printf("\n\ncode_pool icount: %i\n\n", icount);
+   literal_count = 0;
    memset(labels, 0, sizeof(labels));
    memset(branches, 0, sizeof(branches));
 
@@ -72,7 +73,7 @@ code_pool::code_pool(uint32_t icount) :
       ReprotectMemory((unsigned int*)_instructions, (instruction_count * 4) / 4096, 7);
    }
    instructions = _instructions;
-#elif defined(__vita__)
+#elif defined(VITA)
    block = sceKernelAllocMemBlockForVM("desmume_rwx_block", instruction_count * 4);
    if (block < 0)
    {
@@ -94,7 +95,7 @@ code_pool::code_pool(uint32_t icount) :
    }
 #endif
 
-#if !defined(_3DS) && !defined(__vita__)
+#if !defined(_3DS) && !defined(VITA)
    if (mprotect(instructions, instruction_count * 4, PROT_READ | PROT_WRITE | PROT_EXEC))
    {
       fprintf(stderr, "mprotect failed\n");
@@ -105,14 +106,14 @@ code_pool::code_pool(uint32_t icount) :
 
 code_pool::~code_pool()
 {
-   #ifdef _3DS
+#ifdef _3DS
    //ReprotectMemory((unsigned int*)instructions, (instruction_count * 4) / 4096, 3);
-   #elif defined(__vita__)
+#elif defined(VITA)
    sceKernelFreeMemBlock(block);
-   #else
+#else
    mprotect(instructions, instruction_count * 4, PROT_READ | PROT_WRITE);
    free(instructions);
-   #endif
+#endif
 }
 
 void* code_pool::fn_pointer()

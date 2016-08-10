@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#if defined(__vita__)
+#if defined(VITA)
 # include <psp2/kernel/sysmem.h>
 #endif
 
@@ -205,7 +205,7 @@ class code_pool
       uint32_t flush_start;
 
       uint32_t literals[128][2];
-      uint32_t literal_count = 0;
+      uint32_t literal_count;
 
       static const uint32_t TARGET_COUNT = 16;
 
@@ -217,7 +217,7 @@ class code_pool
 
       target labels[TARGET_COUNT];
       target branches[TARGET_COUNT];
-#if defined(__vita__)
+#if defined(VITA)
       SceUID block;
 #endif
 };
