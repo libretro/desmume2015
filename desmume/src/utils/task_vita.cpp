@@ -22,8 +22,6 @@
 #include "../utils/task.h"
 #include "debug.h"
 
-#include "config.h"
-
 class Task::Impl {
 private:
 	SceUID _thread;
@@ -33,7 +31,7 @@ public:
 	Impl();
 	~Impl();
 
-	void start(bool spinlock);
+	void start();
 	void execute(const TWork &work, void *param);
 	void* finish();
 	void shutdown();
@@ -54,18 +52,16 @@ static int taskProc(SceSize args, void *argp)
 	Task::Impl *ctx = *(Task::Impl **)argp;
 	do {
 
-		while (ctx->workFunc == NULL && !ctx->exitThread) {
+		while (ctx->workFunc == NULL && !ctx->exitThread)
 			sceKernelWaitEventFlag(ctx->condWork, EVENT_WORK_START,
 				SCE_EVENT_WAITAND, NULL, NULL);
-		}
 
 		sceKernelClearEventFlag(ctx->condWork, ~EVENT_WORK_START);
 
-		if (ctx->workFunc != NULL) {
+		if (ctx->workFunc != NULL)
 			ctx->ret = ctx->workFunc(ctx->workFuncParam);
-		} else {
+      else
 			ctx->ret = NULL;
-		}
 
 		ctx->workFunc = NULL;
 		sceKernelSetEventFlag(ctx->condWork, EVENT_WORK_END);
@@ -91,11 +87,10 @@ Task::Impl::~Impl()
 	sceKernelDeleteEventFlag(condWork);
 }
 
-void Task::Impl::start(bool spinlock)
+void Task::Impl::start()
 {
-	if (this->_isThreadRunning) {
+	if (this->_isThreadRunning)
 		return;
-	}
 
 	this->workFunc = NULL;
 	this->workFuncParam = NULL;
@@ -114,9 +109,8 @@ void Task::Impl::start(bool spinlock)
 
 void Task::Impl::execute(const TWork &work, void *param)
 {
-	if (work == NULL || !this->_isThreadRunning) {
+	if (work == NULL || !this->_isThreadRunning)
 		return;
-	}
 
 	this->workFunc = work;
 	this->workFuncParam = param;
@@ -128,14 +122,12 @@ void* Task::Impl::finish()
 {
 	void *returnValue = NULL;
 
-	if (!this->_isThreadRunning) {
+	if (!this->_isThreadRunning)
 		return returnValue;
-	}
 
-	while (this->workFunc != NULL) {
+	while (this->workFunc != NULL)
 		sceKernelWaitEventFlag(condWork, EVENT_WORK_END,
 			SCE_EVENT_WAITAND, NULL, NULL);
-	}
 
 	sceKernelClearEventFlag(condWork, ~EVENT_WORK_END);
 
@@ -146,11 +138,10 @@ void* Task::Impl::finish()
 
 void Task::Impl::shutdown()
 {
-	if (!this->_isThreadRunning) {
+	if (!this->_isThreadRunning)
 		return;
-	}
 
-	this->workFunc = NULL;
+	this->workFunc   = NULL;
 	this->exitThread = true;
 
 	sceKernelSetEventFlag(condWork, EVENT_WORK_START | EVENT_WORK_END);
@@ -160,7 +151,7 @@ void Task::Impl::shutdown()
 	this->_isThreadRunning = false;
 }
 
-void Task::start(bool spinlock) { impl->start(spinlock); }
+void Task::start() { impl->start(); }
 void Task::shutdown() { impl->shutdown(); }
 Task::Task() : impl(new Task::Impl()) {}
 Task::~Task() { delete impl; }
