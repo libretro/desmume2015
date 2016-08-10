@@ -1287,7 +1287,7 @@ bool BackupDevice::no_gba_unpack(u8 *&buf, u32 &size)
 		}
 	}
 
-	delete out_buf;
+	delete[] out_buf;
 
 	return false;
 }
