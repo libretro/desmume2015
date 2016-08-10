@@ -177,19 +177,21 @@ void Slot1Comp_Protocol::write_command(GC_Command command)
 	address = 0;
 
 	switch(mode)
-	{
-	case eCardMode_RAW:
-		write_command_RAW(command);
-		break;
+   {
+      case eCardMode_RAW:
+         write_command_RAW(command);
+         break;
 
-	case eCardMode_KEY1:
-		write_command_KEY1(command);
-		break;
-	
-	case eCardMode_NORMAL:
-		write_command_NORMAL(command);
-		break;
-	}
+      case eCardMode_KEY1:
+         write_command_KEY1(command);
+         break;
+
+      case eCardMode_NORMAL:
+         write_command_NORMAL(command);
+         break;
+      default:
+         break;
+   }
 }
 
 void Slot1Comp_Protocol::write_GCDATAIN(u8 PROCNUM, u32 val)

@@ -180,6 +180,8 @@ public:
 			case eSlot1Operation_2x_SecureAreaLoad:
 			//case eSlot1Operation_B7_Read:
 				return rom.read();
+         default:
+            break;
 		}
 
 		//handle special commands ourselves
@@ -250,6 +252,8 @@ public:
 			case eSlot1Operation_B7_Read:
 			case eSlot1Operation_2x_SecureAreaLoad:
 				return;
+         default:
+            break;
 		}
 
 		//handle special commands ourselves
