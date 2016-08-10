@@ -199,6 +199,8 @@ void Slot1Comp_Protocol::write_GCDATAIN(u8 PROCNUM, u32 val)
 		case eSlot1Operation_Unknown:
 			client->slot1client_write_GCDATAIN(operation,val);
 			break;
+      default:
+         break;
 	}
 }
 

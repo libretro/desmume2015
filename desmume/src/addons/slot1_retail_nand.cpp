@@ -106,6 +106,8 @@ public:
 			case eSlot1Operation_2x_SecureAreaLoad:
 				rom.start(operation,protocol.address);
 				return;
+         default:
+            break;
 		}
 
 		//handle special commands ourselves
