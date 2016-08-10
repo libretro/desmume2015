@@ -153,7 +153,9 @@ void code_pool::set_label(const char* name)
 
 void code_pool::resolve_label(const char* name)
 {
+#ifdef VITA
    RW_INIT();
+#endif
    for (int i = 0; i < TARGET_COUNT; i ++)
    {
       if (labels[i].name != name)
@@ -178,7 +180,9 @@ void code_pool::resolve_label(const char* name)
       labels[i].name = 0;
       break;
    }
+#ifdef VITA
    RW_END();
+#endif
 }
 
 // Code Gen: Generic
@@ -195,9 +199,13 @@ void code_pool::insert_raw_instruction(uint32_t op)
       fprintf(stderr, "code_pool overflow\n");
       abort();
    }
+#ifdef VITA
    RW_INIT();
+#endif
    instructions[next_instruction ++] = op;
+#ifdef VITA
    RW_END();
+#endif
 }
 
 void code_pool::alu_op(AG_ALU_OP op, reg_t rd, reg_t rn,
