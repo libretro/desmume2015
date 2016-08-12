@@ -56,7 +56,7 @@ code_pool::code_pool(uint32_t icount) :
    memset(labels, 0, sizeof(labels));
    memset(branches, 0, sizeof(branches));
 
-#elif defined(_3DS)
+#if defined(_3DS)
    if(!_instructions)
    {
       _instructions = (uint32_t*)memalign(4096, instruction_count * 4);
