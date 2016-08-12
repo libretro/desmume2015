@@ -56,14 +56,9 @@ code_pool::code_pool(uint32_t icount) :
    memset(labels, 0, sizeof(labels));
    memset(branches, 0, sizeof(branches));
 
-#ifdef USE_POSIX_MEMALIGN
-   if (posix_memalign((void**)&instructions, 4096, instruction_count * 4))
-   {
-      fprintf(stderr, "posix_memalign failed\n");
-      abort();
-   }
 #elif defined(_3DS)
-   if(!_instructions){
+   if(!_instructions)
+   {
       _instructions = (uint32_t*)memalign(4096, instruction_count * 4);
       if (!_instructions)
       {
@@ -86,6 +81,18 @@ code_pool::code_pool(uint32_t icount) :
       fprintf(stderr, "sceKernelGetMemBlockBase failed\n");
       abort();
    }
+#elif defined(USE_POSIX_MEMALIGN)
+   if (posix_memalign((void**)&instructions, 4096, instruction_count * 4))
+   {
+      fprintf(stderr, "posix_memalign failed\n");
+      abort();
+   }
+
+   if (mprotect(instructions, instruction_count * 4, PROT_READ | PROT_WRITE | PROT_EXEC))
+   {
+      fprintf(stderr, "mprotect failed\n");
+      abort();
+   }
 #else
    instructions = (uint32_t*)memalign(4096, instruction_count * 4);
    if (!instructions)
@@ -93,9 +100,7 @@ code_pool::code_pool(uint32_t icount) :
       fprintf(stderr, "memalign failed\n");
       abort();
    }
-#endif
 
-#if !defined(_3DS) && !defined(VITA)
    if (mprotect(instructions, instruction_count * 4, PROT_READ | PROT_WRITE | PROT_EXEC))
    {
       fprintf(stderr, "mprotect failed\n");
