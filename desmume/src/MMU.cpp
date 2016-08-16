@@ -4140,8 +4140,10 @@ void FASTCALL _MMU_ARM9_write32(u32 adr, u32 val)
 u8 FASTCALL _MMU_ARM9_read08(u32 adr)
 {
 	adr &= 0x0FFFFFFF;
-	
+	 
+#ifdef _MMU_DEBUG
 	mmu_log_debug_ARM9(adr, "(read08) 0x%02X", MMU.MMU_MEM[ARMCPU_ARM9][(adr>>20)&0xFF][adr&MMU.MMU_MASK[ARMCPU_ARM9][(adr>>20)&0xFF]]);
+#endif
 
 	if(adr<0x02000000)
 		return T1ReadByte(MMU.ARM9_ITCM, adr&0x7FFF);
@@ -4302,7 +4304,9 @@ u16 FASTCALL _MMU_ARM9_read16(u32 adr)
 {    
 	adr &= 0x0FFFFFFE;
 
+#ifdef _MMU_DEBUG
 	mmu_log_debug_ARM9(adr, "(read16) 0x%04X", T1ReadWord_guaranteedAligned(MMU.MMU_MEM[ARMCPU_ARM9][adr >> 20], adr & MMU.MMU_MASK[ARMCPU_ARM9][adr >> 20]));
+#endif
 
 	if(adr<0x02000000)
 		return T1ReadWord_guaranteedAligned(MMU.ARM9_ITCM, adr & 0x7FFE);	
@@ -4414,7 +4418,9 @@ u32 FASTCALL _MMU_ARM9_read32(u32 adr)
 {
 	adr &= 0x0FFFFFFC;
 
+#ifdef _MMU_DEBUG
 	mmu_log_debug_ARM9(adr, "(read32) 0x%08X", T1ReadLong_guaranteedAligned(MMU.MMU_MEM[ARMCPU_ARM9][adr >> 20], adr & MMU.MMU_MASK[ARMCPU_ARM9][adr>>20]));
+#endif
 
 	if(adr<0x02000000) 
 		return T1ReadLong_guaranteedAligned(MMU.ARM9_ITCM, adr&0x7FFC);
@@ -4559,7 +4565,9 @@ void FASTCALL _MMU_ARM7_write08(u32 adr, u8 val)
 {
 	adr &= 0x0FFFFFFF;
 
+#ifdef _MMU_DEBUG
 	mmu_log_debug_ARM7(adr, "(write08) 0x%02X", val);
+#endif
 
 	if (adr < 0x02000000) return; //can't write to bios or entire area below main memory
 
@@ -4672,7 +4680,9 @@ void FASTCALL _MMU_ARM7_write16(u32 adr, u16 val)
 {
 	adr &= 0x0FFFFFFE;
 
+#ifdef _MMU_DEBUG
 	mmu_log_debug_ARM7(adr, "(write16) 0x%04X", val);
+#endif
 
 	if (adr < 0x02000000) return; //can't write to bios or entire area below main memory
 
@@ -4847,7 +4857,9 @@ void FASTCALL _MMU_ARM7_write32(u32 adr, u32 val)
 {
 	adr &= 0x0FFFFFFC;
 
+#ifdef _MMU_DEBUG
 	mmu_log_debug_ARM7(adr, "(write32) 0x%08X", val);
+#endif
 
 	if (adr < 0x02000000) return; //can't write to bios or entire area below main memory
 
@@ -4950,7 +4962,9 @@ u8 FASTCALL _MMU_ARM7_read08(u32 adr)
 {
 	adr &= 0x0FFFFFFF;
 
+#ifdef _MMU_DEBUG
 	mmu_log_debug_ARM7(adr, "(read08) 0x%02X", MMU.MMU_MEM[ARMCPU_ARM7][(adr>>20)&0xFF][adr&MMU.MMU_MASK[ARMCPU_ARM7][(adr>>20)&0xFF]]);
+#endif
 
 	if (adr < 0x4000)
 	{
@@ -5019,7 +5033,9 @@ u16 FASTCALL _MMU_ARM7_read16(u32 adr)
 {
 	adr &= 0x0FFFFFFE;
 
+#ifdef _MMU_DEBUG
 	mmu_log_debug_ARM7(adr, "(read16) 0x%04X", T1ReadWord(MMU.MMU_MEM[ARMCPU_ARM7][(adr>>20)&0xFF], adr & MMU.MMU_MASK[ARMCPU_ARM7][(adr>>20)&0xFF]));
+#endif
 
 	if (adr < 0x4000)
 	{
@@ -5114,7 +5130,9 @@ u32 FASTCALL _MMU_ARM7_read32(u32 adr)
 {
 	adr &= 0x0FFFFFFC;
 
+#ifdef _MMU_DEBUG
 	mmu_log_debug_ARM7(adr, "(read32) 0x%08X", T1ReadLong(MMU.MMU_MEM[ARMCPU_ARM7][(adr>>20)&0xFF], adr & MMU.MMU_MASK[ARMCPU_ARM7][(adr>>20)&0xFF]));
+#endif
 
 	if (adr < 0x4000)
 	{
