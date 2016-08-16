@@ -35,6 +35,7 @@ using namespace arm_gen;
 #include "arm_jit.h"
 #include "bios.h"
 #include "armcpu.h"
+#include "../bits.h"
 
 u32 saveBlockSizeJIT = 0;
 
