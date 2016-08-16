@@ -53,7 +53,6 @@
 #include <tmmintrin.h>
 #endif
 
-#include "bits.h"
 #include "common.h"
 #include "matrix.h"
 #include "render3D.h"

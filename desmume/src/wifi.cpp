@@ -45,10 +45,10 @@
 
 #include <assert.h>
 
+#include "utils/bits.h"
 #include "armcpu.h"
 #include "NDSSystem.h"
 #include "debug.h"
-#include "bits.h"
 #include "registers.h"
 
 #ifndef INVALID_SOCKET 	 

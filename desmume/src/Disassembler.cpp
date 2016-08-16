@@ -19,7 +19,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "Disassembler.h"
-#include "bits.h"
+#include "utils/bits.h"
+#include "armcpu.h"
 
 #define ROR(i, j)   ((((u32)(i))>>(j)) | (((u32)(i))<<(32-(j))))
 

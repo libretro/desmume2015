@@ -28,7 +28,7 @@
 #include <tmmintrin.h>
 #endif
 
-#include "bits.h"
+#include "utils/bits.h"
 #include "common.h"
 #include "gfx3d.h"
 #include "MMU.h"

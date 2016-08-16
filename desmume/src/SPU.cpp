@@ -41,6 +41,7 @@
 #include "armcpu.h"
 #include "NDSSystem.h"
 #include "matrix.h"
+#include "utils/bits.h"
 
 extern retro_audio_sample_batch_t audio_batch_cb;
 

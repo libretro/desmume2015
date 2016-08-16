@@ -32,6 +32,7 @@
 #endif
 #include "NDSSystem.h"
 #include "MMU_timing.h"
+#include "utils/bits.h"
 #ifdef HAVE_JIT
 #include "arm_jit.h"
 #endif

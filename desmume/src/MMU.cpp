@@ -25,6 +25,7 @@
 
 #include <retro_assert.h>
 
+#include "utils/bits.h"
 #include "armcpu.h"
 #include "common.h"
 #include "debug.h"

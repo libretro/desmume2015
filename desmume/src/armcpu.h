@@ -20,12 +20,13 @@
 #define ARM_CPU
 
 #include "types.h"
-#include "bits.h"
 #include "MMU.h"
 
-#define CODE(i)     (((i)>>25)&0x7)
-#define OPCODE(i)   (((i)>>21)&0xF)
-#define SIGNEBIT(i) BIT_N(i,20)
+#define CONDITION(i) ((i)>>28)
+#define REG_POS(i,n) (((i)>>n) & 0xF)
+#define CODE(i)      (((i)>>25)&0x7)
+#define OPCODE(i)    (((i)>>21)&0xF)
+#define SIGNEBIT(i)  (((i)>>20) & 1)
 
 #define EXCEPTION_RESET 0x00
 #define EXCEPTION_UNDEFINED_INSTRUCTION 0x04

@@ -44,7 +44,6 @@
 #include "emufile.h"
 #include "matrix.h"
 #include "GPU.h"
-#include "bits.h"
 #include "MMU.h"
 #include "render3D.h"
 #include "mem.h"
@@ -53,6 +52,7 @@
 #include "NDSSystem.h"
 #include "readwrite.h"
 #include "FIFO.h"
+#include "utils/bits.h"
 #include "movie.h" //only for currframecounter which really ought to be moved into the core emu....
 
 #if 0

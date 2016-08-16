@@ -31,6 +31,7 @@ extern unsigned long crc32(unsigned long, const unsigned char*,unsigned int);
 #include "utils/decrypt/crc.h"
 #include "utils/advanscene.h"
 #include "utils/task.h"
+#include "utils/bits.h"
 
 #include "common.h"
 #include "armcpu.h"

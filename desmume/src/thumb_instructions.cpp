@@ -29,6 +29,7 @@
 #include "MMU.h"
 #include "NDSSystem.h"
 #include "MMU_timing.h"
+#include "utils/bits.h"
 
 #define cpu (&ARMPROC)
 #define TEMPLATE template<int PROCNUM> 

@@ -31,6 +31,7 @@
 #define HAVE_STATIC_CODE_BUFFER
 #endif
 
+#include "utils/bits.h"
 #include "armcpu.h"
 #include "instructions.h"
 #include "instruction_attributes.h"

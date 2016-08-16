@@ -24,6 +24,7 @@
 #include "MMU.h"
 #include "emufile.h"
 #include "readwrite.h"
+#include "utils/bits.h"
 
 armcp15_t cp15;
 
