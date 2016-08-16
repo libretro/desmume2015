@@ -416,13 +416,8 @@ public:
 	float round_s(double val)
 	{
 		if (val > 0.0)
-		{
 			return floorf(val*256.0f+0.5f)/256.0f; //this value(256.0) is good result.(I think)
-		}
-		else
-		{
-			return -1.0*floorf(fabs(val)*256.0f+0.5f)/256.0f;
-		}
+      return -1.0*floorf(fabs(val)*256.0f+0.5f)/256.0f;
 	}
 	
 	FORCEINLINE void shade(const PolygonMode polygonMode, const FragmentColor src, FragmentColor &dst, const float texCoordU, const float texCoordV)
@@ -535,32 +530,24 @@ public:
 		else
 		{
 			if (newDepth >= dstAttributeDepth)
-			{
 				goto depth_fail;
-			}
 		}
 		
 		//handle shadow polys
 		if (isShadowPolygon)
 		{
 			if (polyAttr.polygonID == 0)
-			{
 				goto rejected_fragment;
-			}
 			else
 			{
 				if (dstAttributeStencil == 0)
-				{
 					goto rejected_fragment;
-				}	
 
 				//shadow polys have a special check here to keep from self-shadowing when user
 				//has tried to prevent it from happening
 				//if this isnt here, then the vehicle select in mariokart will look terrible
 				if (dstAttributeOpaquePolyID == polyAttr.polygonID)
-				{
 					goto rejected_fragment;
-				}
 			}
 		}
 		
