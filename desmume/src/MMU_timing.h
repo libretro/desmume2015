@@ -17,8 +17,8 @@
 	along with the this software.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// this file is split from MMU.h for the purpose of avoiding ridiculous recompile times
-// when changing it, because practically everything includes MMU.h.
+/* this file is split from MMU.h for the purpose of avoiding ridiculous recompile times
+ * when changing it, because practically everything includes MMU.h. */
 #ifndef MMUTIMING_H
 #define MMUTIMING_H
 
@@ -29,39 +29,38 @@
 #include "debug.h"
 #include "NDSSystem.h"
 
-////////////////////////////////////////////////////////////////
-// MEMORY TIMING ACCURACY CONFIGURATION
-//
-// the more of these are enabled,
-// the more accurate memory access timing _should_ become.
-// they should be listed roughly in order of most to least important.
-// it's reasonable to disable some of these as a speed hack.
-// obviously, these defines don't cover all the variables or features needed,
-// and in particular, DMA or code+data access bus contention is still missing.
+/*
+ * MEMORY TIMING ACCURACY CONFIGURATION
+ *
+ * the more of these are enabled,
+ * the more accurate memory access timing _should_ become.
+ * they should be listed roughly in order of most to least important.
+ * it's reasonable to disable some of these as a speed hack.
+ * obviously, these defines don't cover all the variables or features needed,
+ * and in particular, DMA or code+data access bus contention is still missing.
+ */
 
-	//disable this to prevent the advanced timing logic from ever running at all
+/* disable this to prevent the advanced timing logic from ever running at all */
 #define ENABLE_ADVANCED_TIMING
 
 #ifdef ENABLE_ADVANCED_TIMING
-	// makes non-sequential accesses slower than sequential ones.
+/* makes non-sequential accesses slower than sequential ones. */
 #define ACCOUNT_FOR_NON_SEQUENTIAL_ACCESS
-	//(SOMETIMES THIS IS A BIG SPEED HIT!)
+/*(SOMETIMES THIS IS A BIG SPEED HIT!) */
 
-	// enables emulation of code fetch waits.
+/* enables emulation of code fetch waits. */
 #define ACCOUNT_FOR_CODE_FETCH_CYCLES
 
-	// makes access to DTCM (arm9 only) fast.
+/* makes access to DTCM (arm9 only) fast. */
 #define ACCOUNT_FOR_DATA_TCM_SPEED
 
-	// enables simulation of cache hits and cache misses.
+/* enables simulation of cache hits and cache misses. */
 #define ENABLE_CACHE_CONTROLLER_EMULATION
 
-#endif //ENABLE_ADVANCED_TIMING
+#endif /* ENABLE_ADVANCED_TIMING */
 
-//
-////////////////////////////////////////////////////////////////
-
-FORCEINLINE bool USE_TIMING() { 
+FORCEINLINE bool USE_TIMING(void)
+{ 
 #ifdef ENABLE_ADVANCED_TIMING
 	return CommonSettings.advanced_timing;
 #else
@@ -69,16 +68,17 @@ FORCEINLINE bool USE_TIMING() {
 #endif
 }
 
-
 enum MMU_ACCESS_DIRECTION
 {
-	MMU_AD_READ, MMU_AD_WRITE
+	MMU_AD_READ = 0,
+   MMU_AD_WRITE
 };
 
 
-// note that we don't actually emulate the cache contents here,
-// only enough to guess what would be a cache hit or a cache miss.
-// this doesn't really get used unless ENABLE_CACHE_CONTROLLER_EMULATION is defined.
+/* note that we don't actually emulate the cache contents here,
+ * only enough to guess what would be a cache hit or a cache miss.
+ * this doesn't really get used unless ENABLE_CACHE_CONTROLLER_EMULATION is defined.
+ */
 template<int SIZESHIFT, int ASSOCIATIVESHIFT, int BLOCKSIZESHIFT>
 class CacheController
 {
@@ -88,14 +88,14 @@ public:
 	{
 		u32 blockMasked = addr & BLOCKMASK;
 		if(blockMasked == m_cacheCache)
-			return true;
-		else
-			return this->CachedInternal<DIR>(addr, blockMasked);
+         return true;
+      return this->CachedInternal<DIR>(addr, blockMasked);
 	}
 	
 	void Reset()
 	{
-		for(int blockIndex = 0; blockIndex < NUMBLOCKS; blockIndex++)
+      unsigned blockIndex;
+		for(blockIndex = 0; blockIndex < NUMBLOCKS; blockIndex++)
 			m_blocks[blockIndex].Reset();
 		m_cacheCache = ~0;
 	}
@@ -106,20 +106,24 @@ public:
 	
 	void savestate(EMUFILE* os, int version)
 	{
+      unsigned i;
 		write32le(m_cacheCache, os);
-		for(int i = 0; i < NUMBLOCKS; i++)
+		for(i = 0; i < NUMBLOCKS; i++)
 		{
-			for(int j = 0; j < ASSOCIATIVITY; j++)
+         unsigned j;
+			for(j = 0; j < ASSOCIATIVITY; j++)
 				write32le(m_blocks[i].tag[j],os);
 			write32le(m_blocks[i].nextWay,os);
 		}
 	}
 	bool loadstate(EMUFILE* is, int version)
 	{
+      unsigned i;
 		read32le(&m_cacheCache, is);
-		for(int i = 0; i < NUMBLOCKS; i++)
+		for(i = 0; i < NUMBLOCKS; i++)
 		{
-			for(int j = 0; j < ASSOCIATIVITY; j++)
+         unsigned j;
+			for(j = 0; j < ASSOCIATIVITY; j++)
 				read32le(&m_blocks[i].tag[j],is);
 			read32le(&m_blocks[i].nextWay,is);
 		}
@@ -130,17 +134,21 @@ private:
 	template<MMU_ACCESS_DIRECTION DIR>
 	bool CachedInternal(u32 addr, u32 blockMasked)
 	{
+      unsigned way;
 		u32 blockIndex = blockMasked >> BLOCKSIZESHIFT;
 		CacheBlock& block = m_blocks[blockIndex];
 		addr &= TAGMASK;
 
-		for(int way = 0; way < ASSOCIATIVITY; way++)
-			if(addr == block.tag[way])
-			{
-				// found it, already allocated
-				m_cacheCache = blockMasked;
-				return true;
-			}
+		for(way = 0; way < ASSOCIATIVITY; way++)
+      {
+         if(addr != block.tag[way])
+            continue;
+
+         // found it, already allocated
+         m_cacheCache = blockMasked;
+         return true;
+      }
+
 		if(DIR == MMU_AD_READ)
 		{
 			// TODO: support other allocation orders?
@@ -170,8 +178,10 @@ private:
 
 		void Reset()
 		{
+         unsigned way;
+
 			nextWay = 0;
-			for(int way = 0; way < ASSOCIATIVITY; way++)
+			for(way = 0; way < ASSOCIATIVITY; way++)
 				tag[way] = 0;
 		}
 	};
@@ -200,9 +210,7 @@ public:
 		#endif
 		
 		if(AT == MMU_AT_CODE && !prohibit)
-		{
 			return 1;
-		}
 
 		u32 time = _MMU_accesstime<PROCNUM, AT, READSIZE, DIRECTION,TIMING>(address,
 #ifdef ACCOUNT_FOR_NON_SEQUENTIAL_ACCESS
@@ -296,6 +304,7 @@ FORCEINLINE u32 _MMU_accesstime(u32 addr, bool sequential)
 	if(AT != MMU_AT_DMA && TIMING && PROCNUM==ARMCPU_ARM9 && (addr & 0x0F000000) == 0x02000000)
 	{
 #ifdef ENABLE_CACHE_CONTROLLER_EMULATION
+		u32 c;
 		bool cached = false;
 		if(AT==MMU_AT_CODE)
 			cached = MMU_timing.arm9codeCache.Cached<DIRECTION>(addr);
@@ -303,7 +312,6 @@ FORCEINLINE u32 _MMU_accesstime(u32 addr, bool sequential)
 			cached = MMU_timing.arm9dataCache.Cached<DIRECTION>(addr);
 		if(cached)
 			return MC;
-		u32 c;
 		if(sequential && AT==MMU_AT_DATA)
 			c = M16; // bonus for sequential data access
 		else if(DIRECTION == MMU_AD_READ)
@@ -347,9 +355,7 @@ FORCEINLINE u32 _MMU_accesstime(u32 addr, bool sequential)
 	if(TIMING && !sequential)
 	{
 		//if(c != MC || PROCNUM==ARMCPU_ARM7) // check not needed anymore because ITCM/DTCM return earlier
-		{
 			c += (PROCNUM==ARMCPU_ARM9) ? 3*2 : 1;
-		}
 	}
 #endif
 
@@ -368,8 +374,7 @@ FORCEINLINE u32 MMU_memAccessCycles(u32 addr)
 {
 	if(TIMING)
 		return MMU_timing.armDataFetch<PROCNUM>().template Fetch<READSIZE,DIRECTION,true>((addr)&(~((READSIZE>>3)-1)));
-	else
-		return MMU_timing.armDataFetch<PROCNUM>().template Fetch<READSIZE,DIRECTION,false>((addr)&(~((READSIZE>>3)-1)));
+   return MMU_timing.armDataFetch<PROCNUM>().template Fetch<READSIZE,DIRECTION,false>((addr)&(~((READSIZE>>3)-1)));
 }
 
 template<int PROCNUM, int READSIZE, MMU_ACCESS_DIRECTION DIRECTION>
@@ -377,8 +382,7 @@ FORCEINLINE u32 MMU_memAccessCycles(u32 addr)
 {
 	if(USE_TIMING())
 		return MMU_memAccessCycles<PROCNUM,READSIZE,DIRECTION,true>(addr);
-	else
-		return MMU_memAccessCycles<PROCNUM,READSIZE,DIRECTION,false>(addr);
+   return MMU_memAccessCycles<PROCNUM,READSIZE,DIRECTION,false>(addr);
 }
 
 // calculates the cycle time of a single code fetch in the FETCH stage
@@ -389,8 +393,7 @@ FORCEINLINE u32 MMU_codeFetchCycles(u32 addr)
 {
 	if(USE_TIMING())
 		return MMU_timing.armCodeFetch<PROCNUM>().template Fetch<READSIZE,MMU_AD_READ,true>((addr)&(~((READSIZE>>3)-1)));
-	else
-		return MMU_timing.armCodeFetch<PROCNUM>().template Fetch<READSIZE,MMU_AD_READ,false>((addr)&(~((READSIZE>>3)-1)));
+   return MMU_timing.armCodeFetch<PROCNUM>().template Fetch<READSIZE,MMU_AD_READ,false>((addr)&(~((READSIZE>>3)-1)));
 }
 
 // calculates the cycle contribution of ALU + MEM stages (= EXECUTE)
@@ -399,26 +402,26 @@ FORCEINLINE u32 MMU_codeFetchCycles(u32 addr)
 template<int PROCNUM>
 FORCEINLINE u32 MMU_aluMemCycles(u32 aluCycles, u32 memCycles)
 {
-	if(PROCNUM==ARMCPU_ARM9)
-	{
-		// ALU and MEM are different stages of the 5-stage pipeline.
-		// we approximate the pipeline throughput using max,
-		// since simply adding the cycles of each instruction together
-		// fails to take into account the parallelism of the arm pipeline
-		// and would make the emulated system unnaturally slow.
-		return std::max(aluCycles, memCycles);
-	}
-	else
-	{
-		// ALU and MEM are part of the same stage of the 3-stage pipeline,
-		// thus they occur in sequence and we can simply add the counts together.
-		return aluCycles + memCycles;
-	}
+   if(PROCNUM==ARMCPU_ARM9)
+   {
+      /* ALU and MEM are different stages of the 5-stage pipeline.
+       * we approximate the pipeline throughput using max,
+       * since simply adding the cycles of each instruction together
+       * fails to take into account the parallelism of the arm pipeline
+       * and would make the emulated system unnaturally slow.
+       */
+      return std::max(aluCycles, memCycles);
+   }
+
+   /* ALU and MEM are part of the same stage of the 3-stage pipeline,
+    * thus they occur in sequence and we can simply add the counts together.
+    */
+   return aluCycles + memCycles;
 }
 
-// calculates the cycle contribution of ALU + MEM stages (= EXECUTE)
-// given ALU cycle time and the description of a single memory access.
-// this may have side effects, so don't call it more than necessary.
+/* calculates the cycle contribution of ALU + MEM stages (= EXECUTE)
+ * given ALU cycle time and the description of a single memory access.
+ * this may have side effects, so don't call it more than necessary. */
 template<int PROCNUM, int READSIZE, MMU_ACCESS_DIRECTION DIRECTION>
 FORCEINLINE u32 MMU_aluMemAccessCycles(u32 aluCycles, u32 addr)
 {
@@ -429,10 +432,10 @@ FORCEINLINE u32 MMU_aluMemAccessCycles(u32 aluCycles, u32 addr)
 	return MMU_aluMemCycles<PROCNUM>(aluCycles, memCycles);
 }
 
-// calculates the cycle contribution of FETCH + EXECUTE stages
-// given executeCycles = the combined ALU+MEM cycles
-//     and fetchCycles = the cycle time of the FETCH stage
-// this function might belong more in armcpu, but I don't think it matters.
+/* calculates the cycle contribution of FETCH + EXECUTE stages
+ * given executeCycles = the combined ALU+MEM cycles
+ *     and fetchCycles = the cycle time of the FETCH stage
+ * this function might belong more in armcpu, but I don't think it matters. */
 template<int PROCNUM>
 FORCEINLINE u32 MMU_fetchExecuteCycles(u32 executeCycles, u32 fetchCycles)
 {
@@ -444,16 +447,17 @@ FORCEINLINE u32 MMU_fetchExecuteCycles(u32 executeCycles, u32 fetchCycles)
 
 	if(USE_TIMING() && allow)
 	{
-		// execute and fetch are different stages of the pipeline for both arm7 and arm9.
-		// again, we approximate the pipeline throughput using max.
+		/* execute and fetch are different stages of the pipeline for both arm7 and arm9.
+		 * again, we approximate the pipeline throughput using max. */
 		return std::max(executeCycles, fetchCycles);
-		// TODO: add an option to support conflict between MEM and FETCH cycles
-		//  if they're both using the same data bus.
-		//  in the case of a conflict this should be:
-		//  return std::max(aluCycles, memCycles + fetchCycles);
+		/* TODO: add an option to support conflict between MEM and FETCH cycles
+		 *  if they're both using the same data bus.
+		 *  in the case of a conflict this should be:
+		 *  return std::max(aluCycles, memCycles + fetchCycles);
+       */
 	}
 	return executeCycles;
 }
 
 
-#endif //MMUTIMING_H
+#endif /* MMUTIMING_H */
