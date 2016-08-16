@@ -2674,12 +2674,29 @@ bool validateIORegsWrite(u32 addr, u8 size, u32 val)
 			case eng_3D_CLRIMAGE_OFFSET:
 			case eng_3D_FOG_COLOR:
 			case eng_3D_FOG_OFFSET:
-			case eng_3D_FOG_TABLE + 0x00: case eng_3D_FOG_TABLE + 0x04: case eng_3D_FOG_TABLE + 0x08: case eng_3D_FOG_TABLE + 0x0C:
-			case eng_3D_FOG_TABLE + 0x10: case eng_3D_FOG_TABLE + 0x14: case eng_3D_FOG_TABLE + 0x18: case eng_3D_FOG_TABLE + 0x1C:
-			case eng_3D_TOON_TABLE + 0x00: case eng_3D_TOON_TABLE + 0x04: case eng_3D_TOON_TABLE + 0x08: case eng_3D_TOON_TABLE + 0x0C:
-			case eng_3D_TOON_TABLE + 0x10: case eng_3D_TOON_TABLE + 0x14: case eng_3D_TOON_TABLE + 0x18: case eng_3D_TOON_TABLE + 0x1C:
-			case eng_3D_TOON_TABLE + 0x20: case eng_3D_TOON_TABLE + 0x24: case eng_3D_TOON_TABLE + 0x28: case eng_3D_TOON_TABLE + 0x2C:
-			case eng_3D_TOON_TABLE + 0x30: case eng_3D_TOON_TABLE + 0x34: case eng_3D_TOON_TABLE + 0x38: case eng_3D_TOON_TABLE + 0x3C:
+			case eng_3D_FOG_TABLE + 0x00:
+         case eng_3D_FOG_TABLE + 0x04:
+         case eng_3D_FOG_TABLE + 0x08:
+         case eng_3D_FOG_TABLE + 0x0C:
+			case eng_3D_FOG_TABLE + 0x10:
+         case eng_3D_FOG_TABLE + 0x14:
+         case eng_3D_FOG_TABLE + 0x18:
+         case eng_3D_FOG_TABLE + 0x1C:
+			case eng_3D_TOON_TABLE + 0x00:
+         case eng_3D_TOON_TABLE + 0x04:
+         case eng_3D_TOON_TABLE + 0x08:
+         case eng_3D_TOON_TABLE + 0x0C:
+			case eng_3D_TOON_TABLE + 0x10:
+         case eng_3D_TOON_TABLE + 0x14:
+         case eng_3D_TOON_TABLE + 0x18:
+         case eng_3D_TOON_TABLE + 0x1C:
+			case eng_3D_TOON_TABLE + 0x20:
+         case eng_3D_TOON_TABLE + 0x24:
+         case eng_3D_TOON_TABLE + 0x28: case eng_3D_TOON_TABLE + 0x2C:
+			case eng_3D_TOON_TABLE + 0x30:
+         case eng_3D_TOON_TABLE + 0x34:
+         case eng_3D_TOON_TABLE + 0x38:
+         case eng_3D_TOON_TABLE + 0x3C:
 			case eng_3D_GXFIFO + 0x00: case eng_3D_GXFIFO + 0x04: case eng_3D_GXFIFO + 0x08: case eng_3D_GXFIFO + 0x0C:
 			case eng_3D_GXFIFO + 0x10: case eng_3D_GXFIFO + 0x14: case eng_3D_GXFIFO + 0x18: case eng_3D_GXFIFO + 0x1C:
 			case eng_3D_GXFIFO + 0x20: case eng_3D_GXFIFO + 0x24: case eng_3D_GXFIFO + 0x28: case eng_3D_GXFIFO + 0x2C:
@@ -2886,7 +2903,7 @@ bool validateIORegsWrite(u32 addr, u8 size, u32 val)
 #ifdef DEVELOPER
 				printf("MMU7 write%02d to undefined register %08Xh = %08Xh (PC:%08X)\n", size, addr, val, ARMPROC.instruct_adr);
 #endif
-				return false;
+            break;
 		}
 	}
 
