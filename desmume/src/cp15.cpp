@@ -419,7 +419,7 @@ BOOL armcp15_t::moveARM2CP(u32 val, u8 CRn, u8 CRm, u8 opcode1, u8 opcode2)
          }
          break;
       case 9:
-         if((opcode1==0))
+         if(opcode1 == 0)
          {
             switch(CRm)
             {
