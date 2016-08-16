@@ -2692,15 +2692,28 @@ bool validateIORegsWrite(u32 addr, u8 size, u32 val)
          case eng_3D_TOON_TABLE + 0x1C:
 			case eng_3D_TOON_TABLE + 0x20:
          case eng_3D_TOON_TABLE + 0x24:
-         case eng_3D_TOON_TABLE + 0x28: case eng_3D_TOON_TABLE + 0x2C:
+         case eng_3D_TOON_TABLE + 0x28:
+         case eng_3D_TOON_TABLE + 0x2C:
 			case eng_3D_TOON_TABLE + 0x30:
          case eng_3D_TOON_TABLE + 0x34:
          case eng_3D_TOON_TABLE + 0x38:
          case eng_3D_TOON_TABLE + 0x3C:
-			case eng_3D_GXFIFO + 0x00: case eng_3D_GXFIFO + 0x04: case eng_3D_GXFIFO + 0x08: case eng_3D_GXFIFO + 0x0C:
-			case eng_3D_GXFIFO + 0x10: case eng_3D_GXFIFO + 0x14: case eng_3D_GXFIFO + 0x18: case eng_3D_GXFIFO + 0x1C:
-			case eng_3D_GXFIFO + 0x20: case eng_3D_GXFIFO + 0x24: case eng_3D_GXFIFO + 0x28: case eng_3D_GXFIFO + 0x2C:
-			case eng_3D_GXFIFO + 0x30: case eng_3D_GXFIFO + 0x34: case eng_3D_GXFIFO + 0x38: case eng_3D_GXFIFO + 0x3C:
+			case eng_3D_GXFIFO + 0x00:
+         case eng_3D_GXFIFO + 0x04:
+         case eng_3D_GXFIFO + 0x08:
+         case eng_3D_GXFIFO + 0x0C:
+			case eng_3D_GXFIFO + 0x10:
+         case eng_3D_GXFIFO + 0x14:
+         case eng_3D_GXFIFO + 0x18:
+         case eng_3D_GXFIFO + 0x1C:
+			case eng_3D_GXFIFO + 0x20:
+         case eng_3D_GXFIFO + 0x24:
+         case eng_3D_GXFIFO + 0x28:
+         case eng_3D_GXFIFO + 0x2C:
+			case eng_3D_GXFIFO + 0x30:
+         case eng_3D_GXFIFO + 0x34:
+         case eng_3D_GXFIFO + 0x38:
+         case eng_3D_GXFIFO + 0x3C:
 
 				// 3d commands
 			case cmd_3D_MTX_MODE:
@@ -2970,230 +2983,234 @@ void FASTCALL _MMU_ARM9_write08(u32 adr, u8 val)
       }
       else
       {
-         switch(adr)
+         if (
+                  (adr >= (eng_3D_CLEAR_COLOR+0))
+               && (adr <= (eng_3D_CLEAR_COLOR+3))
+            )
          {
-            case REG_SQRTCNT:
-               printf("ERROR 8bit SQRTCNT WRITE\n");
-               return;
-            case REG_SQRTCNT+1:
-               printf("ERROR 8bit SQRTCNT1 WRITE\n");
-               return;
-            case REG_SQRTCNT+2:
-               printf("ERROR 8bit SQRTCNT2 WRITE\n");
-               return;
-            case REG_SQRTCNT+3:
-               printf("ERROR 8bit SQRTCNT3 WRITE\n");
-               return;
+            T1WriteByte((u8*)&gfx3d.state.clearColor,adr-eng_3D_CLEAR_COLOR,val); 
+         }
+         else
+         {
+            switch(adr)
+            {
+               case REG_SQRTCNT:
+                  printf("ERROR 8bit SQRTCNT WRITE\n");
+                  return;
+               case REG_SQRTCNT+1:
+                  printf("ERROR 8bit SQRTCNT1 WRITE\n");
+                  return;
+               case REG_SQRTCNT+2:
+                  printf("ERROR 8bit SQRTCNT2 WRITE\n");
+                  return;
+               case REG_SQRTCNT+3:
+                  printf("ERROR 8bit SQRTCNT3 WRITE\n");
+                  return;
 
 #if 1
-            case REG_DIVCNT:
-               printf("ERROR 8bit DIVCNT WRITE\n");
-               return;
-            case REG_DIVCNT+1:
-               printf("ERROR 8bit DIVCNT+1 WRITE\n");
-               return;
-            case REG_DIVCNT+2:
-               printf("ERROR 8bit DIVCNT+2 WRITE\n");
-               return;
-            case REG_DIVCNT+3:
-               printf("ERROR 8bit DIVCNT+3 WRITE\n");
-               return;
-#endif
-               //ensata putchar port
-            case 0x04FFF000:
-               if(nds.ensataEmulation)
-               {
-                  printf("%c",val);
-                  fflush(stdout);
-               }
-               break;
-
-            case eng_3D_GXSTAT:
-               MMU_new.gxstat.write(8,adr,val);
-               break;
-
-            case REG_DISPA_WIN0H: 	 
-               mainEngine->SetWIN0_H1(val);
-               break ; 	 
-            case REG_DISPA_WIN0H+1: 	 
-               mainEngine->SetWIN0_H0(val);
-               break ; 	 
-            case REG_DISPA_WIN1H: 	 
-               mainEngine->SetWIN1_H1(val);
-               break ; 	 
-            case REG_DISPA_WIN1H+1: 	 
-               mainEngine->SetWIN1_H0(val);
-               break ; 	 
-
-            case REG_DISPB_WIN0H: 	 
-               subEngine->SetWIN0_H1(val);
-               break ; 	 
-            case REG_DISPB_WIN0H+1: 	 
-               subEngine->SetWIN0_H0(val);
-               break ; 	 
-            case REG_DISPB_WIN1H: 	 
-               subEngine->SetWIN1_H1(val);
-               break ; 	 
-            case REG_DISPB_WIN1H+1: 	 
-               subEngine->SetWIN1_H0(val);
-               break ;
-
-            case REG_DISPA_WIN0V: 	 
-               mainEngine->SetWIN0_V1(val) ;
-               break ; 	 
-            case REG_DISPA_WIN0V+1: 	 
-               mainEngine->SetWIN0_V0(val) ;
-               break ; 	 
-            case REG_DISPA_WIN1V: 	 
-               mainEngine->SetWIN1_V1(val) ;
-               break ; 	 
-            case REG_DISPA_WIN1V+1: 	 
-               mainEngine->SetWIN1_V0(val) ;
-               break ; 	 
-
-            case REG_DISPB_WIN0V: 	 
-               subEngine->SetWIN0_V1(val);
-               break ; 	 
-            case REG_DISPB_WIN0V+1: 	 
-               subEngine->SetWIN0_V0(val);
-               break ; 	 
-            case REG_DISPB_WIN1V: 	 
-               subEngine->SetWIN1_V1(val);
-               break ; 	 
-            case REG_DISPB_WIN1V+1: 	 
-               subEngine->SetWIN1_V0(val);
-               break ;
-
-            case REG_DISPA_WININ: 	 
-               mainEngine->SetWININ0(val);
-               break ; 	 
-            case REG_DISPA_WININ+1: 	 
-               mainEngine->SetWININ1(val);
-               break ; 	 
-            case REG_DISPA_WINOUT: 	 
-               mainEngine->SetWINOUT(val);
-               break ; 	 
-            case REG_DISPA_WINOUT+1: 	 
-               mainEngine->SetWINOBJ(val);
-               break ; 	 
-
-            case REG_DISPB_WININ: 	 
-               subEngine->SetWININ0(val);
-               break ; 	 
-            case REG_DISPB_WININ+1: 	 
-               subEngine->SetWININ1(val);
-               break ; 
-            case REG_DISPB_WINOUT: 	 
-               subEngine->SetWINOUT(val);
-               break ; 	 
-            case REG_DISPB_WINOUT+1: 	 
-               subEngine->SetWINOBJ(val);
-               break ;
-
-            case REG_DISPA_BLDCNT:
-               mainEngine->SetBLDCNT_HIGH(val);
-               break;
-            case REG_DISPA_BLDCNT+1:
-               mainEngine->SetBLDCNT_LOW(val);
-               break;
-
-            case REG_DISPB_BLDCNT: 	 
-               subEngine->SetBLDCNT_HIGH(val);
-               break;
-            case REG_DISPB_BLDCNT+1: 	 
-               subEngine->SetBLDCNT_LOW(val);
-               break;
-
-            case REG_DISPA_BLDALPHA: 	 
-               mainEngine->SetBLDALPHA_EVA(val);
-               break;
-            case REG_DISPA_BLDALPHA+1:
-               mainEngine->SetBLDALPHA_EVB(val);
-               break;
-
-            case REG_DISPB_BLDALPHA:
-               subEngine->SetBLDALPHA_EVA(val);
-               break;
-            case REG_DISPB_BLDALPHA+1:
-               subEngine->SetBLDALPHA_EVB(val);
-               break;
-
-            case REG_DISPA_BLDY: 	 
-               mainEngine->SetBLDY_EVY(val);
-               break ; 	 
-            case REG_DISPB_BLDY: 	 
-               subEngine->SetBLDY_EVY(val);
-               break;
-
-            case REG_AUXSPICNT:
-            case REG_AUXSPICNT+1:
-               write_auxspicnt(ARMCPU_ARM9, 8, adr & 1, val);
-               return;
-
-            case REG_AUXSPIDATA:
-               {
-                  //if(val!=0) MMU.AUX_SPI_CMD = val & 0xFF; //zero 20-aug-2013 - this seems pointless
-                  u8 spidata = slot1_device->auxspi_transaction(ARMCPU_ARM9,(u8)val);
-                  T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][(REG_AUXSPIDATA >> 20) & 0xff], REG_AUXSPIDATA & 0xfff, spidata);
-                  MMU.AUX_SPI_CNT &= ~0x80; //remove busy flag
+               case REG_DIVCNT:
+                  printf("ERROR 8bit DIVCNT WRITE\n");
                   return;
-               }
+               case REG_DIVCNT+1:
+                  printf("ERROR 8bit DIVCNT+1 WRITE\n");
+                  return;
+               case REG_DIVCNT+2:
+                  printf("ERROR 8bit DIVCNT+2 WRITE\n");
+                  return;
+               case REG_DIVCNT+3:
+                  printf("ERROR 8bit DIVCNT+3 WRITE\n");
+                  return;
+#endif
+                  //ensata putchar port
+               case 0x04FFF000:
+                  if(nds.ensataEmulation)
+                  {
+                     printf("%c",val);
+                     fflush(stdout);
+                  }
+                  break;
 
-            case REG_POWCNT1:
-               writereg_POWCNT1(8,adr,val);
-               break;
+               case eng_3D_GXSTAT:
+                  MMU_new.gxstat.write(8,adr,val);
+                  break;
 
-            case REG_DISPA_DISP3DCNT:
-            case REG_DISPA_DISP3DCNT+1:
-               writereg_DISP3DCNT(8,adr,val);
-               return;
-            case REG_IF:
-               REG_IF_WriteByte<ARMCPU_ARM9>(0,val);
-               break;
-            case REG_IF+1:
-               REG_IF_WriteByte<ARMCPU_ARM9>(1,val);
-               break;
-            case REG_IF+2:
-               REG_IF_WriteByte<ARMCPU_ARM9>(2,val);
-               break;
-            case REG_IF+3:
-               REG_IF_WriteByte<ARMCPU_ARM9>(3,val);
-               break;
-            case eng_3D_CLEAR_COLOR+0:
-            case eng_3D_CLEAR_COLOR+1:
-            case eng_3D_CLEAR_COLOR+2:
-            case eng_3D_CLEAR_COLOR+3:
-               T1WriteByte((u8*)&gfx3d.state.clearColor,adr-eng_3D_CLEAR_COLOR,val); 
-               break;
-            case REG_VRAMCNTA:
-            case REG_VRAMCNTB:
-            case REG_VRAMCNTC:
-            case REG_VRAMCNTD:
-            case REG_VRAMCNTE:
-            case REG_VRAMCNTF:
-            case REG_VRAMCNTG:
-            case REG_WRAMCNT:
-            case REG_VRAMCNTH:
-            case REG_VRAMCNTI:
-               MMU_VRAMmapControl(adr-REG_VRAMCNTA, val);
-               break;
-            case REG_DISPA_DISPMMEMFIFO:
+               case REG_DISPA_WIN0H: 	 
+                  mainEngine->SetWIN0_H1(val);
+                  break ; 	 
+               case REG_DISPA_WIN0H+1: 	 
+                  mainEngine->SetWIN0_H0(val);
+                  break ; 	 
+               case REG_DISPA_WIN1H: 	 
+                  mainEngine->SetWIN1_H1(val);
+                  break ; 	 
+               case REG_DISPA_WIN1H+1: 	 
+                  mainEngine->SetWIN1_H0(val);
+                  break ; 	 
+
+               case REG_DISPB_WIN0H: 	 
+                  subEngine->SetWIN0_H1(val);
+                  break ; 	 
+               case REG_DISPB_WIN0H+1: 	 
+                  subEngine->SetWIN0_H0(val);
+                  break ; 	 
+               case REG_DISPB_WIN1H: 	 
+                  subEngine->SetWIN1_H1(val);
+                  break ; 	 
+               case REG_DISPB_WIN1H+1: 	 
+                  subEngine->SetWIN1_H0(val);
+                  break ;
+
+               case REG_DISPA_WIN0V: 	 
+                  mainEngine->SetWIN0_V1(val) ;
+                  break ; 	 
+               case REG_DISPA_WIN0V+1: 	 
+                  mainEngine->SetWIN0_V0(val) ;
+                  break ; 	 
+               case REG_DISPA_WIN1V: 	 
+                  mainEngine->SetWIN1_V1(val) ;
+                  break ; 	 
+               case REG_DISPA_WIN1V+1: 	 
+                  mainEngine->SetWIN1_V0(val) ;
+                  break ; 	 
+
+               case REG_DISPB_WIN0V: 	 
+                  subEngine->SetWIN0_V1(val);
+                  break ; 	 
+               case REG_DISPB_WIN0V+1: 	 
+                  subEngine->SetWIN0_V0(val);
+                  break ; 	 
+               case REG_DISPB_WIN1V: 	 
+                  subEngine->SetWIN1_V1(val);
+                  break ; 	 
+               case REG_DISPB_WIN1V+1: 	 
+                  subEngine->SetWIN1_V0(val);
+                  break ;
+
+               case REG_DISPA_WININ: 	 
+                  mainEngine->SetWININ0(val);
+                  break ; 	 
+               case REG_DISPA_WININ+1: 	 
+                  mainEngine->SetWININ1(val);
+                  break ; 	 
+               case REG_DISPA_WINOUT: 	 
+                  mainEngine->SetWINOUT(val);
+                  break ; 	 
+               case REG_DISPA_WINOUT+1: 	 
+                  mainEngine->SetWINOBJ(val);
+                  break ; 	 
+
+               case REG_DISPB_WININ: 	 
+                  subEngine->SetWININ0(val);
+                  break ; 	 
+               case REG_DISPB_WININ+1: 	 
+                  subEngine->SetWININ1(val);
+                  break ; 
+               case REG_DISPB_WINOUT: 	 
+                  subEngine->SetWINOUT(val);
+                  break ; 	 
+               case REG_DISPB_WINOUT+1: 	 
+                  subEngine->SetWINOBJ(val);
+                  break ;
+
+               case REG_DISPA_BLDCNT:
+                  mainEngine->SetBLDCNT_HIGH(val);
+                  break;
+               case REG_DISPA_BLDCNT+1:
+                  mainEngine->SetBLDCNT_LOW(val);
+                  break;
+
+               case REG_DISPB_BLDCNT: 	 
+                  subEngine->SetBLDCNT_HIGH(val);
+                  break;
+               case REG_DISPB_BLDCNT+1: 	 
+                  subEngine->SetBLDCNT_LOW(val);
+                  break;
+
+               case REG_DISPA_BLDALPHA: 	 
+                  mainEngine->SetBLDALPHA_EVA(val);
+                  break;
+               case REG_DISPA_BLDALPHA+1:
+                  mainEngine->SetBLDALPHA_EVB(val);
+                  break;
+
+               case REG_DISPB_BLDALPHA:
+                  subEngine->SetBLDALPHA_EVA(val);
+                  break;
+               case REG_DISPB_BLDALPHA+1:
+                  subEngine->SetBLDALPHA_EVB(val);
+                  break;
+
+               case REG_DISPA_BLDY: 	 
+                  mainEngine->SetBLDY_EVY(val);
+                  break ; 	 
+               case REG_DISPB_BLDY: 	 
+                  subEngine->SetBLDY_EVY(val);
+                  break;
+
+               case REG_AUXSPICNT:
+               case REG_AUXSPICNT+1:
+                  write_auxspicnt(ARMCPU_ARM9, 8, adr & 1, val);
+                  return;
+
+               case REG_AUXSPIDATA:
+                  {
+                     //if(val!=0) MMU.AUX_SPI_CMD = val & 0xFF; //zero 20-aug-2013 - this seems pointless
+                     u8 spidata = slot1_device->auxspi_transaction(ARMCPU_ARM9,(u8)val);
+                     T1WriteWord(MMU.MMU_MEM[ARMCPU_ARM9][(REG_AUXSPIDATA >> 20) & 0xff], REG_AUXSPIDATA & 0xfff, spidata);
+                     MMU.AUX_SPI_CNT &= ~0x80; //remove busy flag
+                     return;
+                  }
+
+               case REG_POWCNT1:
+                  writereg_POWCNT1(8,adr,val);
+                  break;
+
+               case REG_DISPA_DISP3DCNT:
+               case REG_DISPA_DISP3DCNT+1:
+                  writereg_DISP3DCNT(8,adr,val);
+                  return;
+               case REG_IF:
+                  REG_IF_WriteByte<ARMCPU_ARM9>(0,val);
+                  break;
+               case REG_IF+1:
+                  REG_IF_WriteByte<ARMCPU_ARM9>(1,val);
+                  break;
+               case REG_IF+2:
+                  REG_IF_WriteByte<ARMCPU_ARM9>(2,val);
+                  break;
+               case REG_IF+3:
+                  REG_IF_WriteByte<ARMCPU_ARM9>(3,val);
+                  break;
+               case REG_VRAMCNTA:
+               case REG_VRAMCNTB:
+               case REG_VRAMCNTC:
+               case REG_VRAMCNTD:
+               case REG_VRAMCNTE:
+               case REG_VRAMCNTF:
+               case REG_VRAMCNTG:
+               case REG_WRAMCNT:
+               case REG_VRAMCNTH:
+               case REG_VRAMCNTI:
+                  MMU_VRAMmapControl(adr-REG_VRAMCNTA, val);
+                  break;
+               case REG_DISPA_DISPMMEMFIFO:
                   DISP_FIFOsend(val);
                   return;
 #ifdef LOG_CARD
-            case 0x040001A0 : /* TODO (clear): ??? */
-            case 0x040001A1 :
-            case 0x040001A2 :
-            case 0x040001A8 :
-            case 0x040001A9 :
-            case 0x040001AA :
-            case 0x040001AB :
-            case 0x040001AC :
-            case 0x040001AD :
-            case 0x040001AE :
-            case 0x040001AF :
-                           LOG("%08X : %02X\r\n", adr, val);
+               case 0x040001A0 : /* TODO (clear): ??? */
+               case 0x040001A1 :
+               case 0x040001A2 :
+               case 0x040001A8 :
+               case 0x040001A9 :
+               case 0x040001AA :
+               case 0x040001AB :
+               case 0x040001AC :
+               case 0x040001AD :
+               case 0x040001AE :
+               case 0x040001AF :
+                  LOG("%08X : %02X\r\n", adr, val);
 #endif
+            }
          }
       }
 
@@ -3326,32 +3343,23 @@ void FASTCALL _MMU_ARM9_write16(u32 adr, u16 val)
 
          case eng_3D_CLEAR_COLOR:
          case eng_3D_CLEAR_COLOR+2:
-                               {
-                                  T1WriteWord((u8*)&gfx3d.state.clearColor,adr-eng_3D_CLEAR_COLOR,val);
-                                  break;
-                               }
+                               T1WriteWord((u8*)&gfx3d.state.clearColor,adr-eng_3D_CLEAR_COLOR,val);
+                               break;
 
                                // Clear background depth setup - Parameters:2
          case eng_3D_CLEAR_DEPTH:
-                               {
-                                  ((u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x354>>1] = val;
-                                  gfx3d_glClearDepth(val);
-                                  return;
-                               }
+                               ((u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x354>>1] = val;
+                               gfx3d_glClearDepth(val);
+                               return;
                                // Fog Color - Parameters:4b
          case eng_3D_FOG_COLOR:
-                               {
-                                  ((u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x358>>1] = val;
-                                  gfx3d_glFogColor(val);
-                                  return;
-                               }
+                               ((u16 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x358>>1] = val;
+                               gfx3d_glFogColor(val);
+                               return;
          case eng_3D_FOG_OFFSET:
-                               {
-                                  ((u32 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x35C>>1] = val;
-                                  gfx3d_glFogOffset(val);
-                                  return;
-                               }
-
+                               ((u32 *)(MMU.MMU_MEM[ARMCPU_ARM9][0x40]))[0x35C>>1] = val;
+                               gfx3d_glFogOffset(val);
+                               return;
          case REG_DIVCNT:
                                MMU_new.div.write16(val);
                                execdiv();
@@ -3808,8 +3816,14 @@ void FASTCALL _MMU_ARM9_write32(u32 adr, u32 val)
 			case REG_POWCNT1: writereg_POWCNT1(32,adr,val); break;
 
 			//fog table: only write bottom 7 bits
-			case eng_3D_FOG_TABLE+0x00: case eng_3D_FOG_TABLE+0x04: case eng_3D_FOG_TABLE+0x08: case eng_3D_FOG_TABLE+0x0C:
-			case eng_3D_FOG_TABLE+0x10: case eng_3D_FOG_TABLE+0x14: case eng_3D_FOG_TABLE+0x18: case eng_3D_FOG_TABLE+0x1C:
+			case eng_3D_FOG_TABLE+0x00:
+         case eng_3D_FOG_TABLE+0x04:
+         case eng_3D_FOG_TABLE+0x08:
+         case eng_3D_FOG_TABLE+0x0C:
+			case eng_3D_FOG_TABLE+0x10:
+         case eng_3D_FOG_TABLE+0x14:
+         case eng_3D_FOG_TABLE+0x18:
+         case eng_3D_FOG_TABLE+0x1C:
 				val &= 0x7F7F7F7F;
 				break;
 
