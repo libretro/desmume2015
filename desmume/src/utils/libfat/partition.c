@@ -298,13 +298,10 @@ void _FAT_partition_destructor (PARTITION* partition) {
 }
 
 PARTITION* _FAT_partition_getPartitionFromPath (const char* path) {
-	const devoptab_t *devops;
+	const struct devoptab_t *devops = GetDeviceOpTab (path);
 
-	devops = GetDeviceOpTab (path);
-
-	if (!devops) {
+	if (!devops)
 		return NULL;
-	}
 
 	return (PARTITION*)devops->deviceData;
 }

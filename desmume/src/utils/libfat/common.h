@@ -56,6 +56,8 @@
    #include <disc_io.h>
 #endif
 
+#include <boolean.h>
+
 // Platform specific options
 #if   defined (__wii__)
    #define DEFAULT_CACHE_PAGES 4

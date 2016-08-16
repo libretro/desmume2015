@@ -31,6 +31,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
 A list of all default devices to try at startup, 
 terminated by a {NULL,NULL} entry.
@@ -106,5 +110,10 @@ Return a 32 bit value that specifies the capabilities of the disc
 static inline uint32_t _FAT_disc_features (const DISC_INTERFACE* disc) {
 	return disc->features;
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif // _DISC_H

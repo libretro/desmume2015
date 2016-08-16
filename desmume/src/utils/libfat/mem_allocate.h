@@ -32,12 +32,15 @@
 #define _MEM_ALLOCATE_H
 
 #include <stdlib.h>
+#include <retro_inline.h>
 
-static inline void* _FAT_mem_allocate (size_t size) {
+static INLINE void* _FAT_mem_allocate (size_t size)
+{
 	return malloc (size);
 }
 
-static inline void* _FAT_mem_align (size_t size) {
+static INLINE void* _FAT_mem_align (size_t size)
+{
 #ifdef __wii__
 	return memalign (32, size);
 #else
@@ -45,7 +48,8 @@ static inline void* _FAT_mem_align (size_t size) {
 #endif
 }
 
-static inline void _FAT_mem_free (void* mem) {
+static inline void _FAT_mem_free (void* mem)
+{
 	free (mem);
 }
 

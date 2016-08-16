@@ -32,10 +32,17 @@
 #include "common.h"
 #include <sys/types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 uint16_t _FAT_filetime_getTimeFromRTC (void);
 uint16_t _FAT_filetime_getDateFromRTC (void);
 
 time_t _FAT_filetime_to_time_t (uint16_t t, uint16_t d);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _FILETIME_H

@@ -33,6 +33,7 @@
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <stdint.h>
 #include <string.h>
 #include <limits.h>
 
@@ -103,9 +104,10 @@ void _FAT_cache_destructor (CACHE* cache) {
 }
 
 
-static u32 accessCounter = 0;
+static uint32_t accessCounter = 0;
 
-static u32 accessTime(){
+static uint32_t accessTime(void)
+{
 	accessCounter++;
 	return accessCounter;
 }

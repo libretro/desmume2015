@@ -28,9 +28,11 @@
 */
 
 
+#include <stdint.h>
+#include <string.h>
+
 #include "file_allocation_table.h"
 #include "partition.h"
-#include <string.h>
 
 /*
 Gets the cluster linked from input cluster
@@ -53,12 +55,12 @@ uint32_t _FAT_fat_nextCluster(PARTITION* partition, uint32_t cluster)
 
 		case FS_FAT12:
 		{
-			u32 nextCluster_h;
+			uint32_t nextCluster_h;
 			sector = partition->fat.fatStart + (((cluster * 3) / 2) / BYTES_PER_READ);
 			offset = ((cluster * 3) / 2) % BYTES_PER_READ;
 
 
-			_FAT_cache_readLittleEndianValue (partition->cache, &nextCluster, sector, offset, sizeof(u8));
+			_FAT_cache_readLittleEndianValue (partition->cache, &nextCluster, sector, offset, sizeof(uint8_t));
 
 			offset++;
 
@@ -68,7 +70,7 @@ uint32_t _FAT_fat_nextCluster(PARTITION* partition, uint32_t cluster)
 			}
 			nextCluster_h = 0;
 
-			_FAT_cache_readLittleEndianValue (partition->cache, &nextCluster_h, sector, offset, sizeof(u8));
+			_FAT_cache_readLittleEndianValue (partition->cache, &nextCluster_h, sector, offset, sizeof(uint8_t));
 			nextCluster |= (nextCluster_h << 8);
 
 			if (cluster & 0x01) {
@@ -88,7 +90,7 @@ uint32_t _FAT_fat_nextCluster(PARTITION* partition, uint32_t cluster)
 			sector = partition->fat.fatStart + ((cluster << 1) / BYTES_PER_READ);
 			offset = (cluster % (BYTES_PER_READ >> 1)) << 1;
 
-			_FAT_cache_readLittleEndianValue (partition->cache, &nextCluster, sector, offset, sizeof(u16));
+			_FAT_cache_readLittleEndianValue (partition->cache, &nextCluster, sector, offset, sizeof(uint16_t));
 
 			if (nextCluster >= 0xFFF7) {
 				nextCluster = CLUSTER_EOF;
@@ -99,7 +101,7 @@ uint32_t _FAT_fat_nextCluster(PARTITION* partition, uint32_t cluster)
 			sector = partition->fat.fatStart + ((cluster << 2) / BYTES_PER_READ);
 			offset = (cluster % (BYTES_PER_READ >> 2)) << 2;
 
-			_FAT_cache_readLittleEndianValue (partition->cache, &nextCluster, sector, offset, sizeof(u32));
+			_FAT_cache_readLittleEndianValue (partition->cache, &nextCluster, sector, offset, sizeof(uint32_t));
 
 			if (nextCluster >= 0x0FFFFFF7) {
 				nextCluster = CLUSTER_EOF;
@@ -140,11 +142,11 @@ static bool _FAT_fat_writeFatEntry (PARTITION* partition, uint32_t cluster, uint
 
 			if (cluster & 0x01) {
 
-				_FAT_cache_readLittleEndianValue (partition->cache, &oldValue, sector, offset, sizeof(u8));
+				_FAT_cache_readLittleEndianValue (partition->cache, &oldValue, sector, offset, sizeof(uint8_t));
 
 				value = (value << 4) | (oldValue & 0x0F);
 
-				_FAT_cache_writeLittleEndianValue (partition->cache, value & 0xFF, sector, offset, sizeof(u8));
+				_FAT_cache_writeLittleEndianValue (partition->cache, value & 0xFF, sector, offset, sizeof(uint8_t));
 
 				offset++;
 				if (offset >= BYTES_PER_READ) {
@@ -152,11 +154,11 @@ static bool _FAT_fat_writeFatEntry (PARTITION* partition, uint32_t cluster, uint
 					sector++;
 				}
 
-				_FAT_cache_writeLittleEndianValue (partition->cache, (value >> 8) & 0xFF, sector, offset, sizeof(u8));
+				_FAT_cache_writeLittleEndianValue (partition->cache, (value >> 8) & 0xFF, sector, offset, sizeof(uint8_t));
 
 			} else {
 
-				_FAT_cache_writeLittleEndianValue (partition->cache, value, sector, offset, sizeof(u8));
+				_FAT_cache_writeLittleEndianValue (partition->cache, value, sector, offset, sizeof(uint8_t));
 
 				offset++;
 				if (offset >= BYTES_PER_READ) {
@@ -164,11 +166,11 @@ static bool _FAT_fat_writeFatEntry (PARTITION* partition, uint32_t cluster, uint
 					sector++;
 				}
 
-				_FAT_cache_readLittleEndianValue (partition->cache, &oldValue, sector, offset, sizeof(u8));
+				_FAT_cache_readLittleEndianValue (partition->cache, &oldValue, sector, offset, sizeof(uint8_t));
 
 				value = ((value >> 8) & 0x0F) | (oldValue & 0xF0);
 
-				_FAT_cache_writeLittleEndianValue (partition->cache, value, sector, offset, sizeof(u8));
+				_FAT_cache_writeLittleEndianValue (partition->cache, value, sector, offset, sizeof(uint8_t));
 			}
 
 			break;
@@ -177,7 +179,7 @@ static bool _FAT_fat_writeFatEntry (PARTITION* partition, uint32_t cluster, uint
 			sector = partition->fat.fatStart + ((cluster << 1) / BYTES_PER_READ);
 			offset = (cluster % (BYTES_PER_READ >> 1)) << 1;
 
-			_FAT_cache_writeLittleEndianValue (partition->cache, value, sector, offset, sizeof(u16));
+			_FAT_cache_writeLittleEndianValue (partition->cache, value, sector, offset, sizeof(uint16_t));
 
 			break;
 
@@ -185,7 +187,7 @@ static bool _FAT_fat_writeFatEntry (PARTITION* partition, uint32_t cluster, uint
 			sector = partition->fat.fatStart + ((cluster << 2) / BYTES_PER_READ);
 			offset = (cluster % (BYTES_PER_READ >> 2)) << 2;
 
-			_FAT_cache_writeLittleEndianValue (partition->cache, value, sector, offset, sizeof(u32));
+			_FAT_cache_writeLittleEndianValue (partition->cache, value, sector, offset, sizeof(uint32_t));
 
 			break;
 

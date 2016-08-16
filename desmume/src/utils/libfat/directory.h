@@ -57,6 +57,10 @@
 #define ATTRIB_HID	0x02			// Hidden
 #define ATTRIB_RO	0x01			// Read only
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {FT_DIRECTORY, FT_FILE} FILE_TYPE;
 
 typedef struct {
@@ -174,5 +178,9 @@ void _FAT_directory_entryStat (PARTITION* partition, DIR_ENTRY* entry, struct st
 Get volume label
 */
 bool _FAT_directory_getVolumeLabel (PARTITION* partition, char *label);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _DIRECTORY_H

@@ -42,6 +42,10 @@
 #define PAGE_SECTORS 64
 #define CACHE_PAGE_SIZE (BYTES_PER_READ * PAGE_SECTORS)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
 	sec_t        sector;
 	unsigned int count;
@@ -125,6 +129,10 @@ void _FAT_cache_invalidate (CACHE* cache);
 CACHE* _FAT_cache_constructor (unsigned int numberOfPages, unsigned int sectorsPerPage, const DISC_INTERFACE* discInterface, sec_t endOfPartition);
 
 void _FAT_cache_destructor (CACHE* cache);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _CACHE_H
 

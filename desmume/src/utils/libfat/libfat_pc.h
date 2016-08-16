@@ -3,8 +3,6 @@
 
 #ifdef LIBFAT_PC
 
-#include "../../types.h"
-
 #ifdef _MSC_VER
 
 #define ENOTSUP 0
@@ -113,10 +111,10 @@ struct devoptab_t {
 		
 	int dirStateSize;
 	
-	DIR_ITER* (*diropen_r)(struct _reent *r, DIR_ITER *dirState, const char *path);
-	int (*dirreset_r)(struct _reent *r, DIR_ITER *dirState);
-	int (*dirnext_r)(struct _reent *r, DIR_ITER *dirState, char *filename, struct stat *filestat);
-	int (*dirclose_r)(struct _reent *r, DIR_ITER *dirState);
+	struct DIR_ITER* (*diropen_r)(struct _reent *r, struct DIR_ITER *dirState, const char *path);
+	int (*dirreset_r)(struct _reent *r, struct DIR_ITER *dirState);
+	int (*dirnext_r)(struct _reent *r, struct DIR_ITER *dirState, char *filename, struct stat *filestat);
+	int (*dirclose_r)(struct _reent *r, struct DIR_ITER *dirState);
 	#ifndef LIBFAT_PC
 	int (*statvfs_r)(struct _reent *r, const char *path, struct statvfs *buf);
 	#endif
@@ -131,7 +129,7 @@ struct devoptab_t {
 };
 
 
-devoptab_t* GetDeviceOpTab(const char* name);
+struct devoptab_t* GetDeviceOpTab(const char* name);
 
 #define _ATTR_WEAK_ 
 

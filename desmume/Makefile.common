@@ -33,17 +33,6 @@ SOURCES_CXX := \
 	$(CORE_DIR)/utils/decrypt/decrypt.cpp \
 	$(CORE_DIR)/utils/decrypt/header.cpp \
 	$(CORE_DIR)/utils/vfat.cpp \
-	$(CORE_DIR)/utils/libfat/cache.cpp \
-	$(CORE_DIR)/utils/libfat/directory.cpp \
-	$(CORE_DIR)/utils/libfat/disc.cpp \
-	$(CORE_DIR)/utils/libfat/fatdir.cpp \
-	$(CORE_DIR)/utils/libfat/fatfile.cpp \
-	$(CORE_DIR)/utils/libfat/filetime.cpp \
-	$(CORE_DIR)/utils/libfat/file_allocation_table.cpp \
-	$(CORE_DIR)/utils/libfat/libfat.cpp \
-	$(CORE_DIR)/utils/libfat/libfat_public_api.cpp \
-	$(CORE_DIR)/utils/libfat/lock.cpp \
-	$(CORE_DIR)/utils/libfat/partition.cpp \
 	$(CORE_DIR)/utils/tinyxml/tinystr.cpp \
 	$(CORE_DIR)/utils/tinyxml/tinyxml.cpp \
 	$(CORE_DIR)/utils/tinyxml/tinyxmlerror.cpp \
@@ -73,7 +62,18 @@ SOURCES_CXX := \
 	$(CORE_DIR)/driver.cpp \
 	$(CORE_DIR)/libretro/libretro.cpp \
 	$(CORE_DIR)/libretro/scrc32.cpp
-SOURCES_C :=
+SOURCES_C := \
+	$(CORE_DIR)/utils/libfat/partition.c \
+	$(CORE_DIR)/utils/libfat/cache.c \
+	$(CORE_DIR)/utils/libfat/directory.c \
+	$(CORE_DIR)/utils/libfat/disc.c \
+	$(CORE_DIR)/utils/libfat/fatdir.c \
+	$(CORE_DIR)/utils/libfat/fatfile.c \
+	$(CORE_DIR)/utils/libfat/filetime.c \
+	$(CORE_DIR)/utils/libfat/file_allocation_table.c \
+	$(CORE_DIR)/utils/libfat/libfat.c \
+	$(CORE_DIR)/utils/libfat/libfat_public_api.c \
+	$(CORE_DIR)/utils/libfat/lock.c
 
 ifeq ($(platform), vita)
 SOURCES_CXX += $(CORE_DIR)/utils/task_vita.cpp

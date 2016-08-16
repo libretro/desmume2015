@@ -32,6 +32,9 @@
 #ifndef _FATFILE_H
 #define _FATFILE_H
 
+#include <stdint.h>
+#include <boolean.h>
+
 #include "common.h"
 #include "partition.h"
 #include "directory.h"
@@ -41,13 +44,16 @@
 #include <sys/stat.h>
 #endif
 
-
 #define FILE_MAX_SIZE ((uint32_t)0xFFFFFFFF)	// 4GiB - 1B
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
-	u32   cluster;
+	uint32_t   cluster;
 	sec_t sector;
-	s32   byte;
+	int32_t   byte;
 } FILE_POSITION;
 
 struct _FILE_STRUCT;
@@ -104,5 +110,9 @@ Does no locking of its own -- lock the partition before calling.
 Returns 0 on success, an error code on failure.
 */
 extern int _FAT_syncToDisc (FILE_STRUCT* file);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _FATFILE_H

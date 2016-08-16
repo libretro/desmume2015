@@ -122,7 +122,7 @@ void build_ListCallback(RDIR *rdir, EListCallbackArg arg)
 		virtPathStack.push(currVirtPath);
 
 		currVirtPath = currVirtPath + "/" + fname;
-		bool ok = LIBFAT::MkDir(currVirtPath.c_str());
+		bool ok = LIBFAT_MkDir(currVirtPath.c_str());
 
 		if(!ok)
 			printf("ERROR adding dir %s via libfat\n",currVirtPath.c_str());
@@ -156,7 +156,7 @@ void build_ListCallback(RDIR *rdir, EListCallbackArg arg)
 
 			std::string path = currVirtPath + "/" + fname;
          printf("FAT + (%10.2f KB) %s \n",len/1024.f,path.c_str());
-			bool ok = LIBFAT::WriteFile(path.c_str(),buf,len);
+			bool ok = LIBFAT_WriteFile(path.c_str(),buf,len);
 			if(!ok) 
 				printf("ERROR adding file to fat\n");
 			delete[] buf;
@@ -224,9 +224,9 @@ bool VFAT::build(const char* path, int extra_MB)
 	EMUFILE_MEMORY* memf = (EMUFILE_MEMORY*)file;
 
 	//setup libfat and write all the files through it
-	LIBFAT::Init(memf->buf(),memf->size());
+	LIBFAT_Init(memf->buf(),memf->size());
 	list_files(path, build_ListCallback);
-	LIBFAT::Shutdown();
+	LIBFAT_Shutdown();
 
 	return true;
 }

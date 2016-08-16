@@ -504,7 +504,7 @@ int _FAT_mkdir_r (struct _reent *r, const char *path, int mode) {
 //	return 0;
 //}
 
-DIR_ITER* _FAT_diropen_r(struct _reent *r, DIR_ITER *dirState, const char *path) {
+struct DIR_ITER* _FAT_diropen_r(struct _reent *r, struct DIR_ITER *dirState, const char *path) {
 	DIR_ENTRY dirEntry;
 	DIR_STATE_STRUCT* state = (DIR_STATE_STRUCT*) (dirState->dirStruct);
 	bool fileExists;
@@ -552,10 +552,10 @@ DIR_ITER* _FAT_diropen_r(struct _reent *r, DIR_ITER *dirState, const char *path)
 	// We are now using this entry
 	state->inUse = true;
 	_FAT_unlock(&state->partition->lock);
-	return (DIR_ITER*) state;
+	return (struct DIR_ITER*) state;
 }
 
-int _FAT_dirreset_r (struct _reent *r, DIR_ITER *dirState) {
+int _FAT_dirreset_r (struct _reent *r, struct DIR_ITER *dirState) {
 	DIR_STATE_STRUCT* state = (DIR_STATE_STRUCT*) (dirState->dirStruct);
 
 	_FAT_lock(&state->partition->lock);
@@ -575,7 +575,7 @@ int _FAT_dirreset_r (struct _reent *r, DIR_ITER *dirState) {
 	return 0;
 }
 
-int _FAT_dirnext_r (struct _reent *r, DIR_ITER *dirState, char *filename, struct stat *filestat) {
+int _FAT_dirnext_r (struct _reent *r, struct DIR_ITER *dirState, char *filename, struct stat *filestat) {
 	DIR_STATE_STRUCT* state = (DIR_STATE_STRUCT*) (dirState->dirStruct);
 
 	_FAT_lock(&state->partition->lock);
@@ -609,7 +609,7 @@ int _FAT_dirnext_r (struct _reent *r, DIR_ITER *dirState, char *filename, struct
 	return 0;
 }
 
-int _FAT_dirclose_r (struct _reent *r, DIR_ITER *dirState) {
+int _FAT_dirclose_r (struct _reent *r, struct DIR_ITER *dirState) {
 	DIR_STATE_STRUCT* state = (DIR_STATE_STRUCT*) (dirState->dirStruct);
 	
 	// We are no longer using this entry

@@ -43,7 +43,7 @@
 #endif
 
 
-static const devoptab_t dotab_fat = {
+static const struct devoptab_t dotab_fat = {
 	"fat",
 	sizeof (FILE_STRUCT),
 	_FAT_open_r,
@@ -74,8 +74,8 @@ static const devoptab_t dotab_fat = {
 };
 
 #ifdef LIBFAT_PC
-static devoptab_t* _sole_device = NULL;
-devoptab_t* GetDeviceOpTab(const char* name)
+static struct devoptab_t* _sole_device = NULL;
+struct devoptab_t* GetDeviceOpTab(const char* name)
 {
 	return _sole_device;
 }
@@ -84,7 +84,7 @@ devoptab_t* GetDeviceOpTab(const char* name)
 
 bool fatMount (const char* name, const DISC_INTERFACE* interface, sec_t startSector, uint32_t cacheSize, uint32_t SectorsPerPage) {
 	PARTITION* partition;
-	devoptab_t* devops;
+	struct devoptab_t* devops;
 	//char* nameCopy;
 
 	if(!name || strlen(name) > 8 || !interface)
@@ -101,7 +101,7 @@ bool fatMount (const char* name, const DISC_INTERFACE* interface, sec_t startSec
 	//if(FindDevice(devname) >= 0)
 	//	return true;
 
-	devops = (devoptab_t*)_FAT_mem_allocate (sizeof(devoptab_t) + strlen(name) + 1);
+	devops = (struct devoptab_t*)_FAT_mem_allocate (sizeof(struct devoptab_t) + strlen(name) + 1);
 	if (!devops) {
 		return false;
 	}
@@ -135,7 +135,7 @@ bool fatMountSimple (const char* name, const DISC_INTERFACE* interface) {
 	return fatMount (name, interface, 0, DEFAULT_CACHE_PAGES, DEFAULT_SECTORS_PAGE);
 }
 
-void fatUnmountDirect (devoptab_t *devops) {
+void fatUnmountDirect (struct devoptab_t *devops) {
 	PARTITION* partition = (PARTITION*)devops->deviceData;
 	_FAT_partition_destructor (partition);
 	_FAT_mem_free (devops);
@@ -143,13 +143,13 @@ void fatUnmountDirect (devoptab_t *devops) {
 }
 
 //void fatUnmount (const char* name) {
-//	devoptab_t *devops;
+//	struct devoptab_t *devops;
 //	PARTITION* partition;
 //
 //	if(!name)
 //		return;
 //
-//	devops = (devoptab_t*)GetDeviceOpTab (name);
+//	devops = (struct devoptab_t*)GetDeviceOpTab (name);
 //	if (!devops) {
 //		return;
 //	}
@@ -229,7 +229,7 @@ void fatUnmountDirect (devoptab_t *devops) {
 //}
 
 //void fatGetVolumeLabel (const char* name, char *label) {
-//	devoptab_t *devops;
+//	struct devoptab_t *devops;
 //	PARTITION* partition;
 //	char *buf;
 //	int namelen,i;
@@ -251,7 +251,7 @@ void fatUnmountDirect (devoptab_t *devops) {
 //		buf[namelen+1]='\0';
 //	}
 //
-//	devops = (devoptab_t*)GetDeviceOpTab(buf);
+//	devops = (struct devoptab_t*)GetDeviceOpTab(buf);
 //
 //	for(i=0;buf[i]!='\0' && buf[i]!=':';i++);  
 //	if (!devops || strncasecmp(buf,devops->name,i)) {

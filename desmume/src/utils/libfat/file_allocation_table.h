@@ -43,6 +43,9 @@
 #define CLUSTERS_PER_FAT12 4085
 #define CLUSTERS_PER_FAT16 65525
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 uint32_t _FAT_fat_nextCluster(PARTITION* partition, uint32_t cluster);
 
@@ -66,5 +69,9 @@ static inline sec_t _FAT_fat_clusterToSector (PARTITION* partition, uint32_t clu
 static inline bool _FAT_fat_isValidCluster (PARTITION* partition, uint32_t cluster) {
 	return (cluster >= CLUSTER_FIRST) && (cluster <= partition->fat.lastCluster /* This will catch CLUSTER_ERROR */);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _FAT_H

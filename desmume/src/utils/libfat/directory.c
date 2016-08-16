@@ -226,7 +226,8 @@ static int _FAT_directory_mbsncasecmp (const char* s1, const char* s2, size_t le
 }
 
 
-static bool _FAT_directory_entryGetAlias (const u8* entryData, char* destName) {
+static bool _FAT_directory_entryGetAlias (const uint8_t * entryData, char* destName)
+{
 	int i=0;
 	int j=0;
 

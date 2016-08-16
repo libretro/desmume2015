@@ -34,6 +34,10 @@
 #include "cache.h"
 #include "lock.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Device name
 extern const char* DEVICE_NAME;
 
@@ -85,5 +89,9 @@ void _FAT_partition_destructor (PARTITION* partition);
 Return the partition specified in a path, as taken from the devoptab.
 */
 PARTITION* _FAT_partition_getPartitionFromPath (const char* path);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _PARTITION_H

@@ -43,6 +43,9 @@
 #include <sys/reent.h>
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct {
 	PARTITION* partition;
@@ -69,10 +72,13 @@ extern int _FAT_statvfs_r (struct _reent *r, const char *path, struct statvfs *b
 /*
 Directory iterator functions
 */
-extern DIR_ITER* _FAT_diropen_r(struct _reent *r, DIR_ITER *dirState, const char *path);
-extern int _FAT_dirreset_r (struct _reent *r, DIR_ITER *dirState);
-extern int _FAT_dirnext_r (struct _reent *r, DIR_ITER *dirState, char *filename, struct stat *filestat);
-extern int _FAT_dirclose_r (struct _reent *r, DIR_ITER *dirState);
+extern struct DIR_ITER* _FAT_diropen_r(struct _reent *r, struct DIR_ITER *dirState, const char *path);
+extern int _FAT_dirreset_r (struct _reent *r, struct DIR_ITER *dirState);
+extern int _FAT_dirnext_r (struct _reent *r, struct DIR_ITER *dirState, char *filename, struct stat *filestat);
+extern int _FAT_dirclose_r (struct _reent *r, struct DIR_ITER *dirState);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _FATDIR_H
