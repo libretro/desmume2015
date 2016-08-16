@@ -3,6 +3,10 @@
 
 #ifdef LIBFAT_PC
 
+#include <stdint.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #ifdef _MSC_VER
 
 #define ENOTSUP 0
@@ -14,42 +18,12 @@
 #define strcasecmp(x,y) _stricmp(x,y)
 #define strncasecmp(x, y, l) strnicmp(x, y, l)
 
-typedef unsigned __int64 uint64_t;
-typedef __int64 int64_t;
-typedef unsigned int uint32_t;
-typedef int int32_t;
-typedef unsigned short uint16_t;
-typedef short int16_t;
-typedef unsigned char uint8_t;
-typedef char int8_t;
-
-typedef int32_t ssize_t;
-
-#include <sys/stat.h>
-
 #define S_IRUSR S_IREAD
 #define S_IRGRP S_IREAD
 #define S_IROTH S_IREAD
 #define S_IWUSR S_IWRITE
 #define S_IWGRP S_IWRITE
 #define S_IWOTH S_IWRITE
-
-//struct stat {
-//	u32 st_dev;
-//	u32 st_ino;
-//	u32 st_mode;
-//	u32 st_nlink;
-//	u32 st_uid;
-//	u32 st_gid;
-//	u32 st_rdev;
-//	s64 st_size;
-//	time_t st_atime;
-//	time_t st_mtime;
-//	time_t st_ctime;
-//	s32 st_blksize;
-//	s32 st_blocks;
-//	u32 st_attr;
-//}; 
 
 #else // (!_MSC_VER)
 

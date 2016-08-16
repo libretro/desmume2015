@@ -32,6 +32,7 @@
 #ifndef _FATDIR_H
 #define _FATDIR_H
 
+#include <sys/types.h>
 #include <sys/stat.h>
 
 #include "common.h"
