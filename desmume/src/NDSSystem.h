@@ -163,20 +163,20 @@ void NDS_RescheduleTimers();
 
 enum ENSATA_HANDSHAKE
 {
-	ENSATA_HANDSHAKE_none = 0,
-	ENSATA_HANDSHAKE_query = 1,
-	ENSATA_HANDSHAKE_ack = 2,
-	ENSATA_HANDSHAKE_confirm = 3,
-	ENSATA_HANDSHAKE_complete = 4,
+	ENSATA_HANDSHAKE_none     = 0,
+	ENSATA_HANDSHAKE_query    = 1,
+	ENSATA_HANDSHAKE_ack      = 2,
+	ENSATA_HANDSHAKE_confirm  = 3,
+	ENSATA_HANDSHAKE_complete = 4
 };
 
 enum NDS_CONSOLE_TYPE
 {
-	NDS_CONSOLE_TYPE_FAT = 0xFF,
-	NDS_CONSOLE_TYPE_LITE = 0x20,
-	NDS_CONSOLE_TYPE_IQUE = 0x43,
+	NDS_CONSOLE_TYPE_FAT      = 0xFF,
+	NDS_CONSOLE_TYPE_LITE     = 0x20,
+	NDS_CONSOLE_TYPE_IQUE     = 0x43,
 	NDS_CONSOLE_TYPE_IQUE_LIE = 0x63,
-	NDS_CONSOLE_TYPE_DSI = 0xFE
+	NDS_CONSOLE_TYPE_DSI      = 0xFE
 };
 
 struct NDSSystem
@@ -586,9 +586,9 @@ extern struct TCommonSettings {
 	enum MicMode
 	{
 		InternalNoise = 0,
-		Sample = 1,
-		Random = 2,
-		Physical = 3,
+		Sample        = 1,
+		Random        = 2,
+		Physical      = 3
 	} micMode;
 
 
