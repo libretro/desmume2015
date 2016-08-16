@@ -101,8 +101,8 @@ SOURCES_C += $(CORE_DIR)/utils/ConvertUTF.c \
 
 ifeq ($(DESMUME_JIT_ARM),1)
 SOURCES_CXX += \
-	$(CORE_DIR)/libretro/arm_arm/arm_gen.cpp \
-	$(CORE_DIR)/libretro/arm_arm/arm_jit.cpp
+	$(CORE_DIR)/utils/arm_arm/arm_gen.cpp \
+	$(CORE_DIR)/utils/arm_arm/arm_jit.cpp
 endif
 
 ifeq ($(DEBUG),1)
