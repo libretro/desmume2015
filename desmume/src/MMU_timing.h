@@ -439,24 +439,21 @@ FORCEINLINE u32 MMU_aluMemAccessCycles(u32 aluCycles, u32 addr)
 template<int PROCNUM>
 FORCEINLINE u32 MMU_fetchExecuteCycles(u32 executeCycles, u32 fetchCycles)
 {
-	#ifdef ACCOUNT_FOR_CODE_FETCH_CYCLES
-	const bool allow = true;
-	#else
-	const bool allow = false;
-	#endif
-
-	if(USE_TIMING() && allow)
-	{
-		/* execute and fetch are different stages of the pipeline for both arm7 and arm9.
-		 * again, we approximate the pipeline throughput using max. */
-		return std::max(executeCycles, fetchCycles);
-		/* TODO: add an option to support conflict between MEM and FETCH cycles
-		 *  if they're both using the same data bus.
-		 *  in the case of a conflict this should be:
-		 *  return std::max(aluCycles, memCycles + fetchCycles);
+#ifdef ACCOUNT_FOR_CODE_FETCH_CYCLES
+   if(USE_TIMING())
+   {
+      /* execute and fetch are different stages of the pipeline for both arm7 and arm9.
+       * again, we approximate the pipeline throughput using max. */
+      return std::max(executeCycles, fetchCycles);
+      /* TODO: add an option to support conflict between MEM and FETCH cycles
+       *  if they're both using the same data bus.
+       *  in the case of a conflict this should be:
+       *  return std::max(aluCycles, memCycles + fetchCycles);
        */
-	}
-	return executeCycles;
+   }
+#endif
+
+   return executeCycles;
 }
 
 
