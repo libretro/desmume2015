@@ -381,9 +381,7 @@ public:
 		
 		//dump palette data for cache keying
 		if(palSize)
-		{
 			memcpy(newitem->dump.palette, pal, palSize*2);
-		}
 
 		//dump texture and 4x4 index data for cache keying
 		const int texsize = newitem->dump.textureSize = ms.size;
@@ -405,7 +403,9 @@ public:
 		{
 		case TEXMODE_A3I5:
 			{
-				for(int j=0;j<ms.numItems;j++) {
+            int j;
+				for(j=0;j<ms.numItems;j++)
+            {
 					adr = ms.items[j].ptr;
 					for(u32 x = 0; x < ms.items[j].len; x++)
 					{
@@ -423,32 +423,31 @@ public:
 
 		case TEXMODE_I2:
 			{
-				for(int j=0;j<ms.numItems;j++) {
-					adr = ms.items[j].ptr;
-					for(u32 x = 0; x < ms.items[j].len; x++)
-					{
-						u8 bits;
-						u16 c;
+            int j;
+				for(j=0;j<ms.numItems;j++)
+            {
+               adr = ms.items[j].ptr;
+               for(u32 x = 0; x < ms.items[j].len; x++)
+               {
+                  u8 bits = (*adr)&0x3;
+                  u16   c = pal[bits];
+                  *dwdst++ = CONVERT(c,(bits == 0) ? palZeroTransparent : opaqueColor);
 
-						bits = (*adr)&0x3;
-						c = pal[bits];
-						*dwdst++ = CONVERT(c,(bits == 0) ? palZeroTransparent : opaqueColor);
+                  bits = ((*adr)>>2)&0x3;
+                  c = pal[bits];
+                  *dwdst++ = CONVERT(c,(bits == 0) ? palZeroTransparent : opaqueColor);
 
-						bits = ((*adr)>>2)&0x3;
-						c = pal[bits];
-						*dwdst++ = CONVERT(c,(bits == 0) ? palZeroTransparent : opaqueColor);
+                  bits = ((*adr)>>4)&0x3;
+                  c = pal[bits];
+                  *dwdst++ = CONVERT(c,(bits == 0) ? palZeroTransparent : opaqueColor);
 
-						bits = ((*adr)>>4)&0x3;
-						c = pal[bits];
-						*dwdst++ = CONVERT(c,(bits == 0) ? palZeroTransparent : opaqueColor);
+                  bits = ((*adr)>>6)&0x3;
+                  c = pal[bits];
+                  *dwdst++ = CONVERT(c,(bits == 0) ? palZeroTransparent : opaqueColor);
 
-						bits = ((*adr)>>6)&0x3;
-						c = pal[bits];
-						*dwdst++ = CONVERT(c,(bits == 0) ? palZeroTransparent : opaqueColor);
-
-						adr++;
-					}
-				}
+                  adr++;
+               }
+            }
 				break;
 			}
 		case TEXMODE_I4:
@@ -457,11 +456,8 @@ public:
 					adr = ms.items[j].ptr;
 					for(u32 x = 0; x < ms.items[j].len; x++)
 					{
-						u8 bits;
-						u16 c;
-
-						bits = (*adr)&0xF;
-						c = pal[bits];
+						u8 bits = (*adr)&0xF;
+						u16   c = pal[bits];
 						*dwdst++ = CONVERT(c,(bits == 0) ? palZeroTransparent : opaqueColor);
 
 						bits = ((*adr)>>4);
@@ -644,7 +640,7 @@ public:
 					adr = ms.items[j].ptr;
 					for(u32 x = 0; x < ms.items[j].len; ++x)
 					{
-						u16 c = pal[*adr&0x07];
+						u16    c = pal[*adr&0x07];
 						u8 alpha = (*adr>>3);
 						if(TEXFORMAT == TexFormat_15bpp)
 							*dwdst++ = RGB15TO6665(c,alpha);
@@ -701,9 +697,7 @@ public:
 			//this is because each 4x4 item doesnt carry along with it a copy of the entire palette, for verification
 			//instead, we just use the one paletteDump for verifying of all 4x4 textures; and if paletteDirty is set, verification has failed
 			if(it->second->getTextureMode() == TEXMODE_4X4 && paletteDirty)
-			{
 				it->second->assumedInvalid = true;
-			}
 		}
 	}
 
@@ -746,11 +740,16 @@ void TexCache_Invalidate()
 TexCacheItem* TexCache_SetTexture(TexCache_TexFormat TEXFORMAT, u32 format, u32 texpal)
 {
 	switch(TEXFORMAT)
-	{
-	case TexFormat_32bpp: return texCache.scan<TexFormat_32bpp>(format,texpal);
-	case TexFormat_15bpp: return texCache.scan<TexFormat_15bpp>(format,texpal);
-	default: assert(false); return NULL;
-	}
+   {
+      case TexFormat_32bpp:
+         return texCache.scan<TexFormat_32bpp>(format,texpal);
+      case TexFormat_15bpp:
+         return texCache.scan<TexFormat_15bpp>(format,texpal);
+      default:
+         break;
+   }
+
+   return NULL;
 }
 
 //call this periodically to keep the tex cache clean
