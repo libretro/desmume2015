@@ -161,8 +161,8 @@ else ifeq ($(platform), vita)
    CC = arm-vita-eabi-gcc$(EXE_EXT)
    CXX = arm-vita-eabi-g++$(EXE_EXT)
    AR = arm-vita-eabi-ar$(EXE_EXT)
-   CXXFLAGS += -DVITA
-   CFLAGS   += -DVITA
+   CXXFLAGS += -DVITA -fno-optimize-sibling-calls
+   CFLAGS   += -DVITA -fno-optimize-sibling-calls
    DESMUME_JIT_ARM = 1
    STATIC_LINKING = 1
 
