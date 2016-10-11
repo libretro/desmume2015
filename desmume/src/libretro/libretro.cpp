@@ -1,6 +1,10 @@
 #include <stdarg.h>
 #include <libretro.h>
 
+#if defined(VITA)
+  int _newlib_heap_size_user = 64 * 1024 * 1024;
+#endif
+
 #include "cheatSystem.h"
 #include "MMU.h"
 #include "NDSSystem.h"
@@ -326,7 +330,7 @@ static void check_variables(bool first_boot)
          }
       }
    }
- 
+
     var.key = "desmume_num_cores";
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -419,7 +423,7 @@ static void check_variables(bool first_boot)
             pointer_device = 1;
         else if(!strcmp(var.value, "r-stick"))
             pointer_device = 2;
-        else 
+        else
             pointer_device=0;
     }
    else
@@ -448,7 +452,7 @@ static void check_variables(bool first_boot)
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        static const struct { const char* name; int id; } languages[] = 
+        static const struct { const char* name; int id; } languages[] =
         {
             { "Auto", -1 },
             { "Japanese", 0 },
@@ -858,7 +862,7 @@ void retro_run (void)
       {
          analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X) / final_acceleration;
          analogY = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y) / final_acceleration;
-      } 
+      }
       else if(pointer_device == 2)
       {
          analogX = input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X) / final_acceleration;
@@ -895,7 +899,7 @@ void retro_run (void)
       //log_cb(RETRO_LOG_DEBUG, "%d %d.\n", GPU_LR_FRAMEBUFFER_NATIVE_WIDTH,GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT);
       //log_cb(RETRO_LOG_DEBUG, "%d %d.\n", analogX,analogY);
 
-      have_touch = have_touch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); 
+      have_touch = have_touch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2);
 
       TouchX = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1), TouchX + analogX);
       TouchY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1), TouchY + analogY);
