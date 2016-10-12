@@ -12,7 +12,6 @@
 #elif defined(VITA)
 # include <psp2/kernel/sysmem.h>
 # define RW_INIT sceKernelOpenVMDomain
-# define RW_END sceKernelCloseVMDomain
 #else
 # include <sys/mman.h>
 #endif
@@ -81,6 +80,8 @@ code_pool::code_pool(uint32_t icount) :
       fprintf(stderr, "sceKernelGetMemBlockBase failed\n");
       abort();
    }
+   
+   RW_INIT();
 #elif defined(USE_POSIX_MEMALIGN)
    if (posix_memalign((void**)&instructions, 4096, instruction_count * 4))
    {
@@ -158,9 +159,7 @@ void code_pool::set_label(const char* name)
 
 void code_pool::resolve_label(const char* name)
 {
-#ifdef VITA
-   RW_INIT();
-#endif
+
    for (int i = 0; i < TARGET_COUNT; i ++)
    {
       if (labels[i].name != name)
@@ -185,9 +184,7 @@ void code_pool::resolve_label(const char* name)
       labels[i].name = 0;
       break;
    }
-#ifdef VITA
-   RW_END();
-#endif
+
 }
 
 // Code Gen: Generic
@@ -204,13 +201,9 @@ void code_pool::insert_raw_instruction(uint32_t op)
       fprintf(stderr, "code_pool overflow\n");
       abort();
    }
-#ifdef VITA
-   RW_INIT();
-#endif
+
    instructions[next_instruction ++] = op;
-#ifdef VITA
-   RW_END();
-#endif
+
 }
 
 void code_pool::alu_op(AG_ALU_OP op, reg_t rd, reg_t rn,
