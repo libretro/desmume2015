@@ -2,7 +2,7 @@
 #include <libretro.h>
 
 #if defined(VITA)
-  int _newlib_heap_size_user = 64 * 1024 * 1024;
+  int _newlib_heap_size_user = 128 * 1024 * 1024;
 #endif
 
 #include "cheatSystem.h"

@@ -112,7 +112,7 @@ public:
 		std::vector<std::string> parts = tokenize_str(filename,"|");
 		SetRomName(parts[parts.size()-1].c_str());
 		LoadModulePath();
-#if !defined(WIN32) && !defined(DESMUME_COCOA)
+#if !defined(WIN32) && !defined(DESMUME_COCOA) && !defined(VITA)
 		ReadPathSettings();
 #endif
 		
@@ -122,7 +122,11 @@ public:
    {
       const char* saveDir = 0;
       environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &saveDir);
-      strncpy(pathToModule, saveDir ? saveDir : ".", PATH_MAX_LENGTH);
+#if !defined(VITA)
+			strncpy(pathToModule, saveDir ? saveDir : ".", PATH_MAX_LENGTH);
+#else
+			strncpy(pathToModule, saveDir ? saveDir : "", PATH_MAX_LENGTH);
+#endif
 
       if(saveDir == 0 && log_cb)
       {
@@ -130,8 +134,11 @@ public:
 
          const char* systemDir = 0;
          environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &systemDir);
+#if !defined(VITA)
          strncpy(pathToModule, systemDir ? systemDir : ".", PATH_MAX_LENGTH);
-
+#else
+				 strncpy(pathToModule, systemDir ? systemDir : "", PATH_MAX_LENGTH);
+#endif
          if(systemDir == 0 && log_cb)
             log_cb(RETRO_LOG_WARN, "System directory is not defined. Fallback to ROM dir\n");	  
 
@@ -256,7 +263,11 @@ public:
 	
 			if(!Path::IsPathRooted(thePath))
 			{
+#if defined(VITA)
+				thePath = (std::string)pathToModule + DIRECTORY_DELIMITER_CHAR;
+#else
 				thePath = (std::string)pathToModule + thePath;
+#endif
 			}
 
 			strncpy(buffer, thePath.c_str(), PATH_MAX_LENGTH);
@@ -425,4 +436,3 @@ public:
 };
 
 extern PathInfo path;
-
