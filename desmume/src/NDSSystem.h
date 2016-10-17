@@ -35,6 +35,8 @@ class EMUFILE;
 #define LAYOUT_RIGHT_LEFT                 3
 #define LAYOUT_TOP_ONLY                   4
 #define LAYOUT_BOTTOM_ONLY                5
+#define LAYOUT_HYBRID_TOP_ONLY            6
+#define LAYOUT_HYBRID_BOTTOM_ONLY         7
 
 template<typename Type>
 struct buttonstruct {
