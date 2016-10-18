@@ -207,7 +207,7 @@ static void BlankScreenSmallSection(uint16_t *pt1, const uint16_t *pt2){
 	while( pt1 < pt2)
 	{
 		int awidth = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3;
-		memset(pt1, CONVERT_COLOR(0), hybrid_layout_scale*awidth*sizeof(uint16_t));
+		memset(pt1, 0, hybrid_layout_scale*awidth*sizeof(uint16_t));
 		pt1 += hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3 + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH);
 	}
 }
@@ -262,7 +262,7 @@ static void SwapScreenSmall(uint16_t *dst, const uint16_t *src, uint32_t pitch, 
 		//Make Sure The Screen Gap is Empty
 		for(i=0; i< addgap; ++i)
 		{
-			memset(dst, CONVERT_COLOR(0), hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3*sizeof(uint16_t));
+			memset(dst, 0, hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3*sizeof(uint16_t));
 			dst += hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3 + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH);
 		}
 	}
@@ -298,10 +298,9 @@ static void SwapScreenSmall(uint16_t *dst, const uint16_t *src, uint32_t pitch, 
 	}
 	//Make Sure underneath the Screens is Empty. Fixes leftovers when changing screen layout
 	if(!first){
-		int awidth = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3;
-		int endheight = hybrid_layout_scale*awidth - addgap;
+		int endheight = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3 - addgap;
 		for(i=0; i<endheight; ++i){
-			memset(dst, CONVERT_COLOR(0), hybrid_layout_scale*awidth*sizeof(uint16_t));
+			memset(dst, 0, hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3*sizeof(uint16_t));
 			dst += hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3 + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH);
 		}
 	}
