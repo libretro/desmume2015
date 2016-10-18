@@ -39,7 +39,6 @@ static int analog_stick_acceleration_modifier = 0;
 static int microphone_force_enable = 0;
 static int nds_screen_gap = 0;
 static int hybrid_layout_scale = 1;
-static uint16_t pointer_colour = 0xFFFF;
 
 static uint16_t *screen_buf;
 
@@ -101,13 +100,13 @@ static int32_t FramesWithPointer;
 static void DrawPointerLine(uint16_t* aOut, uint32_t aPitchInPix)
 {
    for(int i = 0; i < (5 * scale) ; i ++)
-      aOut[aPitchInPix * i] = pointer_colour;
+      aOut[aPitchInPix * i] = 0xFFFF;
 }
 
 static void DrawPointerLineSmall(uint16_t* aOut, uint32_t aPitchInPix, int factor)
 {
    for(int i = 0; i < (factor * scale) ; i ++)
-      aOut[aPitchInPix * i] = pointer_colour;
+      aOut[aPitchInPix * i] = 0xFFFF;
 }
 
 static void DrawPointer(uint16_t* aOut, uint32_t aPitchInPix)
@@ -152,7 +151,7 @@ static void DrawPointerHybrid(uint16_t* aOut, uint32_t aPitchInPix, bool large)
    if(large)
 	   factor = 5*hybrid_layout_scale;
    else if(hybrid_layout_scale == 3)
-	   factor = 6;
+	   factor = 5;
    else
 	   factor = 3; 
    if(TouchX >   (factor * scale)) DrawPointerLineSmall(&aOut[TouchY * aPitchInPix + TouchX - (factor * scale) ], 1, factor);
@@ -840,26 +839,6 @@ static void check_variables(bool first_boot)
             nds_screen_gap = 100;
       }
    }
-
-   var.key = "desmume_pointer_colour";
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-	  if(!strcmp(var.value, "white"))
-		 pointer_colour = 0xFFFF;
-      else if (!strcmp(var.value, "black"))
-         pointer_colour = 0x0000;
-	  else if(!strcmp(var.value, "red"))
-		 pointer_colour = 0xF800;
-	  else if(!strcmp(var.value, "yellow"))
-		 pointer_colour = 0xFFE0;
-	  else if(!strcmp(var.value, "blue"))
-		 pointer_colour = 0x001F;
-	  else
-		 pointer_colour = 0xFFFF;
-   }
-   else{
-	   pointer_colour = 0xFFFF;
-   }
 }
 
 #ifndef GPU3D_NULL
@@ -914,7 +893,6 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch|hybrid/top|hybrid/bottom" },
       { "desmume_pointer_mouse", "Enable mouse/pointer; enable|disable" },
       { "desmume_pointer_type", "Pointer type; mouse|touch" },
-	  { "desmume_pointer_colour", "Pointer Colour; white|black|red|blue|yellow"},
       { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
       { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },
       { "desmume_pointer_device_acceleration_mod", "Emulated pointer acceleration modifier percent; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
@@ -931,7 +909,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_mic_force_enable", "Force Microphone Enable; no|yes" },
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
 	  { "desmume_hybrid_layout_scale", "Hybrid Layout Scale (restart); 1|3"},
-	  { 0, 0 }
+      { 0, 0 }
    };
 
    environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)values);
@@ -1401,7 +1379,6 @@ bool retro_load_game(const struct retro_game_info *game)
    environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, desc);
 
    execute = NDS_LoadROM(game->path);
-   printf("DON: %s\n", gameInfo.ROMname);
 
    if (execute == -1)
       return false;
