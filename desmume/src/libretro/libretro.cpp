@@ -38,6 +38,7 @@ static int analog_stick_acceleration = 2048;
 static int analog_stick_acceleration_modifier = 0;
 static int microphone_force_enable = 0;
 static int nds_screen_gap = 0;
+static int hybrid_layout_scale = 1;
 
 static uint16_t *screen_buf;
 
@@ -102,9 +103,9 @@ static void DrawPointerLine(uint16_t* aOut, uint32_t aPitchInPix)
       aOut[aPitchInPix * i] = 0xFFFF;
 }
 
-static void DrawPointerLineSmall(uint16_t* aOut, uint32_t aPitchInPix)
+static void DrawPointerLineSmall(uint16_t* aOut, uint32_t aPitchInPix, int factor)
 {
-   for(int i = 0; i < (3 * scale) ; i ++)
+   for(int i = 0; i < (factor * scale) ; i ++)
       aOut[aPitchInPix * i] = 0xFFFF;
 }
 
@@ -122,25 +123,41 @@ static void DrawPointer(uint16_t* aOut, uint32_t aPitchInPix)
    if(TouchY < (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-(5 * scale) )) DrawPointerLine(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
 }
 
-static void DrawPointerSmall(uint16_t* aOut, uint32_t aPitchInPix)
+static void DrawPointerHybrid(uint16_t* aOut, uint32_t aPitchInPix, bool large)
 {
    if(FramesWithPointer-- < 0)
       return;
-
-  //This should only be used in Hybrid Top Only Mode, so move to bottom part
-   int addgap;
-   if(nds_screen_gap >= GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3)
-	   addgap = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3-1;
+	
+	unsigned height,width;
+	int awidth = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3;
+   if(!large)
+   {  
+	int addgap;
+	if(nds_screen_gap >= hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3)
+	   addgap = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3-1;
    	else
 		addgap = nds_screen_gap;
-   aOut += (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3 + addgap)*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3);
-   TouchX = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3-1), TouchX);
-   TouchY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3-1), TouchY);
-   
-   if(TouchX >   (3 * scale)) DrawPointerLineSmall(&aOut[TouchY * aPitchInPix + TouchX - (3 * scale) ], 1);
-   if(TouchX < (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3 - (3 * scale) )) DrawPointerLineSmall(&aOut[TouchY * aPitchInPix + TouchX + 1], 1);
-   if(TouchY >   (3 * scale)) DrawPointerLineSmall(&aOut[(TouchY - (3 * scale) ) * aPitchInPix + TouchX], aPitchInPix);
-   if(TouchY < (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3-(3 * scale) )) DrawPointerLineSmall(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix);
+	aOut += hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3 + addgap)*hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3);
+	height = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3;
+		width = hybrid_layout_scale*awidth;
+   }
+   else{
+	   height = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+		width = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+   }
+   TouchX = Saturate(0, (width-1), TouchX);
+   TouchY = Saturate(0, (height-1), TouchY);
+   int factor;
+   if(large)
+	   factor = 5*hybrid_layout_scale;
+   else if(hybrid_layout_scale == 3)
+	   factor = 5;
+   else
+	   factor = 3; 
+   if(TouchX >   (factor * scale)) DrawPointerLineSmall(&aOut[TouchY * aPitchInPix + TouchX - (factor * scale) ], 1, factor);
+   if(TouchX < (hybrid_layout_scale*awidth - (factor * scale) )) DrawPointerLineSmall(&aOut[TouchY * aPitchInPix + TouchX + 1], 1, factor);
+   if(TouchY >   (factor * scale)) DrawPointerLineSmall(&aOut[(TouchY - (factor * scale) ) * aPitchInPix + TouchX], aPitchInPix, factor);
+   if(TouchY < (hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3-(factor * scale) )) DrawPointerLineSmall(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix, factor);
 }
 
 
@@ -149,48 +166,49 @@ static retro_pixel_format colorMode;
 static uint32_t frameSkip;
 static uint32_t frameIndex;
 
-bool Resample(int w1, int h1, const uint16_t *old, uint16_t *ret, bool divide, int factor)
+#define CONVERT_COLOR(color) (((color & 0x001f) << 11) | ((color & 0x03e0) << 1) | ((color & 0x0200) >> 4) | ((color & 0x7c00) >> 10))
+
+bool Resample_Screen(int w1, int h1, bool shrink, const uint16_t *old, uint16_t *ret)
     {
-		int w2,h2;
-		if(divide)
+		int w2, h2, x2, y2 ;
+		if(shrink)
 		{
-			w2 = w1/factor;
-			h2 = h1/factor;
+			w2 = w1/3;
+			h2 = h1/3;
 		}
 		else
 		{
-			w2 = w1*factor;
-			h2 = h1*factor;
+			w2 = w1*3;
+			h2 = h1*3;
 		}
-	
-		
-		int px, py ; 
+			
 		for (int i=0;i<h2;i++) 
 		{
 			for (int j=0;j<w2;j++) 
 			{
-				px = j*3 ;
-				py = i*3 ;
-				ret[(i*w2)+j] = old[(int)((py*w1)+px)] ;
-			}
-		}
-       
-
+				if(shrink){
+					x2 = j*3;
+					y2 = i*3;
+				}
+				else{
+					x2 = j/3;
+					y2 = i/3;
+				}
+				ret[(i*w2)+j] = old[(y2*w1)+x2] ;
+			}                
+		}                
         return true;
     }
-
-
-
-#define CONVERT_COLOR(color) (((color & 0x001f) << 11) | ((color & 0x03e0) << 1) | ((color & 0x0200) >> 4) | ((color & 0x7c00) >> 10))
 
 static void BlankScreenSmallSection(uint16_t *pt1, const uint16_t *pt2){
 	//Ensures above the hybrid screens is blank - If someone changes screen layout, stuff will be leftover otherwise
 	unsigned i;
-	pt1 += GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+	pt1 += hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
 	while( pt1 < pt2)
 	{
-		memset(pt1, CONVERT_COLOR(0), GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3*sizeof(uint16_t));
-		pt1 += GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3 + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+		int awidth = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3;
+		memset(pt1, 0, hybrid_layout_scale*awidth*sizeof(uint16_t));
+		pt1 += hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3 + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH);
 	}
 }
 
@@ -210,44 +228,80 @@ static void SwapScreen(uint16_t *dst, const uint16_t *src, uint32_t pitch)
    }
 }
 
+static void SwapScreenLarge(uint16_t *dst, const uint16_t *src, uint32_t pitch)
+{
+	unsigned i, j;
+	uint32_t skip = pitch - hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+	uint16_t resampl[GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH*hybrid_layout_scale*hybrid_layout_scale];
+	//Resample_Screen(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH*hybrid_layout_scale, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT*hybrid_layout_scale, src, resampl);
+	Resample_Screen(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, false, src, resampl);
+	
+	for(i = 0; i < hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT; i ++)
+   {
+      for(j = 0; j < hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH; j ++)
+      {
+         *dst++ = CONVERT_COLOR(resampl[i*(hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH)+j]);
+      }
+      dst += skip;
+   }
+   
+}
+
 static void SwapScreenSmall(uint16_t *dst, const uint16_t *src, uint32_t pitch, bool first)
 {
    unsigned i, j;
-   uint32_t skip = pitch - GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
-	
-	
 	int addgap;
-	if(nds_screen_gap >= GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3)
-		addgap = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3 - 1;
+	if(nds_screen_gap >= hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3)
+		addgap = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3 - 1;
 	else
 		addgap = nds_screen_gap;
 	//If it is the bottom screen, start drawing lower down.
 	if(!first)
 	{
-		dst += (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3)*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3);
+		dst += hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3)*hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3);
 		//Make Sure The Screen Gap is Empty
 		for(i=0; i< addgap; ++i)
 		{
-			memset(dst, CONVERT_COLOR(0), GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3*sizeof(uint16_t));
-			dst += GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3 + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+			memset(dst, 0, hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3*sizeof(uint16_t));
+			dst += hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3 + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH);
 		}
 	}
 	
-	//Shrink to 1/3 the width and 1/3 the height
-	uint16_t resampl[GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/9];
-	Resample(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, src, resampl, true, 3);
-	for(i=0; i<GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3; ++i)
+	if(hybrid_layout_scale != 3)
 	{
-		for(j=0; j<GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3; ++j)
-			*dst++ = CONVERT_COLOR(resampl[i*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3)+j]);
-		dst += GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+		//Shrink to 1/3 the width and 1/3 the height
+		uint16_t resampl[GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/9];
+		//Resample_Screen(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3, src, resampl);
+		Resample_Screen(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, true, src, resampl);
+		
+		for(i=0; i<GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3; ++i)
+		{
+			for(j=0; j<GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3; ++j)
+				*dst++ = CONVERT_COLOR(resampl[i*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3)+j]);
+			dst += GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+		}
+	}
+	else
+	{
+		uint32_t skip = pitch - GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+		for(i=0; i<GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT; ++i)
+		{
+			for(j=0; j<GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1; ++j)
+			{	
+				uint16_t col = *src++;
+				*dst++ = CONVERT_COLOR(col);
+			}
+			//Cuts off last pixel in width, because 3 does not divide native_width evenly. This prevents overwriting some of the main screen
+			*src++; *dst++;
+			dst += skip;
+		}
 	}
 	//Make Sure underneath the Screens is Empty. Fixes leftovers when changing screen layout
 	if(!first){
-		int endheight = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3 - addgap;
+		int endheight = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3 - addgap;
 		for(i=0; i<endheight; ++i){
-			memset(dst, CONVERT_COLOR(0), GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3*sizeof(uint16_t));
-			dst += GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3 + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+			memset(dst, 0, hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3*sizeof(uint16_t));
+			dst += hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3 + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH);
 		}
 	}
 }
@@ -334,28 +388,32 @@ static void get_layout_params(unsigned id, uint16_t *src, LayoutData *layout)
          layout->draw_screen2  = true;
 		 break;
       case LAYOUT_HYBRID_TOP_ONLY:
+	  {
+		  int awidth = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3;
          if (src)
          {
             layout->dst    = src;
 			int addgap;
-			if(nds_screen_gap >= GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3)
-				addgap = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3-1;
+			if(nds_screen_gap >= hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3)
+				addgap = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3-1;
 			else
 				addgap = nds_screen_gap;
-			
-			
-			layout->dst2   = (uint16_t*)(src + (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3)*( GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/6 - addgap/2) - GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3);
+			layout->dst2   = (uint16_t*)(src + hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3)*( hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/6 - addgap/2) - hybrid_layout_scale*awidth);
          }
-         layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3;
-         layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
-         layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3;
+         layout->width  = hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + awidth);
+         layout->height = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+         layout->pitch  = hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + awidth);
+		 //What should these touch values be?
          layout->touch_x= GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
          layout->touch_y= 0;
 
          layout->draw_screen1  = true;
          layout->draw_screen2  = false;
+	  }
          break;
       case LAYOUT_HYBRID_BOTTOM_ONLY:
+		{
+			int awidth = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3;
          if (src)
          {
 			int addgap;
@@ -363,14 +421,16 @@ static void get_layout_params(unsigned id, uint16_t *src, LayoutData *layout)
 				addgap = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3-1;
 			else
 				addgap = nds_screen_gap;
-            layout->dst   = (uint16_t*)(src + (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3)*( GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/6 - addgap/2 ) - GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3);
+            layout->dst   = (uint16_t*)(src + hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3)*( hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/6 - addgap/2) - hybrid_layout_scale*awidth);
 			layout->dst2  = src;
          }
-         layout->width  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3;
-         layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
-         layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3;
+         layout->width  = hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + awidth);
+         layout->height = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+         layout->pitch  = hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + awidth);
+		 //What should these touch values be?
          layout->touch_x= 0;
-         layout->touch_y= GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+         layout->touch_y= hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+		}
 
          layout->draw_screen1  = false;
          layout->draw_screen2  = true;
@@ -484,6 +544,18 @@ static void check_variables(bool first_boot)
                break;
          }
       }
+		//This needs to be on first boot only as it affects the screen_buf size, unless want to realloc
+	     var.key = "desmume_hybrid_layout_scale";
+
+		if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+		{
+			if ((atoi(var.value)) != hybrid_layout_scale)
+			{
+				hybrid_layout_scale = atoi(var.value);
+				if (hybrid_layout_scale != 1 && hybrid_layout_scale != 3)
+					hybrid_layout_scale = 1;
+			}
+		}
    }
 
     var.key = "desmume_num_cores";
@@ -755,9 +827,9 @@ static void check_variables(bool first_boot)
    }
    else
       CommonSettings.advanced_timing = true;
-
+   
    var.key = "desmume_screens_gap";
-
+   
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if ((atoi(var.value)) != nds_screen_gap)
@@ -836,6 +908,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_gfx_txthack", "Enable TXT Hack; disable|enable"},
       { "desmume_mic_force_enable", "Force Microphone Enable; no|yes" },
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
+	  { "desmume_hybrid_layout_scale", "Hybrid Layout Scale (restart); 1|3"},
       { 0, 0 }
    };
 
@@ -1108,14 +1181,16 @@ void retro_run (void)
 
    if(have_touch)
    {
-	   //Hybrid layout with Top screen in focus requires "rescaling" of coordinates. No idea how this works on actual touch screen - tested on PC with mousepad and emulated gamepad
-	if(current_layout == LAYOUT_HYBRID_TOP_ONLY)
-		NDS_setTouchPos(TouchX*3, TouchY*3, scale);
+	   //Hybrid layout requires "rescaling" of coordinates. No idea how this works on actual touch screen - tested on PC with mousepad and emulated gamepad
+	if(current_layout == LAYOUT_HYBRID_TOP_ONLY || (current_layout == LAYOUT_HYBRID_BOTTOM_ONLY)){
+		NDS_setTouchPos(TouchX*3/hybrid_layout_scale, TouchY*3/hybrid_layout_scale, scale);
+	}
 	else
 		NDS_setTouchPos(TouchX, TouchY, scale);
    }
    else
       NDS_releaseTouch();
+  
 
    // BUTTONS
    //NDS_beginProcessingInput();
@@ -1160,9 +1235,19 @@ void retro_run (void)
             break;
 		case LAYOUT_HYBRID_TOP_ONLY:
 			current_layout = LAYOUT_HYBRID_BOTTOM_ONLY;
+			{//Need to swap around DST variables
+				uint16_t*swap = layout.dst;
+				layout.dst = layout.dst2;
+				layout.dst2 = swap;
+			}
 			break;
 		case LAYOUT_HYBRID_BOTTOM_ONLY:
 			current_layout = LAYOUT_HYBRID_TOP_ONLY;
+			{
+				uint16_t*swap = layout.dst;
+				layout.dst = layout.dst2;
+				layout.dst2 = swap;
+			}
 			break;
       }
       delay_timer++;
@@ -1194,7 +1279,10 @@ void retro_run (void)
 		u16 *screen = GPU->GetCustomFramebuffer();
 		if (current_layout == LAYOUT_HYBRID_TOP_ONLY)
 		{
-			SwapScreen (layout.dst,  screen, layout.pitch);
+			if(hybrid_layout_scale == 3)
+				SwapScreenLarge(layout.dst,  screen, layout.pitch);
+			else
+				SwapScreen (layout.dst,  screen, layout.pitch);
 			BlankScreenSmallSection(layout.dst, layout.dst2);
 			SwapScreenSmall(layout.dst2, screen, layout.pitch, true);
 		}
@@ -1204,18 +1292,22 @@ void retro_run (void)
 		screen = GPU->GetCustomFramebuffer() + (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT);
 		if (current_layout == LAYOUT_HYBRID_BOTTOM_ONLY)
 		{
-			SwapScreen (layout.dst2, screen, layout.pitch);
+			if(hybrid_layout_scale == 3)
+				SwapScreenLarge(layout.dst2,  screen, layout.pitch);
+			else
+				SwapScreen (layout.dst2,  screen, layout.pitch);
 			BlankScreenSmallSection(layout.dst2, layout.dst);
-			DrawPointer (layout.dst2, layout.pitch);
 			SwapScreenSmall (layout.dst, screen, layout.pitch, false);
+			//Keep the Touch Cursor on the Small Screen, even if the bottom is the primary screen? Make this configurable by user? (Needs work to get working with hybrid_layout_scale==3 and layout_hybrid_bottom_only)
+			DrawPointerHybrid (layout.dst, layout.pitch, false);
 		}
 		else
 		{
 			SwapScreenSmall (layout.dst2, screen, layout.pitch, false);
-			//If the touch screen isn't primary, need to enable drawpointer
-			DrawPointerSmall (layout.dst2, layout.pitch);
+			DrawPointerHybrid (layout.dst2, layout.pitch, false);
 		}
 	  }
+	  //This is for every layout except Hybrid - same as before
 	  else
 	  {
 		u16 *screen = GPU->GetCustomFramebuffer();
@@ -1229,9 +1321,7 @@ void retro_run (void)
 		}
 	  }		
    }
-
    video_cb(skipped ? 0 : screen_buf, layout.width, layout.height, layout.pitch * 2);
-
    frameIndex = skipped ? frameIndex : 0;
 }
 
@@ -1293,7 +1383,7 @@ bool retro_load_game(const struct retro_game_info *game)
    if (execute == -1)
       return false;
 
-   screen_buf = (uint16_t*)malloc(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + NDS_MAX_SCREEN_GAP) * 2 * sizeof(uint16_t));
+   screen_buf = (uint16_t*)malloc(hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * (hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + NDS_MAX_SCREEN_GAP) * 2 * sizeof(uint16_t));
 
    return true;
 }
