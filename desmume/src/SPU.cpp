@@ -1098,6 +1098,8 @@ template<int FORMAT, int CHANNELS>
             case 2: /* MixR */
                SPU->sndbuf[(SPU->bufpos<<1)+1] += data;
                break;
+            case -1:
+               break;
          }
 
          SPU->lastdata = data;
@@ -1144,6 +1146,8 @@ template<int FORMAT, int CHANNELS>
                      break;
                }
             }
+            break;
+         case 3:
             break;
       }
 	}
