@@ -28,6 +28,7 @@
 #include <net/net_compat.h>
 #include <net/net_socket.h>
 #include <compat/strl.h>
+#include <string/stdstring.h>
 
 enum
 {
@@ -253,7 +254,9 @@ struct http_t *net_http_new(struct http_connection_t *conn)
 
    if (conn->port != 80)
    {
-      char portstr[16] = {0};
+      char portstr[16];
+
+      portstr[0] = '\0';
 
       snprintf(portstr, sizeof(portstr), ":%i", conn->port);
       net_http_send_str(fd, &error, portstr);
@@ -350,7 +353,7 @@ bool net_http_update(struct http_t *state, size_t* progress, size_t* total)
                state->len = strtol(state->data + 
                      strlen("Content-Length: "), NULL, 10);
             }
-            if (!strcmp(state->data, "Transfer-Encoding: chunked"))
+            if (string_is_equal(state->data, "Transfer-Encoding: chunked"))
                state->bodytype = T_CHUNK;
 
             /* TODO: save headers somewhere */

@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <encodings/crc32.h>
 #include <streams/file_stream.h>
 #include <file/archive_file.h>
 
@@ -47,9 +48,7 @@ static void dword_write_be(uint8_t *buf, uint32_t val)
 static bool png_write_crc(RFILE *file, const uint8_t *data, size_t size)
 {
    uint8_t crc_raw[4] = {0};
-   const struct file_archive_file_backend *stream_backend = 
-      file_archive_get_default_file_backend();
-   uint32_t crc = stream_backend->stream_crc_calculate(0, data, size);
+   uint32_t crc       = encoding_crc32(0, data, size);
 
    dword_write_be(crc_raw, crc);
    return filestream_write(file, crc_raw, sizeof(crc_raw)) == sizeof(crc_raw);
@@ -230,7 +229,7 @@ static bool rpng_save_image(const char *path,
    if (!file)
       GOTO_END_ERROR();
 
-   stream_backend = file_archive_get_default_file_backend();
+   stream_backend = file_archive_get_zlib_file_backend();
 
    if (filestream_write(file, png_magic, sizeof(png_magic)) != sizeof(png_magic))
       GOTO_END_ERROR();

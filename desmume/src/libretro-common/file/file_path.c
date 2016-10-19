@@ -94,7 +94,7 @@ end:
  * after a compression extension is considered.
  *
  * Returns: pointer to the delimiter in the path if it contains
- * a compressed file, otherwise NULL.
+ * a path inside a compressed file, otherwise NULL.
  */
 const char *path_get_archive_delim(const char *path)
 {
@@ -104,7 +104,12 @@ const char *path_get_archive_delim(const char *path)
 
 #ifdef HAVE_ZLIB
    if (last)
+   {
       delim = strcasestr(last, ".zip#");
+
+      if (!delim)
+         delim = strcasestr(last, ".apk#");
+   }
 
    if (delim)
       return delim + 4;
@@ -194,12 +199,13 @@ bool path_is_compressed_file(const char* path)
    const char *ext = path_get_extension(path);
 
 #ifdef HAVE_ZLIB
-   if (strcasestr(ext, "zip"))
+   if (string_is_equal_noncase(ext, "zip") ||
+             string_is_equal_noncase(ext, "apk"))
       return true;
 #endif
 
 #ifdef HAVE_7ZIP
-   if (strcasestr(ext, "7z"))
+   if (string_is_equal_noncase(ext, "7z"))
       return true;
 #endif
 
@@ -251,8 +257,10 @@ bool path_file_exists(const char *path)
 void fill_pathname(char *out_path, const char *in_path,
       const char *replace, size_t size)
 {
-   char tmp_path[PATH_MAX_LENGTH] = {0};
+   char tmp_path[PATH_MAX_LENGTH];
    char *tok                      = NULL;
+
+   tmp_path[0] = '\0';
 
    retro_assert(strlcpy(tmp_path, in_path,
             sizeof(tmp_path)) < sizeof(tmp_path));
@@ -459,8 +467,10 @@ void fill_dated_filename(char *out_filename,
 void fill_str_dated_filename(char *out_filename,
       const char *in_str, const char *ext, size_t size)
 {
-   char format[256] = {0};
+   char format[256];
    time_t cur_time = time(NULL);
+
+   format[0] = '\0';
 
    strftime(format, sizeof(format), "-%y%m%d-%H%M%S.", localtime(&cur_time));
    strlcpy(out_filename, in_str, size);
@@ -482,7 +492,7 @@ void path_basedir(char *path)
       return;
 
 #ifdef HAVE_COMPRESSION
-   /* We want to find the directory with the zipfile in basedir. */
+   /* We want to find the directory with the archive in basedir. */
    last = (char*)path_get_archive_delim(path);
    if (last)
       *last = '\0';
@@ -569,7 +579,9 @@ bool path_is_absolute(const char *path)
 void path_resolve_realpath(char *buf, size_t size)
 {
 #ifndef RARCH_CONSOLE
-   char tmp[PATH_MAX_LENGTH] = {0};
+   char tmp[PATH_MAX_LENGTH];
+
+   tmp[0] = '\0';
 
    strlcpy(tmp, buf, sizeof(tmp));
 
@@ -657,7 +669,7 @@ void fill_pathname_join_special_ext(char *out_path,
 }
 
 void fill_pathname_join_concat(char *out_path,
-      const char *dir, const char *path, 
+      const char *dir, const char *path,
       const char *concat,
       size_t size)
 {
@@ -722,10 +734,12 @@ void fill_pathname_join_delim_concat(char *out_path, const char *dir,
 void fill_short_pathname_representation(char* out_rep,
       const char *in_path, size_t size)
 {
-   char path_short[PATH_MAX_LENGTH] = {0};
+   char path_short[PATH_MAX_LENGTH];
 #ifdef HAVE_COMPRESSION
    char *last_slash                  = NULL;
 #endif
+
+   path_short[0] = '\0';
 
    fill_pathname(path_short, path_basename(in_path), "",
             sizeof(path_short));

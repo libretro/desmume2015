@@ -186,7 +186,7 @@ void string_list_set(struct string_list *list,
  * @list             : pointer to string list.
  * @delim            : delimiter character for @list.
  *
- * A string list will be joined/concatenated as a 
+ * A string list will be joined/concatenated as a
  * string to @buffer, delimited by @delim.
  */
 void string_list_join_concat(char *buffer, size_t size,
@@ -290,10 +290,12 @@ bool string_list_find_elem_prefix(const struct string_list *list,
       const char *prefix, const char *elem)
 {
    size_t i;
-   char prefixed[PATH_MAX_LENGTH] = {0};
+   char prefixed[PATH_MAX_LENGTH];
 
    if (!list)
       return false;
+
+   prefixed[0] = '\0';
 
    strlcpy(prefixed, prefix, sizeof(prefixed));
    strlcat(prefixed, elem,   sizeof(prefixed));
