@@ -345,12 +345,12 @@ u8 SPU_struct::ReadByte(u32 addr)
    u8 * channel_timer;
    u8 * channel_loopstart;
 
-   u8 * sound_bias = (u8 *)regs.soundbias;
+   u8 * sound_bias = (u8 *)&regs.soundbias;
 
-   u8 * cap0_dad = (u8 *)regs.cap[0].dad;
-   u8 * cap1_dad = (u8 *)regs.cap[1].dad;
-   u8 * cap0_len = (u8 *)regs.cap[0].len;
-   u8 * cap1_len = (u8 *)regs.cap[1].len;
+   u8 * cap0_dad = (u8 *)&regs.cap[0].dad;
+   u8 * cap1_dad = (u8 *)&regs.cap[1].dad;
+   u8 * cap0_len = (u8 *)&regs.cap[0].len;
+   u8 * cap1_len = (u8 *)&regs.cap[1].len;
 
    //individual channel regs
    if ((addr & 0x0F00) == 0x0400)
@@ -358,8 +358,8 @@ u8 SPU_struct::ReadByte(u32 addr)
       u32 chan_num = (addr >> 4) & 0xF;
       channel_struct &thischan = channels[chan_num];
 
-      channel_timer = (u8 *)thischan.timer;
-      channel_loopstart = (u8 *)thischan.loopstart;
+      channel_timer     = (u8 *)&thischan.timer;
+      channel_loopstart = (u8 *)&thischan.loopstart;
       switch (addr & 0xF)
       {
          case 0x0:
@@ -455,8 +455,8 @@ u8 SPU_struct::ReadByte(u32 addr)
 
 u16 SPU_struct::ReadWord(u32 addr)
 {
-	u16 * cap0_dad = (u16 *)regs.cap[0].dad;
-	u16 * cap1_dad = (u16 *)regs.cap[1].dad;
+	u16 * cap0_dad = (u16 *)&regs.cap[0].dad;
+	u16 * cap1_dad = (u16 *)&regs.cap[1].dad;
 
 	//individual channel regs
 	if ((addr & 0x0F00) == 0x0400)
@@ -674,17 +674,11 @@ void SPU_struct::ProbeCapture(int which)
 
 void SPU_struct::WriteByte(u32 addr, u8 val)
 {
-	u8 * channel_address;
-	u8 * channel_timer;
-	u8 * channel_loopstart;
-	u8 * channel_length;
-
-	u8 * sound_bias = (u8 *)regs.soundbias;
-
-	u8 * cap0_dad = (u8 *)regs.cap[0].dad;
-	u8 * cap1_dad = (u8 *)regs.cap[1].dad;
-	u8 * cap0_len = (u8 *)regs.cap[0].len;
-	u8 * cap1_len = (u8 *)regs.cap[1].len;
+	u8 * sound_bias = (u8 *)&regs.soundbias;
+	u8 * cap0_dad   = (u8 *)&regs.cap[0].dad;
+	u8 * cap1_dad   = (u8 *)&regs.cap[1].dad;
+	u8 * cap0_len   = (u8 *)&regs.cap[0].len;
+	u8 * cap1_len   = (u8 *)&regs.cap[1].len;
 
 	//individual channel regs
 	if ((addr & 0x0F00) == 0x0400)
@@ -692,10 +686,10 @@ void SPU_struct::WriteByte(u32 addr, u8 val)
 		u8 chan_num = (addr >> 4) & 0xF;
 		channel_struct &thischan = channels[chan_num];
 
-		channel_address = (u8 *)thischan.addr;
-		channel_timer = (u8 *)thischan.timer;
-		channel_loopstart = (u8 *)thischan.loopstart;
-		channel_length = (u8 *)thischan.length;
+		u8 *channel_address = (u8 *)&thischan.addr;
+		u8 *channel_timer = (u8 *)&thischan.timer;
+		u8 *channel_loopstart = (u8 *)&thischan.loopstart;
+		u8 *channel_length = (u8 *)&thischan.length;
 
 		//printf("SPU write08 channel%d, reg %04X, val %02X\n", chan_num, addr, val);
 
@@ -787,20 +781,16 @@ void SPU_struct::WriteByte(u32 addr, u8 val)
 
 void SPU_struct::WriteWord(u32 addr, u16 val)
 {
-	u16 * channel_address;
-	u16 * channel_length;
-
-	u16 * cap0_dad = (u16 *)regs.cap[0].dad;
-	u16 * cap1_dad = (u16 *)regs.cap[1].dad;
+	u16 * cap0_dad = (u16 *)&regs.cap[0].dad;
+	u16 * cap1_dad = (u16 *)&regs.cap[1].dad;
 
 	//individual channel regs
 	if ((addr & 0x0F00) == 0x0400)
 	{
 		u32 chan_num = (addr >> 4) & 0xF;
 		channel_struct &thischan = channels[chan_num];
-
-		channel_address = (u16 *)thischan.addr;
-		channel_length = (u16 *)thischan.length;
+		u16 *channel_address = (u16 *)&thischan.addr;
+		u16 *channel_length = (u16 *)&thischan.length;
 
 		//printf("SPU write16 channel%d, reg %04X, val %04X\n", chan_num, addr, val);
 
