@@ -231,10 +231,11 @@ static void SwapScreen(uint16_t *dst, const uint16_t *src, uint32_t pitch)
 
 static void SwapScreenLarge(uint16_t *dst, const uint16_t *src, uint32_t pitch)
 {
+	//This can be very slow if the rendering resolution is higher. Need to look into a better way of resizing the screen
 	unsigned i, j;
 	uint32_t skip = pitch - hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
-	uint16_t resampl[GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH*hybrid_layout_scale*hybrid_layout_scale];
-	//Resample_Screen(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH*hybrid_layout_scale, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT*hybrid_layout_scale, src, resampl);
+	uint16_t *resampl;
+	resampl = (uint16_t*)malloc(GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH*hybrid_layout_scale*hybrid_layout_scale * sizeof(uint16_t));
 	Resample_Screen(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, false, src, resampl);
 	
 	for(i = 0; i < hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT; i ++)
@@ -245,6 +246,7 @@ static void SwapScreenLarge(uint16_t *dst, const uint16_t *src, uint32_t pitch)
       }
       dst += skip;
    }
+   free(resampl);
    
 }
 
@@ -271,8 +273,8 @@ static void SwapScreenSmall(uint16_t *dst, const uint16_t *src, uint32_t pitch, 
 	if(hybrid_layout_scale != 3)
 	{
 		//Shrink to 1/3 the width and 1/3 the height
-		uint16_t resampl[GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/9];
-		//Resample_Screen(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3, src, resampl);
+		uint16_t *resampl;
+		resampl = (uint16_t*)malloc(GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/9*sizeof(uint16_t));
 		Resample_Screen(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, true, src, resampl);
 		
 		for(i=0; i<GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3; ++i)
@@ -281,6 +283,7 @@ static void SwapScreenSmall(uint16_t *dst, const uint16_t *src, uint32_t pitch, 
 				*dst++ = CONVERT_COLOR(resampl[i*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3)+j]);
 			dst += GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
 		}
+		free(resampl);
 	}
 	else
 	{
