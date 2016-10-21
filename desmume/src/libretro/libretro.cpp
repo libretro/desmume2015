@@ -231,23 +231,26 @@ static void SwapScreen(uint16_t *dst, const uint16_t *src, uint32_t pitch)
 
 static void SwapScreenLarge(uint16_t *dst, const uint16_t *src, uint32_t pitch)
 {
-	//This can be very slow if the rendering resolution is higher. Need to look into a better way of resizing the screen
-	unsigned i, j;
+	/*
+	This method uses Nearest Neighbour to resize the primary screen to 3 times its original width and 3 times its original height.
+	It is a lot faster than the previous method. If we want to apply some different method of scaling this needs to change.
+	*/
+	unsigned i, j, k;
 	uint32_t skip = pitch - hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
-	uint16_t *resampl;
-	resampl = (uint16_t*)malloc(GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH*hybrid_layout_scale*hybrid_layout_scale * sizeof(uint16_t));
-	Resample_Screen(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT, false, src, resampl);
-	
-	for(i = 0; i < hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT; i ++)
+		
+	unsigned heightlimit = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+	for(i = 0; i < heightlimit; i ++)
    {
-      for(j = 0; j < hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH; j ++)
+	  if( i%hybrid_layout_scale != 0)
+		  src -= GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
+      for(j = 0; j < GPU_LR_FRAMEBUFFER_NATIVE_WIDTH; j ++)
       {
-         *dst++ = CONVERT_COLOR(resampl[i*(hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH)+j]);
+		 uint16_t col = *src++;
+		 for(k = 0; k < hybrid_layout_scale; ++k)
+			*dst++ = CONVERT_COLOR(col);
       }
       dst += skip;
    }
-   free(resampl);
-   
 }
 
 static void SwapScreenSmall(uint16_t *dst, const uint16_t *src, uint32_t pitch, bool first)
@@ -915,6 +918,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_cpu_mode", "CPU mode; interpreter" },
 #endif
       { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch|hybrid/top|hybrid/bottom" },
+	  { "desmume_hybrid_layout_scale", "Hybrid Layout Scale (restart); 1|3"},
       { "desmume_pointer_mouse", "Enable mouse/pointer; enable|disable" },
       { "desmume_pointer_type", "Pointer type; mouse|touch" },
 	  { "desmume_pointer_colour", "Pointer Colour; white|black|red|blue|yellow"},
@@ -933,7 +937,6 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_gfx_txthack", "Enable TXT Hack; disable|enable"},
       { "desmume_mic_force_enable", "Force Microphone Enable; no|yes" },
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
-	  { "desmume_hybrid_layout_scale", "Hybrid Layout Scale (restart); 1|3"},
 	  { 0, 0 }
    };
 
