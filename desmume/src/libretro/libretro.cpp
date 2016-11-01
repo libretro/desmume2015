@@ -39,6 +39,8 @@ static int analog_stick_acceleration_modifier = 0;
 static int microphone_force_enable = 0;
 static int nds_screen_gap = 0;
 static int hybrid_layout_scale = 1;
+static bool hybrid_layout_showbothscreens = true;
+static bool hybrid_cursor_always_smallscreen = true;
 static uint16_t pointer_colour = 0xFFFF;
 
 static uint16_t *screen_buf;
@@ -130,7 +132,7 @@ static void DrawPointerHybrid(uint16_t* aOut, uint32_t aPitchInPix, bool large)
       return;
 	
 	unsigned height,width;
-	int awidth = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3;
+	unsigned DrawX, DrawY;
    if(!large)
    {  
 	int addgap;
@@ -140,25 +142,35 @@ static void DrawPointerHybrid(uint16_t* aOut, uint32_t aPitchInPix, bool large)
 		addgap = nds_screen_gap;
 	aOut += hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3 + addgap)*hybrid_layout_scale*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3);
 	height = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3;
+	int awidth = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3;
 		width = hybrid_layout_scale*awidth;
+		DrawX = Saturate(0, (width-1), TouchX);
+		DrawY = Saturate(0, (height-1), TouchY);
    }
    else{
 	   height = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
 		width = hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
-   }
-   TouchX = Saturate(0, (width-1), TouchX);
-   TouchY = Saturate(0, (height-1), TouchY);
+		DrawX = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1), TouchX);
+		DrawY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1), TouchY);
+   }   
    int factor;
    if(large)
+   {
 	   factor = 5*hybrid_layout_scale;
+	   if(hybrid_layout_scale == 3)
+	   {
+		   DrawX = 3*DrawX;
+		   DrawY = 3*DrawY;
+	   }
+   }
    else if(hybrid_layout_scale == 3)
 	   factor = 6;
    else
 	   factor = 3; 
-   if(TouchX >   (factor * scale)) DrawPointerLineSmall(&aOut[TouchY * aPitchInPix + TouchX - (factor * scale) ], 1, factor);
-   if(TouchX < (hybrid_layout_scale*awidth - (factor * scale) )) DrawPointerLineSmall(&aOut[TouchY * aPitchInPix + TouchX + 1], 1, factor);
-   if(TouchY >   (factor * scale)) DrawPointerLineSmall(&aOut[(TouchY - (factor * scale) ) * aPitchInPix + TouchX], aPitchInPix, factor);
-   if(TouchY < (hybrid_layout_scale*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3-(factor * scale) )) DrawPointerLineSmall(&aOut[(TouchY + 1) * aPitchInPix + TouchX], aPitchInPix, factor);
+   if(DrawX >   (factor * scale)) DrawPointerLineSmall(&aOut[DrawY * aPitchInPix + DrawX - (factor * scale) ], 1, factor);
+   if(DrawX < (width - (factor * scale) )) DrawPointerLineSmall(&aOut[DrawY * aPitchInPix + DrawX + 1], 1, factor);
+   if(DrawY >   (factor * scale)) DrawPointerLineSmall(&aOut[(DrawY - (factor * scale) ) * aPitchInPix + DrawX], aPitchInPix, factor);
+   if(DrawY < (height-(factor * scale) )) DrawPointerLineSmall(&aOut[(DrawY + 1) * aPitchInPix + DrawX], aPitchInPix, factor);
 }
 
 
@@ -253,7 +265,7 @@ static void SwapScreenLarge(uint16_t *dst, const uint16_t *src, uint32_t pitch)
    }
 }
 
-static void SwapScreenSmall(uint16_t *dst, const uint16_t *src, uint32_t pitch, bool first)
+static void SwapScreenSmall(uint16_t *dst, const uint16_t *src, uint32_t pitch, bool first, bool draw)
 {
    unsigned i, j;
 	int addgap;
@@ -282,8 +294,16 @@ static void SwapScreenSmall(uint16_t *dst, const uint16_t *src, uint32_t pitch, 
 		
 		for(i=0; i<GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/3; ++i)
 		{
-			for(j=0; j<GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3; ++j)
-				*dst++ = CONVERT_COLOR(resampl[i*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3)+j]);
+			if(draw)
+			{
+				for(j=0; j<GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3; ++j)
+					*dst++ = CONVERT_COLOR(resampl[i*(GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3)+j]);
+			}
+			else
+			{
+				memset(dst, 0, GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3*sizeof(uint16_t));
+				dst += GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/3;
+			}
 			dst += GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
 		}
 		free(resampl);
@@ -293,10 +313,18 @@ static void SwapScreenSmall(uint16_t *dst, const uint16_t *src, uint32_t pitch, 
 		uint32_t skip = pitch - GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
 		for(i=0; i<GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT; ++i)
 		{
-			for(j=0; j<GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1; ++j)
-			{	
-				uint16_t col = *src++;
-				*dst++ = CONVERT_COLOR(col);
+			if(draw)
+			{
+				for(j=0; j<GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1; ++j)
+				{	
+					uint16_t col = *src++;
+					*dst++ = CONVERT_COLOR(col);
+				}
+			}
+			else
+			{
+				memset(dst, 0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1)*sizeof(uint16_t));
+				dst += GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1;
 			}
 			//Cuts off last pixel in width, because 3 does not divide native_width evenly. This prevents overwriting some of the main screen
 			*src++; *dst++;
@@ -846,6 +874,31 @@ static void check_variables(bool first_boot)
             nds_screen_gap = 100;
       }
    }
+   
+  var.key = "desmume_hybrid_showboth_screens";
+   
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "yes"))
+         hybrid_layout_showbothscreens = true;
+      else if(!strcmp(var.value, "no"))
+         hybrid_layout_showbothscreens = false;
+   }
+   else
+      hybrid_layout_showbothscreens = true;
+  
+    var.key = "desmume_hybrid_cursor_always_smallscreen";
+   
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "yes"))
+         hybrid_cursor_always_smallscreen = true;
+      else if(!strcmp(var.value, "no"))
+         hybrid_cursor_always_smallscreen = false;
+   }
+   else
+      hybrid_cursor_always_smallscreen = true;
+  
 
    var.key = "desmume_pointer_colour";
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -918,7 +971,9 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_cpu_mode", "CPU mode; interpreter" },
 #endif
       { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch|hybrid/top|hybrid/bottom" },
-	  { "desmume_hybrid_layout_scale", "Hybrid Layout Scale (restart); 1|3"},
+	  { "desmume_hybrid_layout_scale", "Hybrid layout scale (restart); 1|3"},
+	  { "desmume_hybrid_showboth_screens", "Hybrid layout show both screens; yes|no"},
+	  { "desmume_hybrid_cursor_always_smallscreen", "Hybrid layout cursor always on small screen; yes|no"},
       { "desmume_pointer_mouse", "Enable mouse/pointer; enable|disable" },
       { "desmume_pointer_type", "Pointer type; mouse|touch" },
 	  { "desmume_pointer_colour", "Pointer Colour; white|black|red|blue|yellow"},
@@ -1210,8 +1265,12 @@ void retro_run (void)
    if(have_touch)
    {
 	   //Hybrid layout requires "rescaling" of coordinates. No idea how this works on actual touch screen - tested on PC with mousepad and emulated gamepad
-	if(current_layout == LAYOUT_HYBRID_TOP_ONLY || (current_layout == LAYOUT_HYBRID_BOTTOM_ONLY)){
-		NDS_setTouchPos(TouchX*3/hybrid_layout_scale, TouchY*3/hybrid_layout_scale, scale);
+	if(current_layout == LAYOUT_HYBRID_TOP_ONLY || (current_layout == LAYOUT_HYBRID_BOTTOM_ONLY))
+	{
+		if( (current_layout == LAYOUT_HYBRID_BOTTOM_ONLY) && hybrid_layout_scale == 1 && ( !hybrid_cursor_always_smallscreen || !hybrid_layout_showbothscreens))
+			NDS_setTouchPos(TouchX, TouchY, scale);
+		else
+			NDS_setTouchPos(TouchX*3/hybrid_layout_scale, TouchY*3/hybrid_layout_scale, scale);
 	}
 	else
 		NDS_setTouchPos(TouchX, TouchY, scale);
@@ -1263,10 +1322,17 @@ void retro_run (void)
             break;
 		case LAYOUT_HYBRID_TOP_ONLY:
 			current_layout = LAYOUT_HYBRID_BOTTOM_ONLY;
-			{//Need to swap around DST variables
+			{
+				//Need to swap around DST variables
 				uint16_t*swap = layout.dst;
 				layout.dst = layout.dst2;
 				layout.dst2 = swap;
+				//Need to reset Touch position to 0 with these conditions or it causes problems with mouse
+				if(hybrid_layout_scale == 1 && (!hybrid_layout_showbothscreens || !hybrid_cursor_always_smallscreen))
+				{   
+					TouchX = 0;
+					TouchY = 0;
+				}
 			}
 			break;
 		case LAYOUT_HYBRID_BOTTOM_ONLY:
@@ -1275,6 +1341,13 @@ void retro_run (void)
 				uint16_t*swap = layout.dst;
 				layout.dst = layout.dst2;
 				layout.dst2 = swap;
+				//Need to reset Touch position to 0 with these conditions are it causes problems with mouse
+				if(hybrid_layout_scale == 1 && (!hybrid_layout_showbothscreens || !hybrid_cursor_always_smallscreen))
+				{
+					TouchX = 0;
+					TouchY = 0;
+				}
+					
 			}
 			break;
       }
@@ -1312,10 +1385,10 @@ void retro_run (void)
 			else
 				SwapScreen (layout.dst,  screen, layout.pitch);
 			BlankScreenSmallSection(layout.dst, layout.dst2);
-			SwapScreenSmall(layout.dst2, screen, layout.pitch, true);
+			SwapScreenSmall(layout.dst2, screen, layout.pitch, true, hybrid_layout_showbothscreens);
 		}
 		else if (current_layout == LAYOUT_HYBRID_BOTTOM_ONLY)
-			SwapScreenSmall(layout.dst, screen, layout.pitch, true);
+			SwapScreenSmall(layout.dst, screen, layout.pitch, true, true);
 	 
 		screen = GPU->GetCustomFramebuffer() + (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH * GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT);
 		if (current_layout == LAYOUT_HYBRID_BOTTOM_ONLY)
@@ -1325,13 +1398,16 @@ void retro_run (void)
 			else
 				SwapScreen (layout.dst2,  screen, layout.pitch);
 			BlankScreenSmallSection(layout.dst2, layout.dst);
-			SwapScreenSmall (layout.dst, screen, layout.pitch, false);
+			SwapScreenSmall (layout.dst, screen, layout.pitch, false , hybrid_layout_showbothscreens);
 			//Keep the Touch Cursor on the Small Screen, even if the bottom is the primary screen? Make this configurable by user? (Needs work to get working with hybrid_layout_scale==3 and layout_hybrid_bottom_only)
-			DrawPointerHybrid (layout.dst, layout.pitch, false);
+			if(hybrid_cursor_always_smallscreen && hybrid_layout_showbothscreens)
+				DrawPointerHybrid (layout.dst, layout.pitch, false);
+			else
+				DrawPointerHybrid (layout.dst2, layout.pitch, true);
 		}
 		else
 		{
-			SwapScreenSmall (layout.dst2, screen, layout.pitch, false);
+			SwapScreenSmall (layout.dst2, screen, layout.pitch, false, true);
 			DrawPointerHybrid (layout.dst2, layout.pitch, false);
 		}
 	  }
