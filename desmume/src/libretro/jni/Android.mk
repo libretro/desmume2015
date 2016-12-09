@@ -4,6 +4,11 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
+GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
+ifneq ($(GIT_VERSION)," unknown")
+	LOCAL_CXXFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
+endif
+
 CORE_DIR = ../..
 JIT=
 DESMUME_JIT=0

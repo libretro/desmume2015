@@ -349,7 +349,11 @@ namespace
 void retro_get_system_info(struct retro_system_info *info)
 {
    info->library_name = "DeSmuME";
+#ifdef GIT_VERSION
+   info->library_version = "git" GIT_VERSION;
+#else
    info->library_version = "SVN";
+#endif
    info->valid_extensions = "nds|bin";
    info->need_fullpath = true;
    info->block_extract = false;
