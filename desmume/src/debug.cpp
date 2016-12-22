@@ -28,6 +28,7 @@
 #include "NDSSystem.h"
 #include "utils/xstring.h"
 #include "movie.h"
+#include "emufile.h"
 
 armcpu_t* TDebugEventData::cpu() { return procnum==0?&NDS_ARM9:&NDS_ARM7; }
 
