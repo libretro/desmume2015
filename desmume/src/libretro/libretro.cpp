@@ -1461,7 +1461,7 @@ bool retro_unserialize(const void * data, size_t size)
 
 bool retro_load_game(const struct retro_game_info *game)
 {
-   if (colorMode != RETRO_PIXEL_FORMAT_RGB565)
+   if (!game || colorMode != RETRO_PIXEL_FORMAT_RGB565)
       return false;
 
    struct retro_input_descriptor desc[] = {
