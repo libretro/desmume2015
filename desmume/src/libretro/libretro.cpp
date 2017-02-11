@@ -683,9 +683,9 @@ static void check_variables(bool first_boot)
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
-        if (!strcmp(var.value, "enable"))
+        if (!strcmp(var.value, "enabled"))
             mouse_enable = true;
-      else if (!strcmp(var.value, "disable"))
+      else if (!strcmp(var.value, "disabled"))
             mouse_enable = false;
     }
    else
@@ -757,9 +757,9 @@ static void check_variables(bool first_boot)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-        if (!strcmp(var.value, "enable"))
+        if (!strcmp(var.value, "enabled"))
          CommonSettings.GFX3D_EdgeMark = true;
-      else if (!strcmp(var.value, "disable"))
+      else if (!strcmp(var.value, "disabled"))
          CommonSettings.GFX3D_EdgeMark = false;
    }
    else
@@ -769,9 +769,9 @@ static void check_variables(bool first_boot)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "enable"))
+      if (!strcmp(var.value, "enabled"))
          CommonSettings.GFX3D_LineHack = true;
-      else if (!strcmp(var.value, "disable"))
+      else if (!strcmp(var.value, "disabled"))
          CommonSettings.GFX3D_LineHack = false;
    }
    else
@@ -781,9 +781,9 @@ static void check_variables(bool first_boot)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "enable"))
+      if (!strcmp(var.value, "enabled"))
          CommonSettings.GFX3D_TXTHack = true;
-      else if (!strcmp(var.value, "disable"))
+      else if (!strcmp(var.value, "disabled"))
          CommonSettings.GFX3D_TXTHack = false;
    }
    else
@@ -793,9 +793,9 @@ static void check_variables(bool first_boot)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "yes"))
+      if (!strcmp(var.value, "enabled"))
          microphone_force_enable = 1;
-      else if(!strcmp(var.value, "no"))
+      else if(!strcmp(var.value, "disabled"))
          microphone_force_enable = 0;
    }
    else
@@ -835,9 +835,9 @@ static void check_variables(bool first_boot)
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "enable"))
+      if (!strcmp(var.value, "enabled"))
          CommonSettings.StylusJitter = true;
-      else if (!strcmp(var.value, "disable"))
+      else if (!strcmp(var.value, "disabled"))
          CommonSettings.StylusJitter = false;
    }
    else
@@ -847,9 +847,9 @@ static void check_variables(bool first_boot)
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "enable"))
+      if (!strcmp(var.value, "enabled"))
          CommonSettings.loadToMemory = true;
-      else if (!strcmp(var.value, "disable"))
+      else if (!strcmp(var.value, "disabled"))
          CommonSettings.loadToMemory = false;
    }
    else
@@ -859,9 +859,9 @@ static void check_variables(bool first_boot)
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "enable"))
+      if (!strcmp(var.value, "enabled"))
          CommonSettings.advanced_timing = true;
-      else if (!strcmp(var.value, "disable"))
+      else if (!strcmp(var.value, "disabled"))
          CommonSettings.advanced_timing = false;
    }
    else
@@ -883,9 +883,9 @@ static void check_variables(bool first_boot)
    
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "yes"))
+      if (!strcmp(var.value, "enabled"))
          hybrid_layout_showbothscreens = true;
-      else if(!strcmp(var.value, "no"))
+      else if(!strcmp(var.value, "disabled"))
          hybrid_layout_showbothscreens = false;
    }
    else
@@ -895,9 +895,9 @@ static void check_variables(bool first_boot)
    
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "yes"))
+      if (!strcmp(var.value, "enabled"))
          hybrid_cursor_always_smallscreen = true;
-      else if(!strcmp(var.value, "no"))
+      else if(!strcmp(var.value, "disabled"))
          hybrid_cursor_always_smallscreen = false;
    }
    else
@@ -976,25 +976,25 @@ void retro_set_environment(retro_environment_t cb)
 #endif
       { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch|hybrid/top|hybrid/bottom" },
 	  { "desmume_hybrid_layout_scale", "Hybrid layout scale (restart); 1|3"},
-	  { "desmume_hybrid_showboth_screens", "Hybrid layout show both screens; yes|no"},
-	  { "desmume_hybrid_cursor_always_smallscreen", "Hybrid layout cursor always on small screen; yes|no"},
-      { "desmume_pointer_mouse", "Enable mouse/pointer; enable|disable" },
+	  { "desmume_hybrid_showboth_screens", "Hybrid layout show both screens; enabled|disabled"},
+	  { "desmume_hybrid_cursor_always_smallscreen", "Hybrid layout cursor always on small screen; enabled|disabled"},
+      { "desmume_pointer_mouse", "Enable mouse/pointer; enabled|disabled" },
       { "desmume_pointer_type", "Pointer type; mouse|touch" },
 	  { "desmume_pointer_colour", "Pointer Colour; white|black|red|blue|yellow"},
       { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
       { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },
       { "desmume_pointer_device_acceleration_mod", "Emulated pointer acceleration modifier percent; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
       { "desmume_pointer_stylus_pressure", "Emulated stylus pressure modifier percent; 50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|" },
-      { "desmume_pointer_stylus_jitter", "Enable emulated stylus jitter; disable|enable"},
-      { "desmume_load_to_memory", "Load Game into Memory (restart); disable|enable" },
-      { "desmume_advanced_timing", "Enable Advanced Bus-Level Timing; enable|disable" },
+      { "desmume_pointer_stylus_jitter", "Enable emulated stylus jitter; disabled|enabled"},
+      { "desmume_load_to_memory", "Load Game into Memory (restart); disabled|enabled" },
+      { "desmume_advanced_timing", "Enable Advanced Bus-Level Timing; enabled|disabled" },
       { "desmume_firmware_language", "Firmware language; Auto|English|Japanese|French|German|Italian|Spanish" },
       { "desmume_frameskip", "Frameskip; 0|1|2|3|4|5|6|7|8|9" },
       { "desmume_screens_gap", "Screen Gap; 0|5|64|90|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
-      { "desmume_gfx_edgemark", "Enable Edgemark; enable|disable" },
-      { "desmume_gfx_linehack", "Enable Line Hack; enable|disable" },
-      { "desmume_gfx_txthack", "Enable TXT Hack; disable|enable"},
-      { "desmume_mic_force_enable", "Force Microphone Enable; no|yes" },
+      { "desmume_gfx_edgemark", "Enable Edgemark; enabled|disabled" },
+      { "desmume_gfx_linehack", "Enable Line Hack; enabled|disabled" },
+      { "desmume_gfx_txthack", "Enable TXT Hack; disabled|enabled"},
+      { "desmume_mic_force_enable", "Force Microphone Enable; disabled|enabled" },
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
 	  { 0, 0 }
    };
