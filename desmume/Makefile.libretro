@@ -15,6 +15,11 @@ else ifneq (,$(findstring armv,$(platform)))
    override platform += unix
 endif
 
+prefix := /usr
+libdir := $(prefix)/lib
+
+LIBRETRO_DIR := libretro
+
 TARGET_NAME := desmume
 CORE_DIR := src
 GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
@@ -262,5 +267,11 @@ endif
 clean:
 	rm -f $(OBJECTS) $(TARGET)
 
-.PHONY: clean
+install:
+	install -D -m 755 $(TARGET) $(DESTDIR)$(libdir)/$(LIBRETRO_DIR)/$(TARGET)
+
+uninstall:
+	rm $(DESTDIR)$(libdir)/$(LIBRETRO_DIR)/$(TARGET)
+
+.PHONY: clean install uninstall
 endif
