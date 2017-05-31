@@ -699,6 +699,8 @@ static void check_variables(bool first_boot)
             pointer_device = 1;
         else if(!strcmp(var.value, "r-stick"))
             pointer_device = 2;
+		else if (!strcmp(var.value, "absolute"))
+			pointer_device = 3;
         else
             pointer_device=0;
     }
@@ -981,7 +983,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_pointer_mouse", "Enable mouse/pointer; enabled|disabled" },
       { "desmume_pointer_type", "Pointer type; mouse|touch" },
 	  { "desmume_pointer_colour", "Pointer Colour; white|black|red|blue|yellow"},
-      { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick" },
+      { "desmume_pointer_device", "Pointer emulation; none|l-stick|r-stick|absolute" },
       { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|0|5|10" },
       { "desmume_pointer_device_acceleration_mod", "Emulated pointer acceleration modifier percent; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100" },
       { "desmume_pointer_stylus_pressure", "Emulated stylus pressure modifier percent; 50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|" },
@@ -1176,7 +1178,7 @@ void retro_run (void)
    poll_cb();
    get_layout_params(current_layout, screen_buf, &layout);
 
-   if(pointer_device != 0)
+   if(pointer_device == 1 || 2)
    {
       int16_t analogX = 0;
       int16_t analogY = 0;
@@ -1231,6 +1233,25 @@ void retro_run (void)
 
       FramesWithPointer = (analogX || analogY) ? FramesWithPointerBase : FramesWithPointer;
 
+   }
+   
+   //absolute input on right analog
+   if(pointer_device == 3)
+   {
+      int16_t analogX = 0;
+      int16_t analogY = 0;
+
+      //get analog input normalized to ellipse enclosing max framebuffer
+      analogX = sqrt(2)*GPU_LR_FRAMEBUFFER_NATIVE_WIDTH/2*input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X) / (float)0x8000; 
+      analogY = sqrt(2)*GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT/2*input_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y) / (float)0x8000;
+      
+      have_touch = have_touch || input_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2);
+      
+      //center analog stick on screen
+      TouchX = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1), analogX + ((GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1) / 2));
+      TouchY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1), analogY + ((GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1) / 2));
+
+      FramesWithPointer = (analogX || analogY) ? FramesWithPointerBase : FramesWithPointer;
    }
 
    if(mouse_enable)
