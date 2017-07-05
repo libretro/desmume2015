@@ -323,6 +323,12 @@ else
 	$(LD) $(LDFLAGS) $(fpic) $(SHARED) $(LINKOUT)$@ $(OBJECTS) $(LIBS)
 endif
 
+%.o: %.c
+	$(CC) $(CFLAGS) -c $(OBJOUT)$@ $<
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $(OBJOUT)$@ $<
+
 clean:
 	rm -f $(OBJECTS) $(TARGET)
 
