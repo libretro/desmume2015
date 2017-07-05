@@ -59,7 +59,7 @@
 
 #endif /* ENABLE_ADVANCED_TIMING */
 
-FORCEINLINE bool USE_TIMING(void)
+static FORCEINLINE bool USE_TIMING(void)
 { 
 #ifdef ENABLE_ADVANCED_TIMING
 	return CommonSettings.advanced_timing;
