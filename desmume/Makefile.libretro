@@ -293,9 +293,15 @@ endif
 
 COMMON_DEFINES = $(INCFLAGS) $(INCDIR) $(INCFLAGS_PLATFORM)
 
+
 OBJECTS     = $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
-CXXFLAGS    += -D__LIBRETRO__ -fpermissive $(fpic) $(COMMON_DEFINES)
+CXXFLAGS    += -D__LIBRETRO__ $(fpic) $(COMMON_DEFINES)
 CFLAGS      += -std=gnu99 -D__LIBRETRO__ $(fpic) $(COMMON_DEFINES)
+
+ifeq (,$(findstring msvc,$(platform)))
+CXXFLAGS += -fpermissive
+CFLAGS   += -fpermissive
+endif
 
 OBJOUT   = -o
 LINKOUT  = -o 
