@@ -300,7 +300,7 @@ CFLAGS      += -std=gnu99 -D__LIBRETRO__ $(fpic) $(COMMON_DEFINES)
 
 ifeq (,$(findstring msvc,$(platform)))
 CXXFLAGS += -fpermissive
-CFLAGS   += -fpermissive
+CFLAGS   +=
 endif
 
 OBJOUT   = -o
