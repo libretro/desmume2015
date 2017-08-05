@@ -410,7 +410,7 @@ FORCEINLINE u32 MMU_aluMemCycles(u32 aluCycles, u32 memCycles)
        * fails to take into account the parallelism of the arm pipeline
        * and would make the emulated system unnaturally slow.
        */
-      return std::max(aluCycles, memCycles);
+      return MAX(aluCycles, memCycles);
    }
 
    /* ALU and MEM are part of the same stage of the 3-stage pipeline,
@@ -444,7 +444,7 @@ FORCEINLINE u32 MMU_fetchExecuteCycles(u32 executeCycles, u32 fetchCycles)
    {
       /* execute and fetch are different stages of the pipeline for both arm7 and arm9.
        * again, we approximate the pipeline throughput using max. */
-      return std::max(executeCycles, fetchCycles);
+      return MAX(executeCycles, fetchCycles);
       /* TODO: add an option to support conflict between MEM and FETCH cycles
        *  if they're both using the same data bus.
        *  in the case of a conflict this should be:
