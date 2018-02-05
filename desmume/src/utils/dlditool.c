@@ -73,7 +73,10 @@ typedef int int32_t;
 
 #include <sys/stat.h>
 
+#if defined(__HAIKU__)
+#else
 typedef int32_t addr_t;
+#endif
 typedef unsigned char data_t;
 
 #define FEATURE_MEDIUM_CANREAD	0x00000001
