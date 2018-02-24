@@ -20,7 +20,7 @@ libdir := $(prefix)/lib
 
 LIBRETRO_DIR := libretro
 
-TARGET_NAME := desmume
+TARGET_NAME := desmume2015
 CORE_DIR := src
 GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
 ifneq ($(GIT_VERSION)," unknown")
