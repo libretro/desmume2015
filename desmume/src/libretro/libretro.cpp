@@ -1000,13 +1000,13 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_cpu_mode", "CPU mode; interpreter" },
 #endif
       { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch|hybrid/top|hybrid/bottom" },
-	  { "desmume_hybrid_layout_scale", "Hybrid layout scale (restart); 1|3"},
-	  { "desmume_hybrid_showboth_screens", "Hybrid layout show both screens; enabled|disabled"},
-	  { "desmume_hybrid_cursor_always_smallscreen", "Hybrid layout cursor always on small screen; enabled|disabled"},
+      { "desmume_hybrid_layout_scale", "Hybrid layout scale (restart); 1|3"},
+      { "desmume_hybrid_showboth_screens", "Hybrid layout show both screens; enabled|disabled"},
+      { "desmume_hybrid_cursor_always_smallscreen", "Hybrid layout cursor always on small screen; enabled|disabled"},
       { "desmume_pointer_mouse", "Enable mouse/pointer; enabled|disabled" },
       { "desmume_pointer_type", "Pointer type; mouse|touch" },
       { "desmume_mouse_speed", "Mouse Speed; 1.0|1.5|2.0|0.125|0.25|0.5"},
-	  { "desmume_pointer_colour", "Pointer Colour; white|black|red|blue|yellow"},
+      { "desmume_pointer_colour", "Pointer Colour; white|black|red|blue|yellow"},
       { "desmume_pointer_device_l", "Pointer mode l-analog; none|emulated|absolute|pressed" },
       { "desmume_pointer_device_r", "Pointer mode r-analog; none|emulated|absolute|pressed" },
       { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|35|0|5|10" },
@@ -1023,7 +1023,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_gfx_txthack", "Enable TXT Hack; disabled|enabled"},
       { "desmume_mic_force_enable", "Force Microphone Enable; disabled|enabled" },
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
-	  { 0, 0 }
+      { 0, 0 }
    };
 
    environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)values);
