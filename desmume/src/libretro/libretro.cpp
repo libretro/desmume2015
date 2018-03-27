@@ -32,6 +32,9 @@ volatile int execute = 0;
 static int delay_timer = 0;
 static bool quick_switch_enable = false;
 static bool mouse_enable = false;
+static double mouse_speed= 1.0;
+static double mouse_x_delta = 0.0;
+static double mouse_y_delta = 0.0;
 static int pointer_device_l = 0;
 static int pointer_device_r = 0;
 static int analog_stick_deadzone;
@@ -584,37 +587,38 @@ static void check_variables(bool first_boot)
                break;
          }
       }
-		//This needs to be on first boot only as it affects the screen_buf size, unless want to realloc
-	     var.key = "desmume_hybrid_layout_scale";
 
-		if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-		{
-			if ((atoi(var.value)) != hybrid_layout_scale)
-			{
-				hybrid_layout_scale = atoi(var.value);
-				if (hybrid_layout_scale != 1 && hybrid_layout_scale != 3)
-					hybrid_layout_scale = 1;
-			}
-		}
+      //This needs to be on first boot only as it affects the screen_buf size, unless want to realloc
+      var.key = "desmume_hybrid_layout_scale";
+
+      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      {
+         if ((atoi(var.value)) != hybrid_layout_scale)
+         {
+            hybrid_layout_scale = atoi(var.value);
+            if (hybrid_layout_scale != 1 && hybrid_layout_scale != 3)
+               hybrid_layout_scale = 1;
+         }
+      }
    }
 
-    var.key = "desmume_num_cores";
+   var.key = "desmume_num_cores";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-        CommonSettings.num_cores = var.value ? strtol(var.value, 0, 10) : 1;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      CommonSettings.num_cores = var.value ? strtol(var.value, 0, 10) : 1;
    else
       CommonSettings.num_cores = 1;
 
-    var.key = "desmume_cpu_mode";
-    var.value = 0;
+   var.key = "desmume_cpu_mode";
+   var.value = 0;
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        if (!strcmp(var.value, "jit"))
-            CommonSettings.use_jit = true;
-        else if (!strcmp(var.value, "interpreter"))
-            CommonSettings.use_jit = false;
-    }
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "jit"))
+         CommonSettings.use_jit = true;
+      else if (!strcmp(var.value, "interpreter"))
+         CommonSettings.use_jit = false;
+   }
    else
    {
 #ifdef HAVE_JIT
@@ -625,149 +629,152 @@ static void check_variables(bool first_boot)
    }
 
 #ifdef HAVE_JIT
-    var.key = "desmume_jit_block_size";
+   var.key = "desmume_jit_block_size";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-        CommonSettings.jit_max_block_size = var.value ? strtol(var.value, 0, 10) : 100;
-    else
-        CommonSettings.jit_max_block_size = 100;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      CommonSettings.jit_max_block_size = var.value ? strtol(var.value, 0, 10) : 100;
+   else
+   CommonSettings.jit_max_block_size = 100;
 #endif
 
-    var.key = "desmume_screens_layout";
+   var.key = "desmume_screens_layout";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-       static int old_layout_id      = -1;
-       unsigned new_layout_id        = 0;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      static int old_layout_id = -1;
+      unsigned new_layout_id   = 0;
+      quick_switch_enable      = false;
 
-       quick_switch_enable = false;
+      if (!strcmp(var.value, "top/bottom"))
+         new_layout_id = LAYOUT_TOP_BOTTOM;
+      else if (!strcmp(var.value, "bottom/top"))
+         new_layout_id = LAYOUT_BOTTOM_TOP;
+      else if (!strcmp(var.value, "left/right"))
+         new_layout_id = LAYOUT_LEFT_RIGHT;
+      else if (!strcmp(var.value, "right/left"))
+         new_layout_id = LAYOUT_RIGHT_LEFT;
+      else if (!strcmp(var.value, "top only"))
+         new_layout_id = LAYOUT_TOP_ONLY;
+      else if (!strcmp(var.value, "bottom only"))
+         new_layout_id = LAYOUT_BOTTOM_ONLY;
+      else if(!strcmp(var.value, "hybrid/top"))
+      {
+         new_layout_id = LAYOUT_HYBRID_TOP_ONLY;
+         quick_switch_enable = true;
+      }
+      else if(!strcmp(var.value, "hybrid/bottom"))
+      {
+         new_layout_id = LAYOUT_HYBRID_BOTTOM_ONLY;
+         quick_switch_enable = true;
+      }
+      else if (!strcmp(var.value, "quick switch"))
+      {
+         new_layout_id = LAYOUT_TOP_ONLY;
+         quick_switch_enable = true;
+      }
 
-
-       if (!strcmp(var.value, "top/bottom"))
-          new_layout_id = LAYOUT_TOP_BOTTOM;
-       else if (!strcmp(var.value, "bottom/top"))
-          new_layout_id = LAYOUT_BOTTOM_TOP;
-       else if (!strcmp(var.value, "left/right"))
-          new_layout_id = LAYOUT_LEFT_RIGHT;
-       else if (!strcmp(var.value, "right/left"))
-          new_layout_id = LAYOUT_RIGHT_LEFT;
-       else if (!strcmp(var.value, "top only"))
-          new_layout_id = LAYOUT_TOP_ONLY;
-       else if (!strcmp(var.value, "bottom only"))
-          new_layout_id = LAYOUT_BOTTOM_ONLY;
-	   else if(!strcmp(var.value, "hybrid/top"))
-	   {
-		  new_layout_id = LAYOUT_HYBRID_TOP_ONLY;
-		  quick_switch_enable = true;
-	   }
-	   else if(!strcmp(var.value, "hybrid/bottom"))
-	   {
-		  new_layout_id = LAYOUT_HYBRID_BOTTOM_ONLY;
-		  quick_switch_enable = true;
-	   }
-       else if (!strcmp(var.value, "quick switch"))
-       {
-          new_layout_id = LAYOUT_TOP_ONLY;
-          quick_switch_enable = true;
-       }
-
-       if (old_layout_id != new_layout_id)
-       {
-          old_layout_id = new_layout_id;
-          current_layout = new_layout_id;
-       }
-    }
-    else
-       quick_switch_enable = false;
+      if (old_layout_id != new_layout_id)
+      {
+         old_layout_id = new_layout_id;
+         current_layout = new_layout_id;
+      }
+   }
+   else
+      quick_switch_enable = false;
 
     var.key = "desmume_pointer_mouse";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        if (!strcmp(var.value, "enabled"))
-            mouse_enable = true;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "enabled"))
+         mouse_enable = true;
       else if (!strcmp(var.value, "disabled"))
-            mouse_enable = false;
-    }
+         mouse_enable = false;
+   }
    else
       mouse_enable = false;
 
-    var.key = "desmume_pointer_device_l";
+   var.key = "desmume_mouse_speed";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        if (!strcmp(var.value, "emulated"))
-            pointer_device_l = 1;
-        else if(!strcmp(var.value, "absolute"))
-            pointer_device_l = 2;
-		else if (!strcmp(var.value, "pressed"))
-			pointer_device_l = 3;
-        else
-            pointer_device_l=0;
-    }
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      mouse_speed = (float) atof(var.value);
+   else
+      mouse_speed = 1.0f;
+
+   var.key = "desmume_pointer_device_l";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "emulated"))
+         pointer_device_l = 1;
+      else if(!strcmp(var.value, "absolute"))
+         pointer_device_l = 2;
+      else if (!strcmp(var.value, "pressed"))
+         pointer_device_l = 3;
+      else
+         pointer_device_l=0;
+   }
    else
       pointer_device_l=0;
 
-    var.key = "desmume_pointer_device_r";
+   var.key = "desmume_pointer_device_r";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        if (!strcmp(var.value, "emulated"))
-            pointer_device_r = 1;
-        else if(!strcmp(var.value, "absolute"))
-            pointer_device_r = 2;
-		else if (!strcmp(var.value, "pressed"))
-			pointer_device_r = 3;
-        else
-            pointer_device_r=0;
-    }
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "emulated"))
+         pointer_device_r = 1;
+      else if(!strcmp(var.value, "absolute"))
+         pointer_device_r = 2;
+      else if (!strcmp(var.value, "pressed"))
+         pointer_device_r = 3;
+      else
+         pointer_device_r=0;
+   }
    else
       pointer_device_r=0;
 
-    var.key = "desmume_pointer_device_deadzone";
+   var.key = "desmume_pointer_device_deadzone";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       analog_stick_deadzone = (int)(atoi(var.value));
 
-    var.key = "desmume_pointer_type";
+   var.key = "desmume_pointer_type";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        touchEnabled = var.value && (!strcmp(var.value, "touch"));
-    }
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      touchEnabled = var.value && (!strcmp(var.value, "touch"));
 
-    var.key = "desmume_frameskip";
+   var.key = "desmume_frameskip";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-        frameSkip = var.value ? strtol(var.value, 0, 10) : 0;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      frameSkip = var.value ? strtol(var.value, 0, 10) : 0;
    else
       frameSkip = 0;
 
-    var.key = "desmume_firmware_language";
+   var.key = "desmume_firmware_language";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        static const struct { const char* name; int id; } languages[] =
-        {
-            { "Auto", -1 },
-            { "Japanese", 0 },
-            { "English", 1 },
-            { "French", 2 },
-            { "German", 3 },
-            { "Italian", 4 },
-            { "Spanish", 5 }
-        };
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      static const struct { const char* name; int id; } languages[] =
+      {
+         { "Auto", -1 },
+         { "Japanese", 0 },
+         { "English", 1 },
+         { "French", 2 },
+         { "German", 3 },
+         { "Italian", 4 },
+         { "Spanish", 5 }
+      };
 
-        for (int i = 0; i < 7; i ++)
-        {
-            if (!strcmp(languages[i].name, var.value))
-            {
-                firmwareLanguage = languages[i].id;
-                if (firmwareLanguage == -1) firmwareLanguage = host_get_language();
-                break;
-            }
-        }
-    }
+      for (int i = 0; i < 7; i ++)
+      {
+         if (!strcmp(languages[i].name, var.value))
+         {
+            firmwareLanguage = languages[i].id;
+            if (firmwareLanguage == -1) firmwareLanguage = host_get_language();
+               break;
+         }
+      }
+   }
    else
       firmwareLanguage = 1;
 
@@ -776,7 +783,7 @@ static void check_variables(bool first_boot)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-        if (!strcmp(var.value, "enabled"))
+      if (!strcmp(var.value, "enabled"))
          CommonSettings.GFX3D_EdgeMark = true;
       else if (!strcmp(var.value, "disabled"))
          CommonSettings.GFX3D_EdgeMark = false;
@@ -852,7 +859,7 @@ static void check_variables(bool first_boot)
 
    var.key = "desmume_pointer_stylus_jitter";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "enabled"))
          CommonSettings.StylusJitter = true;
@@ -864,7 +871,7 @@ static void check_variables(bool first_boot)
 
    var.key = "desmume_load_to_memory";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "enabled"))
          CommonSettings.loadToMemory = true;
@@ -876,7 +883,7 @@ static void check_variables(bool first_boot)
 
    var.key = "desmume_advanced_timing";
 
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "enabled"))
          CommonSettings.advanced_timing = true;
@@ -898,7 +905,7 @@ static void check_variables(bool first_boot)
       }
    }
    
-  var.key = "desmume_hybrid_showboth_screens";
+   var.key = "desmume_hybrid_showboth_screens";
    
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
@@ -910,7 +917,7 @@ static void check_variables(bool first_boot)
    else
       hybrid_layout_showbothscreens = true;
   
-    var.key = "desmume_hybrid_cursor_always_smallscreen";
+   var.key = "desmume_hybrid_cursor_always_smallscreen";
    
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
@@ -922,26 +929,25 @@ static void check_variables(bool first_boot)
    else
       hybrid_cursor_always_smallscreen = true;
   
-
    var.key = "desmume_pointer_colour";
+
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-	  if(!strcmp(var.value, "white"))
-		 pointer_colour = 0xFFFF;
+      if(!strcmp(var.value, "white"))
+         pointer_colour = 0xFFFF;
       else if (!strcmp(var.value, "black"))
          pointer_colour = 0x0000;
-	  else if(!strcmp(var.value, "red"))
-		 pointer_colour = 0xF800;
-	  else if(!strcmp(var.value, "yellow"))
-		 pointer_colour = 0xFFE0;
-	  else if(!strcmp(var.value, "blue"))
-		 pointer_colour = 0x001F;
-	  else
-		 pointer_colour = 0xFFFF;
+      else if(!strcmp(var.value, "red"))
+         pointer_colour = 0xF800;
+      else if(!strcmp(var.value, "yellow"))
+         pointer_colour = 0xFFE0;
+      else if(!strcmp(var.value, "blue"))
+         pointer_colour = 0x001F;
+      else
+         pointer_colour = 0xFFFF;
    }
-   else{
-	   pointer_colour = 0xFFFF;
-   }
+   else
+      pointer_colour = 0xFFFF;
 }
 
 #ifndef GPU3D_NULL
@@ -994,12 +1000,13 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_cpu_mode", "CPU mode; interpreter" },
 #endif
       { "desmume_screens_layout", "Screen layout; top/bottom|bottom/top|left/right|right/left|top only|bottom only|quick switch|hybrid/top|hybrid/bottom" },
-	  { "desmume_hybrid_layout_scale", "Hybrid layout scale (restart); 1|3"},
-	  { "desmume_hybrid_showboth_screens", "Hybrid layout show both screens; enabled|disabled"},
-	  { "desmume_hybrid_cursor_always_smallscreen", "Hybrid layout cursor always on small screen; enabled|disabled"},
+      { "desmume_hybrid_layout_scale", "Hybrid layout scale (restart); 1|3"},
+      { "desmume_hybrid_showboth_screens", "Hybrid layout show both screens; enabled|disabled"},
+      { "desmume_hybrid_cursor_always_smallscreen", "Hybrid layout cursor always on small screen; enabled|disabled"},
       { "desmume_pointer_mouse", "Enable mouse/pointer; enabled|disabled" },
       { "desmume_pointer_type", "Pointer type; mouse|touch" },
-	  { "desmume_pointer_colour", "Pointer Colour; white|black|red|blue|yellow"},
+      { "desmume_mouse_speed", "Mouse Speed; 1.0|1.5|2.0|0.125|0.25|0.5"},
+      { "desmume_pointer_colour", "Pointer Colour; white|black|red|blue|yellow"},
       { "desmume_pointer_device_l", "Pointer mode l-analog; none|emulated|absolute|pressed" },
       { "desmume_pointer_device_r", "Pointer mode r-analog; none|emulated|absolute|pressed" },
       { "desmume_pointer_device_deadzone", "Emulated pointer deadzone percent; 15|20|25|30|35|0|5|10" },
@@ -1016,7 +1023,7 @@ void retro_set_environment(retro_environment_t cb)
       { "desmume_gfx_txthack", "Enable TXT Hack; disabled|enabled"},
       { "desmume_mic_force_enable", "Force Microphone Enable; disabled|enabled" },
       { "desmume_mic_mode", "Microphone Simulation Settings; internal|sample|random|physical" },
-	  { 0, 0 }
+      { 0, 0 }
    };
 
    environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)values);
@@ -1417,9 +1424,17 @@ void retro_run (void)
       // TOUCH: Mouse
       if(!touchEnabled)
       {
-         const int16_t mouseX = input_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
-         const int16_t mouseY = input_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
+         int16_t mouseX = input_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
+         int16_t mouseY = input_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
          have_touch           = have_touch || input_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+
+         mouse_x_delta += mouseX * mouse_speed;
+         mouse_y_delta += mouseY * mouse_speed;
+
+         mouseX = (int16_t) trunc(mouse_x_delta);
+         mouse_x_delta -= mouseX;
+         mouseY = (int16_t) trunc(mouse_y_delta);
+         mouse_y_delta -= mouseY;
 
          TouchX = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_WIDTH-1), TouchX + mouseX);
          TouchY = Saturate(0, (GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT-1), TouchY + mouseY);
