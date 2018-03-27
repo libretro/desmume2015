@@ -349,7 +349,7 @@ namespace
 
 void retro_get_system_info(struct retro_system_info *info)
 {
-   info->library_name = "DeSmuME";
+   info->library_name = "DeSmuME 2015";
 #ifdef GIT_VERSION
    info->library_version = "git" GIT_VERSION;
 #else
