@@ -12,6 +12,7 @@ endif
 CORE_DIR = ../..
 JIT=
 DESMUME_JIT=0
+DESMUME_JIT_ARM=0
 
 ifeq ($(TARGET_ARCH),arm)
 LOCAL_CXXFLAGS := -DANDROID_ARM
@@ -47,6 +48,6 @@ LOCAL_CFLAGS = -O3 -D__LIBRETRO__ -Wno-psabi -Wno-write-strings -DANDROID -DFRON
 
 LOCAL_C_INCLUDES = -I$(CORE_DIR)/libretro/zlib -iquote $(CORE_DIR) -iquote $(CORE_DIR)/libretro
 
-LOCAL_LDLIBS += -lz
+LOCAL_LDLIBS += -lz -latomic
 
 include $(BUILD_SHARED_LIBRARY)
