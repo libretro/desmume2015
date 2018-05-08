@@ -1714,10 +1714,25 @@ void retro_unload_game (void)
     execute    = 0;
 }
 
+void *retro_get_memory_data(unsigned type)
+{
+   if (type == RETRO_MEMORY_SYSTEM_RAM)
+      return MMU.MAIN_MEM;
+   else
+      return NULL;
+}
+
+size_t retro_get_memory_size(unsigned type)
+{
+   if (type == RETRO_MEMORY_SYSTEM_RAM)
+      return CommonSettings.ConsoleType == NDS_CONSOLE_TYPE_DSI ? 
+         0x1000000 : 0x0400000;
+   else
+      return 0;
+}
+
 // Stubs
 void retro_set_controller_port_device(unsigned in_port, unsigned device) { }
-void *retro_get_memory_data(unsigned type) { return 0; }
-size_t retro_get_memory_size(unsigned type) { return 0; }
 unsigned retro_api_version(void) { return RETRO_API_VERSION; }
 
 extern CHEATS *cheats;
