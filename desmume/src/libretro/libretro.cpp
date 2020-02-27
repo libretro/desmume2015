@@ -424,7 +424,7 @@ static void get_layout_params(unsigned id, uint16_t *src, LayoutData *layout)
          layout->height = GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * 2 + nds_screen_gap;
          layout->pitch  = GPU_LR_FRAMEBUFFER_NATIVE_WIDTH;
          layout->touch_x= 0;
-         layout->touch_y= GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT;
+         layout->touch_y= GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT + nds_screen_gap;
 
          layout->draw_screen1  = true;
          layout->draw_screen2  = true;
