@@ -229,6 +229,50 @@ static void BlankScreenSmallSection(uint16_t *pt1, const uint16_t *pt2){
 	}
 }
 
+static void BlankScreenGap(uint16_t *screen1, uint16_t *screen2, uint32_t pitch) {
+	if (nds_screen_gap == 0)
+		return;
+
+	bool vertical;
+	uint16_t *screen;
+
+	switch (current_layout) {
+		case LAYOUT_TOP_BOTTOM:
+			vertical = true;
+			screen = screen1;
+			break;
+
+		case LAYOUT_BOTTOM_TOP:
+			vertical = true;
+			screen = screen2;
+			break;
+
+		case LAYOUT_LEFT_RIGHT:
+			vertical = false;
+			screen = screen1;
+			break;
+
+		case LAYOUT_RIGHT_LEFT:
+			vertical = false;
+			screen = screen2;
+			break;
+
+		default:
+			return;
+	}
+
+	if (vertical) {
+		memset(screen + GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT * pitch, 0, nds_screen_gap * pitch * sizeof(uint16_t));
+	}
+	else {
+		unsigned i;
+		for (i = 0; i < GPU_LR_FRAMEBUFFER_NATIVE_HEIGHT; i++) {
+			memset (screen + GPU_LR_FRAMEBUFFER_NATIVE_WIDTH, 0, nds_screen_gap * sizeof(uint16_t));
+			screen += pitch;
+		}
+	}
+}
+
 static void SwapScreen(uint16_t *dst, const uint16_t *src, uint32_t pitch)
 {
    unsigned i, j;
@@ -1621,7 +1665,9 @@ void retro_run (void)
 			SwapScreen (layout.dst2, screen, layout.pitch);
 			DrawPointer(layout.dst2, layout.pitch);
 		}
-	  }		
+
+		BlankScreenGap(layout.dst, layout.dst2, layout.pitch);
+	  }
    }
    video_cb(skipped ? 0 : screen_buf, layout.width, layout.height, layout.pitch * 2);
    frameIndex = skipped ? frameIndex : 0;
