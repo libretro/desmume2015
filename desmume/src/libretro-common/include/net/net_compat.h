@@ -115,19 +115,7 @@ struct hostent
 #include <netdb.h>
 #include <fcntl.h>
 
-#if defined(__CELLOS_LV2__) && !defined(__PSL1GHT__)
-#include <cell/sysmodule.h>
-#include <netex/net.h>
-#include <netex/libnetctl.h>
-#include <sys/timer.h>
-
-#ifndef EWOULDBLOCK
-#define EWOULDBLOCK SYS_NET_EWOULDBLOCK
-#endif
-
-#else
 #include <signal.h>
-#endif
 
 #endif
 
