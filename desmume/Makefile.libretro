@@ -301,6 +301,11 @@ else
 
 endif
 
+ifneq (,$(findstring webos,$(CROSS_COMPILE)))
+   DESMUME_JIT_ARM = 1
+   DESMUME_JIT = 0
+endif
+
 ifeq ($(DESMUME_JIT_ARM),1)
    CXXFLAGS += -DHAVE_JIT
 endif
