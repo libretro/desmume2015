@@ -61,6 +61,12 @@ ifneq (,$(findstring unix,$(platform)))
          CXXFLAGS += -mfloat-abi=hard
       endif
       CXXFLAGS += -DARM
+   else ifneq (,$(filter aarch64 arm64,$(shell uname -m)))
+      # AArch64 (ARM64): no dynarec backend available (AsmJit is x86-only and the
+      # arm_arm JIT is 32-bit ARM only), so build the interpreter core.
+      ARCH = arm64
+      DESMUME_JIT = 0
+      DESMUME_JIT_ARM = 0
    else
       DESMUME_JIT ?= 1
    endif
